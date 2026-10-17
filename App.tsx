@@ -12,7 +12,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { getSupabaseClient } from './src/lib/supabase';
 
 type Role = 'owner' | 'agent';
-type Tab = 'home' | 'portfolio' | 'team' | 'stats';
+type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
+type Customer = { id: string; fullName: string; phone: string; roles: string[]; assignedAgent: string; notes: string; active: boolean; requirementCount: number };
 type PropertyStatus = 'Aktif' | 'Opsiyonlu' | 'Satıldı' | 'Kiralandı';
 type Property = {
   id: string; title: string; address: string; district: string; price: number;
@@ -53,6 +54,22 @@ export default function App() {
   const [agentAvatarUri, setAgentAvatarUri] = useState<string | null>(null);
   const [agentBusy, setAgentBusy] = useState(false);
   const [teamMembers, setTeamMembers] = useState<{name:string; username:string; role:string; avatarPath:string|null; avatarUrl:string|null; id:string}[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [customerModalOpen, setCustomerModalOpen] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerRoles, setCustomerRoles] = useState<string[]>(['buyer']);
+  const [customerNotes, setCustomerNotes] = useState('');
+  const [requirementIntent, setRequirementIntent] = useState<'sale'|'rent'>('sale');
+  const [requirementType, setRequirementType] = useState('apartment');
+  const [requirementCity, setRequirementCity] = useState('Muğla');
+  const [requirementDistrict, setRequirementDistrict] = useState('');
+  const [requirementMaxPrice, setRequirementMaxPrice] = useState('');
+  const [requirementRooms, setRequirementRooms] = useState('');
+  const [customerBusy, setCustomerBusy] = useState(false);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [matchesLoading, setMatchesLoading] = useState(false);
   const [propertiesLoading, setPropertiesLoading] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
   const [properties, setProperties] = useState<Property[]>(initialProperties);
@@ -132,6 +149,30 @@ export default function App() {
     }
   };
 
+  const loadCustomers = async (targetOfficeId: string) => {
+    setCustomersLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('customers').select('id,full_name,phone,roles,assigned_agent_id,notes,is_active,customer_requirements(id)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
+      if (error) throw new Error('Müşteriler yüklenemedi. Migration 003 uygulanmış olmalı.');
+      const rows = data || [];
+      const ids = [...new Set(rows.map((row: any) => row.assigned_agent_id))];
+      const { data: profiles } = ids.length ? await supabase.from('profiles').select('id,full_name').in('id', ids) : { data: [] as any[] };
+      const names = new Map((profiles || []).map((profile: any) => [profile.id, profile.full_name]));
+      setCustomers(rows.map((row: any) => ({ id: row.id, fullName: row.full_name, phone: row.phone || '', roles: row.roles || [], assignedAgent: names.get(row.assigned_agent_id) || 'Danışman', notes: row.notes || '', active: row.is_active, requirementCount: Array.isArray(row.customer_requirements) ? row.customer_requirements.length : 0 })));
+    } finally { setCustomersLoading(false); }
+  };
+
+  const loadMatches = async (targetOfficeId: string) => {
+    setMatchesLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('matches').select('id,status,match_score,match_reasons,created_at,properties(id,title,price,listing_type,district,rooms),customers(id,full_name,phone)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
+      if (error) throw new Error('Eşleşmeler yüklenemedi. Migration 003 uygulanmış olmalı.');
+      setMatches(data || []);
+    } finally { setMatchesLoading(false); }
+  };
+
   const loadTeamMembers = async (targetOfficeId: string) => {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
@@ -159,6 +200,29 @@ export default function App() {
     setTeamMembers(mapped);
   };
 
+  const saveCustomer = async () => {
+    if (!customerName.trim()) { Alert.alert('Eksik bilgi', 'Müşterinin adını gir.'); return; }
+    if (customerRoles.length === 0) { Alert.alert('Müşteri türü', 'En az bir müşteri rolü seç.'); return; }
+    setCustomerBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data: userResult, error: userError } = await supabase.auth.getUser();
+      if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
+      const { data: customer, error } = await supabase.from('customers').insert({ office_id: officeId, assigned_agent_id: userResult.user.id, created_by: userResult.user.id, full_name: customerName.trim(), phone: customerPhone.trim(), roles: customerRoles, notes: customerNotes.trim() }).select('id').single();
+      if (error || !customer) throw new Error(error?.message || 'Müşteri kaydedilemedi. Migration 003 ve RLS ayarlarını kontrol et.');
+      const maxPrice = Number(requirementMaxPrice.replace(/[^0-9]/g, ''));
+      const hasRequirement = !!(requirementDistrict.trim() || requirementMaxPrice.trim() || requirementRooms.trim());
+      if (hasRequirement) {
+        const { error: requirementError } = await supabase.from('customer_requirements').insert({ office_id: officeId, customer_id: customer.id, intent: requirementIntent, property_type: requirementType, city: requirementCity.trim(), district: requirementDistrict.trim(), max_price: maxPrice > 0 ? maxPrice : null, rooms: requirementRooms.trim() ? [requirementRooms.trim()] : [], is_active: true });
+        if (requirementError) throw new Error('Müşteri kaydedildi ancak arama talebi kaydedilemedi: ' + requirementError.message);
+      }
+      await loadCustomers(officeId);
+      setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementMaxPrice(''); setRequirementRooms('');
+      Alert.alert('Müşteri kaydedildi', hasRequirement ? 'Müşteri ve arama talebi kaydedildi. Eşleştirme motoru sonraki adımda bağlanacak.' : 'Müşteri kaydedildi. İstersen daha sonra arama talebi ekleyebilirsin.');
+    } catch (error) { Alert.alert('Müşteri kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.'); }
+    finally { setCustomerBusy(false); }
+  };
+
   const handleLogin = async () => {
     setAuthBusy(true); setAuthError('');
     try {
@@ -166,6 +230,8 @@ export default function App() {
       setRole(result.role);
       setOfficeId(result.officeId);
       await loadProperties(result.officeId);
+      await loadCustomers(result.officeId);
+      await loadMatches(result.officeId);
       if (result.role === 'owner') await loadTeamMembers(result.officeId);
       setMustChangePassword(result.mustChangePassword);
       setAuthenticated(true);
@@ -330,6 +396,31 @@ export default function App() {
           {!visibleProperties.length && <View style={styles.empty}><Ionicons name="file-tray-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Portföy bulunamadı</Text><Text style={styles.pageSub}>Aramanı değiştir veya yeni ilan ekle.</Text></View>}
         </ScrollView>}
 
+        {tab === 'customers' && <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+          <Text style={styles.eyebrow}>GAYIT · MÜŞTERİLER</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Müşteriler</Text><Text style={styles.pageSub}>{role === 'owner' ? 'Ofis müşterileri ve talepleri' : 'Sana atanmış müşteriler ve talepleri'}</Text></View><Pressable onPress={()=>setCustomerModalOpen(true)} style={styles.addButton}><Ionicons name="person-add-outline" size={22} color="#fff"/></Pressable></View>
+          <View style={styles.search}><Ionicons name="search-outline" size={19} color={palette.muted}/><TextInput value={search} onChangeText={setSearch} placeholder="Müşteri adı veya telefon ara" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
+          <Text style={styles.resultCount}>{customersLoading ? 'Müşteriler yükleniyor…' : `${customers.length} müşteri`}</Text>
+          {customers.filter(c => `${c.fullName} ${c.phone}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR'))).map(c=><View key={c.id} style={styles.customerCard}><View style={styles.customerAvatar}><Ionicons name="person-outline" size={22} color={palette.navy}/></View><View style={{flex:1}}><Text style={styles.teamName}>{c.fullName}</Text><Text style={styles.teamMeta}>{c.phone || 'Telefon eklenmemiş'}</Text><Text style={styles.customerRoles}>{c.roles.map(r=>({buyer:'Alıcı',seller:'Satıcı',tenant:'Kiracı',landlord:'Ev sahibi',investor:'Yatırımcı'} as Record<string,string>)[r] || r).join(' · ')}</Text><Text style={styles.teamRole}>{c.requirementCount} arama talebi · {c.assignedAgent}</Text></View></View>)}
+          {!customersLoading && !customers.length && <View style={styles.empty}><Ionicons name="people-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz müşteri yok</Text><Text style={styles.pageSub}>İlk müşterini ekle; ister aynı anda arama kriterlerini de kaydet.</Text><Pressable style={styles.saveButton} onPress={()=>setCustomerModalOpen(true)}><Text style={styles.saveButtonText}>İlk müşteriyi ekle</Text></Pressable></View>}
+        </ScrollView>}
+
+        {tab === 'matches' && <ScrollView contentContainerStyle={styles.page}>
+          <Text style={styles.eyebrow}>GAYIT · AKILLI EŞLEŞME</Text><Text style={styles.pageTitle}>Eşleşmeler</Text><Text style={styles.pageSub}>Tam eşleşmeleri ve esnek alternatifleri ayrı takip et.</Text>
+          <View style={styles.matchSection}><Text style={styles.sectionTitle}>Tam eşleşmeler</Text><Text style={styles.pageSub}>Bütün zorunlu kriterleri karşılayan ilanlar.</Text></View>
+          {matches.filter((m:any)=>m.status==='new'||m.status==='reviewed').map((m:any)=><View key={m.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{m.customers?.full_name || 'Müşteri'}</Text><Text style={styles.teamRole}>{m.properties?.title || 'İlan'} · {m.properties?.district || 'Konum belirtilmemiş'}</Text><Text style={styles.teamMeta}>{m.properties?.listing_type==='rent'?'Kiralık':'Satılık'} · {money(Number(m.properties?.price || 0))}</Text><Text style={styles.customerRoles}>{(m.match_reasons || []).join(' · ') || 'Eşleşme gerekçesi eklenmemiş'}</Text></View><View style={styles.matchScore}><Text style={styles.matchScoreText}>{m.match_score == null ? '—' : `${m.match_score}%`}</Text></View></View>)}
+          <View style={styles.matchSection}><Text style={styles.sectionTitle}>Alternatifler</Text><Text style={styles.pageSub}>Esnek kriterlere göre önerilen ilanlar; hangi kriterin farklı olduğu açıklanmalı.</Text></View>
+          {matches.filter((m:any)=>m.status==='not_interested').map((m:any)=><View key={m.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{m.customers?.full_name || 'Müşteri'}</Text><Text style={styles.teamRole}>{m.properties?.title || 'Alternatif ilan'}</Text><Text style={styles.customerRoles}>{(m.match_reasons || []).join(' · ')}</Text></View></View>)}
+          {!matchesLoading && !matches.length && <View style={styles.empty}><Ionicons name="git-compare-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz eşleşme yok</Text><Text style={styles.pageSub}>Müşteri talepleri ve ilanlar kaydediliyor. Otomatik eşleştirme motoru bir sonraki geliştirme adımında bağlanacak; henüz eşleşme üretilmiyor.</Text></View>}
+          {matchesLoading && <Text style={styles.pageSub}>Eşleşmeler yükleniyor…</Text>}
+        </ScrollView>}
+
+        {tab === 'more' && <ScrollView contentContainerStyle={styles.page}>
+          <Text style={styles.eyebrow}>GAYIT · ARAÇLAR</Text><Text style={styles.pageTitle}>Daha Fazla</Text><Text style={styles.pageSub}>Daha seyrek kullandığın ofis ve çalışma araçları.</Text>
+          {role === 'owner' && <Pressable style={styles.moreCard} onPress={()=>setTab('team')}><Ionicons name="people-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Ekip yönetimi</Text><Text style={styles.teamRole}>Danışmanları ve ofis üyelerini yönet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
+          <Pressable style={styles.moreCard} onPress={()=>setTab('stats')}><Ionicons name="bar-chart-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>{role==='owner'?'Ofis istatistikleri':'Performansım'}</Text><Text style={styles.teamRole}>Portföy ve operasyon özetleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
+          <Pressable style={styles.moreCard} onPress={handleSignOut}><Ionicons name="log-out-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Oturumu kapat</Text><Text style={styles.teamRole}>GAYIT hesabından çıkış yap.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
+        </ScrollView>}
+
         {tab === 'team' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>EKİP YÖNETİMİ</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Danışmanlar</Text><Text style={styles.pageSub}>Ofis ekibinin portföy ve performans özeti.</Text></View><Pressable onPress={()=>setAgentModalOpen(true)} style={styles.addButton}><Ionicons name="person-add-outline" size={22} color="#fff"/></Pressable></View>
           {teamMembers.map((person)=><View key={person.id || person.username} style={styles.teamCard}><View style={styles.avatar}>{person.avatarUrl ? <Image source={{uri:person.avatarUrl}} style={styles.avatarImage}/> : <Text style={styles.avatarText}>{person.name.split(/\s+/).map((part:string)=>part[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')}</Text>}</View><View style={{flex:1}}><Text style={styles.teamName}>{person.name}</Text><Text style={styles.teamRole}>{person.role === 'owner' ? 'Ofis sahibi' : 'Gayrimenkul danışmanı'}</Text><Text style={styles.teamMeta}>@{person.username || 'kullanıcı adı yok'}</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></View>)}
@@ -345,7 +436,7 @@ export default function App() {
         </ScrollView>}
       </View>
 
-      <View style={styles.bottomNav}>{([{key:'home',label:'Özet',icon:'grid-outline'},{key:'portfolio',label:'Portföy',icon:'business-outline'},...(role==='owner'?[{key:'team',label:'Ekip',icon:'people-outline'} as const]:[]),{key:'stats',label:'İstatistik',icon:'bar-chart-outline'}] as {key:Tab;label:string;icon:keyof typeof Ionicons.glyphMap}[]).map(item=><Pressable key={item.key} onPress={()=>setTab(item.key)} style={styles.navItem}><View style={[styles.navIcon,tab===item.key&&styles.navIconOn]}><Ionicons name={item.icon} size={20} color={tab===item.key?palette.gold:palette.muted}/></View><Text style={[styles.navLabel,tab===item.key&&styles.navLabelOn]}>{item.label}</Text></Pressable>)}</View>
+      <View style={styles.bottomNav}>{([{key:'home',label:'Ana Sayfa',icon:'grid-outline'},{key:'portfolio',label:'Portföy',icon:'business-outline'},{key:'customers',label:'Müşteriler',icon:'people-outline'},{key:'matches',label:'Eşleşme',icon:'git-compare-outline'},{key:'more',label:'Daha Fazla',icon:'menu-outline'}] as {key:Tab;label:string;icon:keyof typeof Ionicons.glyphMap}[]).map(item=><Pressable key={item.key} onPress={()=>setTab(item.key)} style={styles.navItem}><View style={[styles.navIcon,tab===item.key&&styles.navIconOn]}><Ionicons name={item.icon} size={20} color={tab===item.key?palette.gold:palette.muted}/></View><Text style={[styles.navLabel,tab===item.key&&styles.navLabelOn]}>{item.label}</Text></Pressable>)}</View>
 
       <Modal visible={!!selected} animationType="slide" onRequestClose={()=>setSelected(null)}>
         {selected && <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>setSelected(null)} style={styles.roundButton}><Ionicons name="chevron-down" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>İlan detayı</Text><Text style={styles.code}>{selected.id}</Text></View>
@@ -357,6 +448,27 @@ export default function App() {
           <View style={styles.shareRow}><Pressable style={styles.whatsappButton} onPress={()=>shareWhatsApp(selected)}><Ionicons name="logo-whatsapp" size={21} color="#fff"/><Text style={styles.actionButtonText}>WhatsApp</Text></Pressable><Pressable style={styles.pdfButton} onPress={()=>createPdf(selected)}><Ionicons name="document-text-outline" size={21} color={palette.navy}/><Text style={styles.pdfButtonText}>PDF sunumu</Text></Pressable></View>
           <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>PDF şu an temel bilgileri içeren profesyonel bir sunum oluşturur. İlan fotoğrafları, ofis logosu ve danışman iletişim bilgileri sonraki tasarım adımında eklenecek.</Text></View>
         </ScrollView></SafeAreaView>}
+      </Modal>
+
+      <Modal visible={customerModalOpen} animationType="slide" onRequestClose={()=>setCustomerModalOpen(false)}>
+        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
+          <View style={styles.modalHeader}><Pressable onPress={()=>setCustomerModalOpen(false)} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Yeni müşteri</Text><View style={{width:40}}/></View>
+          <ScrollView contentContainerStyle={styles.formPage} keyboardShouldPersistTaps="handled">
+            <Text style={styles.pageTitle}>Müşteri bilgileri</Text><Text style={styles.pageSub}>Birden fazla müşteri rolü seçebilir, arama kriterlerini hemen ekleyebilirsin.</Text>
+            <Text style={styles.fieldLabel}>Ad soyad *</Text><TextInput value={customerName} onChangeText={setCustomerName} style={styles.input} placeholder="Örn. Ayşe Yılmaz" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Telefon</Text><TextInput value={customerPhone} onChangeText={setCustomerPhone} keyboardType="phone-pad" style={styles.input} placeholder="05xx xxx xx xx" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Müşteri rolleri (birden fazla seçilebilir)</Text><View style={styles.kindRow}>{([{key:'buyer',label:'Alıcı'},{key:'seller',label:'Satıcı'},{key:'tenant',label:'Kiracı'}]).map(r=><Pressable key={r.key} onPress={()=>setCustomerRoles(old=>old.includes(r.key)?old.filter(x=>x!==r.key):[...old,r.key])} style={[styles.kindButton,customerRoles.includes(r.key)&&styles.kindButtonOn]}><Text style={[styles.kindText,customerRoles.includes(r.key)&&styles.kindTextOn]}>{r.label}</Text></Pressable>)}</View>
+            <View style={[styles.kindRow,{marginTop:8}]}>{([{key:'landlord',label:'Ev sahibi'},{key:'investor',label:'Yatırımcı'}]).map(r=><Pressable key={r.key} onPress={()=>setCustomerRoles(old=>old.includes(r.key)?old.filter(x=>x!==r.key):[...old,r.key])} style={[styles.kindButton,customerRoles.includes(r.key)&&styles.kindButtonOn]}><Text style={[styles.kindText,customerRoles.includes(r.key)&&styles.kindTextOn]}>{r.label}</Text></Pressable>)}</View>
+            <Text style={styles.sectionTitle}>Arama kriterleri (isteğe bağlı)</Text><Text style={styles.fieldLabel}>İşlem türü</Text><View style={styles.kindRow}>{([{key:'sale',label:'Satılık'},{key:'rent',label:'Kiralık'}] as const).map(r=><Pressable key={r.key} onPress={()=>setRequirementIntent(r.key)} style={[styles.kindButton,requirementIntent===r.key&&styles.kindButtonOn]}><Text style={[styles.kindText,requirementIntent===r.key&&styles.kindTextOn]}>{r.label}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>Gayrimenkul tipi</Text><View style={styles.kindRow}>{([{key:'apartment',label:'Daire'},{key:'villa',label:'Villa'},{key:'land',label:'Arsa'},{key:'commercial',label:'İş yeri'}]).map(r=><Pressable key={r.key} onPress={()=>setRequirementType(r.key)} style={[styles.kindButton,requirementType===r.key&&styles.kindButtonOn]}><Text style={[styles.kindText,requirementType===r.key&&styles.kindTextOn]}>{r.label}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>İl</Text><TextInput value={requirementCity} onChangeText={setRequirementCity} style={styles.input} placeholder="Muğla" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>İlçe</Text><TextInput value={requirementDistrict} onChangeText={setRequirementDistrict} style={styles.input} placeholder="Bodrum" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Azami bütçe (TL)</Text><TextInput value={requirementMaxPrice} onChangeText={setRequirementMaxPrice} keyboardType="numeric" style={styles.input} placeholder="5000000" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Oda sayısı (ör. 3+1)</Text><TextInput value={requirementRooms} onChangeText={setRequirementRooms} style={styles.input} placeholder="Fark etmezse boş bırak" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Notlar</Text><TextInput value={customerNotes} onChangeText={setCustomerNotes} style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholder="İletişim ve müşteri hakkında notlar" placeholderTextColor={palette.muted}/>
+            <Pressable disabled={customerBusy} onPress={saveCustomer} style={[styles.saveButton,customerBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{customerBusy?'Kaydediliyor...':'Müşteriyi kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
 
       <Modal visible={agentModalOpen} animationType="slide" onRequestClose={()=>setAgentModalOpen(false)}>
@@ -419,6 +531,7 @@ const styles = StyleSheet.create({
   notice:{flexDirection:'row',gap:8,alignItems:'flex-start',padding:12,backgroundColor:'#EDF1F5',borderRadius:13,marginTop:10},noticeText:{flex:1,fontSize:10,lineHeight:15,color:palette.muted},
   titleRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginTop:7,marginBottom:17},addButton:{width:45,height:45,borderRadius:15,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center'},search:{height:48,flexDirection:'row',alignItems:'center',gap:9,paddingHorizontal:13,backgroundColor:palette.white,borderRadius:14,borderWidth:1,borderColor:palette.line},searchInput:{flex:1,fontSize:12,color:palette.ink},filters:{flexDirection:'row',gap:8,marginTop:13,marginBottom:15},filter:{paddingVertical:8,paddingHorizontal:15,borderRadius:10,borderWidth:1,borderColor:palette.line,backgroundColor:palette.white},filterOn:{backgroundColor:palette.navy,borderColor:palette.navy},filterText:{fontSize:11,fontWeight:'700',color:palette.muted},filterTextOn:{color:'#fff'},resultCount:{fontSize:11,fontWeight:'700',color:palette.muted,marginBottom:11},empty:{alignItems:'center',padding:28,backgroundColor:palette.white,borderRadius:17},
   avatarPicker:{minHeight:100,alignItems:'center',justifyContent:'center',gap:8,backgroundColor:palette.goldSoft,borderWidth:1,borderColor:palette.line,borderRadius:16,marginTop:18},avatarPickerText:{fontSize:12,fontWeight:'800',color:palette.navy},teamCard:{flexDirection:'row',alignItems:'center',gap:12,padding:14,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,borderRadius:16,marginTop:10},avatar:{width:45,height:45,borderRadius:15,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center',overflow:'hidden'},avatarImage:{width:45,height:45,borderRadius:15},avatarText:{color:palette.gold,fontSize:13,fontWeight:'900'},teamName:{fontSize:13,fontWeight:'900',color:palette.ink},teamRole:{fontSize:10,color:palette.muted,marginTop:3},teamMeta:{fontSize:10,color:palette.navy2,fontWeight:'700',marginTop:5},
+  customerCard:{flexDirection:'row',alignItems:'center',gap:12,padding:14,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,borderRadius:16,marginBottom:10},customerAvatar:{width:44,height:44,borderRadius:14,backgroundColor:palette.goldSoft,alignItems:'center',justifyContent:'center'},customerRoles:{fontSize:10,fontWeight:'800',color:palette.navy2,marginTop:5},matchSection:{marginTop:14,marginBottom:8},matchCard:{flexDirection:'row',alignItems:'center',gap:12,padding:14,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,borderRadius:16,marginBottom:10},matchScore:{width:44,height:44,borderRadius:14,backgroundColor:palette.greenSoft,alignItems:'center',justifyContent:'center'},matchScoreText:{fontSize:12,fontWeight:'900',color:palette.green},moreCard:{flexDirection:'row',alignItems:'center',gap:12,padding:16,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,borderRadius:16,marginTop:12},
   bigMetric:{padding:19,backgroundColor:palette.navy,borderRadius:18,marginTop:20,marginBottom:16},metricLabel:{fontSize:11,color:'#C4D0DC'},metricValue:{fontSize:25,fontWeight:'900',color:'#fff',marginTop:8},metricFoot:{fontSize:9,color:'#C4D0DC',marginTop:8,lineHeight:14},progressRow:{flexDirection:'row',alignItems:'center',gap:10,marginBottom:16},progressLabel:{width:78,fontSize:11,fontWeight:'700',color:palette.ink},progressTrack:{flex:1,height:8,backgroundColor:'#E5EAF0',borderRadius:6,overflow:'hidden'},progressFill:{height:8,borderRadius:6},progressCount:{width:20,textAlign:'right',fontSize:11,fontWeight:'800',color:palette.ink},
   bottomNav:{flexDirection:'row',justifyContent:'space-around',backgroundColor:palette.white,borderTopWidth:1,borderTopColor:palette.line,paddingTop:8,paddingBottom:7},navItem:{flex:1,alignItems:'center',gap:4},navIcon:{width:42,height:29,borderRadius:11,alignItems:'center',justifyContent:'center'},navIconOn:{backgroundColor:palette.navy},navLabel:{fontSize:9,color:palette.muted,fontWeight:'700'},navLabelOn:{color:palette.navy,fontWeight:'900'},
   modalSafe:{flex:1,backgroundColor:palette.bg},modalHeader:{paddingHorizontal:18,paddingVertical:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between',backgroundColor:palette.white,borderBottomWidth:1,borderBottomColor:palette.line},roundButton:{width:40,height:40,borderRadius:13,backgroundColor:palette.bg,alignItems:'center',justifyContent:'center'},modalHeaderTitle:{fontSize:15,fontWeight:'900',color:palette.ink},code:{fontSize:10,fontWeight:'800',color:palette.muted},modalPage:{padding:20,paddingBottom:36},propertyHero:{height:165,backgroundColor:'#E4E9EE',borderRadius:20,alignItems:'center',justifyContent:'center',marginBottom:20,position:'relative'},houseIcon:{width:90,height:90,borderRadius:28,backgroundColor:'#FFFFFF80',alignItems:'center',justifyContent:'center'},statusPill:{position:'absolute',top:12,right:12,paddingHorizontal:10,paddingVertical:6,backgroundColor:palette.white,borderRadius:8},statusText:{fontSize:10,fontWeight:'800',color:palette.green},detailTitle:{fontSize:25,fontWeight:'900',color:palette.ink,marginTop:7},addressLine:{flexDirection:'row',alignItems:'center',gap:5,marginTop:9},addressText:{fontSize:12,color:palette.muted,flex:1},detailPrice:{fontSize:27,fontWeight:'900',color:palette.navy,marginTop:18},perMonth:{fontSize:13,fontWeight:'600',color:palette.muted},featureRow:{flexDirection:'row',gap:9,marginVertical:18},feature:{flex:1,alignItems:'center',paddingVertical:13,backgroundColor:palette.white,borderRadius:14,borderWidth:1,borderColor:palette.line,gap:5},featureValue:{fontSize:13,fontWeight:'900',color:palette.ink},featureLabel:{fontSize:9,color:palette.muted},description:{fontSize:12,lineHeight:20,color:palette.muted},mapButton:{flexDirection:'row',alignItems:'center',gap:10,padding:14,backgroundColor:palette.navy,borderRadius:15,marginTop:3},mapButtonTitle:{fontSize:12,fontWeight:'900',color:'#fff'},mapButtonSub:{fontSize:9,color:'#C4D0DC',marginTop:3},shareRow:{flexDirection:'row',gap:10,marginTop:12},whatsappButton:{flex:1,flexDirection:'row',gap:7,alignItems:'center',justifyContent:'center',backgroundColor:'#168A55',paddingVertical:14,borderRadius:13},actionButtonText:{fontSize:12,fontWeight:'900',color:'#fff'},pdfButton:{flex:1,flexDirection:'row',gap:7,alignItems:'center',justifyContent:'center',backgroundColor:palette.goldSoft,paddingVertical:14,borderRadius:13},pdfButtonText:{fontSize:12,fontWeight:'900',color:palette.navy},
