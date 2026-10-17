@@ -55,7 +55,8 @@ export default function App() {
   const [agentPassword, setAgentPassword] = useState('');
   const [agentAvatarUri, setAgentAvatarUri] = useState<string | null>(null);
   const [agentBusy, setAgentBusy] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<{name:string; username:string; role:string; avatarPath:string|null; avatarUrl:string|null; id:string}[]>([]);
+  const [teamMembers, setTeamMembers] = useState<{name:string; username:string; role:string; status:string; avatarPath:string|null; avatarUrl:string|null; id:string}[]>([]);
+  const [teamStatusBusyId, setTeamStatusBusyId] = useState<string | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -293,7 +294,7 @@ export default function App() {
       .from('office_members')
       .select('role,status,profiles(id,full_name,username,avatar_path)')
       .eq('office_id', targetOfficeId)
-      .eq('status', 'active');
+      .in('status', ['active', 'disabled']);
     if (error) throw new Error('Ekip bilgileri yüklenemedi.');
     const mapped = await Promise.all((data || []).map(async (row: any) => {
       const avatarPath = row.profiles?.avatar_path || null;
@@ -307,11 +308,44 @@ export default function App() {
         name: row.profiles?.full_name || 'İsimsiz danışman',
         username: row.profiles?.username || '',
         role: row.role,
+        status: row.status,
         avatarPath,
         avatarUrl,
       };
     }));
     setTeamMembers(mapped);
+  };
+
+  const toggleAgentStatus = (person: {id:string; name:string; role:string; status:string}) => {
+    if (person.role !== 'agent' || !person.id || !officeId) return;
+    const nextStatus = person.status === 'active' ? 'disabled' : 'active';
+    const actionLabel = nextStatus === 'disabled' ? 'devre dışı bırakmak' : 'yeniden etkinleştirmek';
+    Alert.alert(
+      nextStatus === 'disabled' ? 'Danışmanı devre dışı bırak' : 'Danışmanı yeniden etkinleştir',
+      `${person.name} hesabını ${actionLabel} istediğine emin misin? ${nextStatus === 'disabled' ? 'Bu üyelikle ofis verilerine erişimi engellenecek.' : 'Danışman tekrar giriş yapabilecek.'}`,
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        { text: 'Onayla', style: 'destructive', onPress: async () => {
+          setTeamStatusBusyId(person.id);
+          try {
+            const supabase = getSupabaseClient();
+            const { error } = await supabase
+              .from('office_members')
+              .update({ status: nextStatus })
+              .eq('office_id', officeId)
+              .eq('user_id', person.id)
+              .eq('role', 'agent');
+            if (error) throw error;
+            await loadTeamMembers(officeId);
+            Alert.alert('Ekip güncellendi', nextStatus === 'disabled' ? 'Danışmanın ofis erişimi kapatıldı.' : 'Danışmanın ofis erişimi yeniden açıldı.');
+          } catch (error) {
+            Alert.alert('İşlem tamamlanamadı', error instanceof Error ? error.message : 'Üyelik durumu güncellenemedi.');
+          } finally {
+            setTeamStatusBusyId(null);
+          }
+        }},
+      ],
+    );
   };
 
   const openCustomerDetail = async (customer: Customer) => {
@@ -730,7 +764,7 @@ export default function App() {
 
         {tab === 'team' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>EKİP YÖNETİMİ</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Danışmanlar</Text><Text style={styles.pageSub}>Ofis ekibinin portföy ve performans özeti.</Text></View><Pressable onPress={()=>setAgentModalOpen(true)} style={styles.addButton}><Ionicons name="person-add-outline" size={22} color="#fff"/></Pressable></View>
-          {teamMembers.map((person)=><View key={person.id || person.username} style={styles.teamCard}><View style={styles.avatar}>{person.avatarUrl ? <Image source={{uri:person.avatarUrl}} style={styles.avatarImage}/> : <Text style={styles.avatarText}>{person.name.split(/\s+/).map((part:string)=>part[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')}</Text>}</View><View style={{flex:1}}><Text style={styles.teamName}>{person.name}</Text><Text style={styles.teamRole}>{person.role === 'owner' ? 'Ofis sahibi' : 'Gayrimenkul danışmanı'}</Text><Text style={styles.teamMeta}>@{person.username || 'kullanıcı adı yok'}</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></View>)}
+          {teamMembers.map((person)=><View key={person.id || person.username} style={[styles.teamCard,person.status==='disabled'&&{opacity:0.72}]}><View style={styles.avatar}>{person.avatarUrl ? <Image source={{uri:person.avatarUrl}} style={styles.avatarImage}/> : <Text style={styles.avatarText}>{person.name.split(/\s+/).map((part:string)=>part[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')}</Text>}</View><View style={{flex:1}}><Text style={styles.teamName}>{person.name}</Text><Text style={styles.teamRole}>{person.role === 'owner' ? 'Ofis sahibi' : 'Gayrimenkul danışmanı'}{person.role==='agent' ? (person.status==='disabled'?' · Devre dışı':' · Aktif') : ''}</Text><Text style={styles.teamMeta}>@{person.username || 'kullanıcı adı yok'}</Text></View>{person.role==='agent'&&<Pressable disabled={teamStatusBusyId===person.id} onPress={()=>toggleAgentStatus(person)} style={[styles.memberStatusButton,person.status==='disabled'&&styles.memberStatusButtonOn,teamStatusBusyId===person.id&&{opacity:0.5}]}><Text style={[styles.memberStatusButtonText,person.status==='disabled'&&styles.memberStatusButtonTextOn]}>{teamStatusBusyId===person.id?'…':person.status==='active'?'Devre dışı bırak':'Etkinleştir'}</Text></Pressable>}</View>)}
           {!teamMembers.length && <View style={styles.empty}><Ionicons name="people-outline" size={30} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz ekip üyesi yok</Text><Text style={styles.pageSub}>Sağ üstteki butondan ilk danışmanını ekleyebilirsin.</Text></View>}
           <View style={styles.notice}><Ionicons name="shield-checkmark-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Ekip üyeleri oturum açmış ofisin veritabanından yüklenir. Hesap oluşturma fonksiyonunun deploy edilmiş ve Supabase bağlantısının ayarlanmış olması gerekir.</Text></View>        </ScrollView>}
 
@@ -895,7 +929,7 @@ const styles = StyleSheet.create({
   propertyCard:{flexDirection:'row',alignItems:'center',gap:11,padding:11,backgroundColor:palette.white,borderRadius:17,borderWidth:1,borderColor:palette.line,marginBottom:11},propertyThumb:{width:76,height:83,borderRadius:13,backgroundColor:'#E5EAEF',alignItems:'center',justifyContent:'center',position:'relative'},thumbCode:{position:'absolute',bottom:5,fontSize:8,fontWeight:'800',color:palette.navy},propertyInfo:{flex:1,minWidth:0},propertyTitleLine:{flexDirection:'row',alignItems:'center',gap:5},propertyTitle:{fontSize:12,fontWeight:'900',color:palette.ink,flex:1},miniStatus:{paddingHorizontal:6,paddingVertical:4,borderRadius:6},activeStatus:{backgroundColor:palette.greenSoft},optionStatus:{backgroundColor:palette.amberSoft},miniStatusText:{fontSize:8,fontWeight:'800'},propertyAddress:{fontSize:10,color:palette.muted,marginTop:7},propertyPrice:{fontSize:17,fontWeight:'900',color:palette.navy,marginTop:7},rentSuffix:{fontSize:10,fontWeight:'600',color:palette.muted},propertyMeta:{fontSize:10,color:palette.muted,marginTop:4},
   notice:{flexDirection:'row',gap:8,alignItems:'flex-start',padding:12,backgroundColor:'#EDF1F5',borderRadius:13,marginTop:10},noticeText:{flex:1,fontSize:10,lineHeight:15,color:palette.muted},
   titleRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginTop:7,marginBottom:17},addButton:{width:45,height:45,borderRadius:15,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center'},search:{height:48,flexDirection:'row',alignItems:'center',gap:9,paddingHorizontal:13,backgroundColor:palette.white,borderRadius:14,borderWidth:1,borderColor:palette.line},searchInput:{flex:1,fontSize:12,color:palette.ink},filters:{flexDirection:'row',gap:8,marginTop:13,marginBottom:15},filter:{paddingVertical:8,paddingHorizontal:15,borderRadius:10,borderWidth:1,borderColor:palette.line,backgroundColor:palette.white},filterOn:{backgroundColor:palette.navy,borderColor:palette.navy},filterText:{fontSize:11,fontWeight:'700',color:palette.muted},filterTextOn:{color:'#fff'},resultCount:{fontSize:11,fontWeight:'700',color:palette.muted,marginBottom:11},empty:{alignItems:'center',padding:28,backgroundColor:palette.white,borderRadius:17},
-  avatarPicker:{minHeight:100,alignItems:'center',justifyContent:'center',gap:8,backgroundColor:palette.goldSoft,borderWidth:1,borderColor:palette.line,borderRadius:16,marginTop:18},avatarPickerText:{fontSize:12,fontWeight:'800',color:palette.navy},teamCard:{flexDirection:'row',alignItems:'center',gap:12,padding:14,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,borderRadius:16,marginTop:10},avatar:{width:45,height:45,borderRadius:15,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center',overflow:'hidden'},avatarImage:{width:45,height:45,borderRadius:15},avatarText:{color:palette.gold,fontSize:13,fontWeight:'900'},teamName:{fontSize:13,fontWeight:'900',color:palette.ink},teamRole:{fontSize:10,color:palette.muted,marginTop:3},teamMeta:{fontSize:10,color:palette.navy2,fontWeight:'700',marginTop:5},
+  avatarPicker:{minHeight:100,alignItems:'center',justifyContent:'center',gap:8,backgroundColor:palette.goldSoft,borderWidth:1,borderColor:palette.line,borderRadius:16,marginTop:18},avatarPickerText:{fontSize:12,fontWeight:'800',color:palette.navy},teamCard:{flexDirection:'row',alignItems:'center',gap:12,padding:14,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,borderRadius:16,marginTop:10},memberStatusButton:{paddingHorizontal:9,paddingVertical:8,borderRadius:9,backgroundColor:palette.redSoft},memberStatusButtonOn:{backgroundColor:palette.greenSoft},memberStatusButtonText:{fontSize:9,fontWeight:'800',color:palette.red},memberStatusButtonTextOn:{color:palette.green},avatar:{width:45,height:45,borderRadius:15,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center',overflow:'hidden'},avatarImage:{width:45,height:45,borderRadius:15},avatarText:{color:palette.gold,fontSize:13,fontWeight:'900'},teamName:{fontSize:13,fontWeight:'900',color:palette.ink},teamRole:{fontSize:10,color:palette.muted,marginTop:3},teamMeta:{fontSize:10,color:palette.navy2,fontWeight:'700',marginTop:5},
   customerCard:{flexDirection:'row',alignItems:'center',gap:12,padding:14,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,borderRadius:16,marginBottom:10},customerAvatar:{width:44,height:44,borderRadius:14,backgroundColor:palette.goldSoft,alignItems:'center',justifyContent:'center'},customerRoles:{fontSize:10,fontWeight:'800',color:palette.navy2,marginTop:5},matchSection:{marginTop:14,marginBottom:8},matchCard:{flexDirection:'row',alignItems:'center',gap:12,padding:14,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,borderRadius:16,marginBottom:10},matchScore:{width:44,height:44,borderRadius:14,backgroundColor:palette.greenSoft,alignItems:'center',justifyContent:'center'},matchScoreText:{fontSize:12,fontWeight:'900',color:palette.green},moreCard:{flexDirection:'row',alignItems:'center',gap:12,padding:16,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,borderRadius:16,marginTop:12},
   bigMetric:{padding:19,backgroundColor:palette.navy,borderRadius:18,marginTop:20,marginBottom:16},metricLabel:{fontSize:11,color:'#C4D0DC'},metricValue:{fontSize:25,fontWeight:'900',color:'#fff',marginTop:8},metricFoot:{fontSize:9,color:'#C4D0DC',marginTop:8,lineHeight:14},progressRow:{flexDirection:'row',alignItems:'center',gap:10,marginBottom:16},progressLabel:{width:78,fontSize:11,fontWeight:'700',color:palette.ink},progressTrack:{flex:1,height:8,backgroundColor:'#E5EAF0',borderRadius:6,overflow:'hidden'},progressFill:{height:8,borderRadius:6},progressCount:{width:20,textAlign:'right',fontSize:11,fontWeight:'800',color:palette.ink},
   bottomNav:{flexDirection:'row',justifyContent:'space-around',backgroundColor:palette.white,borderTopWidth:1,borderTopColor:palette.line,paddingTop:8,paddingBottom:7},navItem:{flex:1,alignItems:'center',gap:4},navIcon:{width:42,height:29,borderRadius:11,alignItems:'center',justifyContent:'center'},navIconOn:{backgroundColor:palette.navy},navLabel:{fontSize:9,color:palette.muted,fontWeight:'700'},navLabelOn:{color:palette.navy,fontWeight:'900'},
