@@ -131,3 +131,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - Migration 006 adds database-level checks that customer assignments and appointment assignees belong to an active office and have an active profile.
 - Customer creator attribution (`created_by`) is immutable after insert.
 - Regression checks are recorded in `docs/RLS_VALIDATION_CHECKLIST.md`; migration remains unverified until applied to a disposable Supabase project.
+
+### RLS suspension enforcement
+- Migration 007 updates office membership helper functions so disabled profiles and inactive offices fail RLS authorization checks, blocks direct office creation by disabled profiles, and makes customer activity creator attribution immutable.
+- Validate stale JWT and direct table API cases using separate sessions in a disposable Supabase project before production.
