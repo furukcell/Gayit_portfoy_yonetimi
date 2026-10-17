@@ -97,6 +97,7 @@ export default function App() {
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [selected, setSelected] = useState<Property | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'Tümü' | 'Satılık' | 'Kiralık'>('Tümü');
   const [title, setTitle] = useState('');
@@ -503,6 +504,29 @@ export default function App() {
     }
   };
 
+  const openPropertyEditor = (p: Property) => {
+    setEditingPropertyId(p.id);
+    setTitle(p.title); setAddress(p.address); setPrice(String(p.price)); setArea(p.area.replace(/[^0-9.]/g, ''));
+    setKind(p.kind); setRooms(p.rooms || '3+1'); setDescription(p.description || '');
+    setPropertyType('apartment'); setSelected(null); setAddOpen(true);
+  };
+
+  const archiveProperty = async () => {
+    if (!selected) return;
+    Alert.alert('Portföyü arşivle', 'Bu ilan aktif portföy listesinden çıkarılacak. Devam edilsin mi?', [
+      {text:'Vazgeç',style:'cancel'},
+      {text:'Arşivle',style:'destructive',onPress:async()=>{
+        try {
+          const supabase=getSupabaseClient();
+          const {error}=await supabase.from('properties').update({status:'archived'}).eq('id',selected.id).eq('office_id',officeId);
+          if(error) throw error;
+          setSelected(null); await loadProperties(officeId);
+          Alert.alert('Arşivlendi','Portföy arşivlendi.');
+        } catch(error) { Alert.alert('Arşivlenemedi',error instanceof Error?error.message:'Tekrar deneyin.'); }
+      }}
+    ]);
+  };
+
   const saveProperty = async () => {
     const numericPrice = Number(price.replace(/[^0-9]/g, ''));
     const numericArea = Number(area.replace(/[^0-9.]/g, ''));
@@ -515,36 +539,34 @@ export default function App() {
       const { data: userResult, error: userError } = await supabase.auth.getUser();
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
       const parts = address.split(',').map((part) => part.trim());
-      const { data: inserted, error } = await supabase.from('properties').insert({
-        office_id: officeId,
-        owner_agent_id: userResult.user.id,
-        created_by: userResult.user.id,
-        title: title.trim(),
-        address: address.trim(),
+      const payload = {
+        title: title.trim(), address: address.trim(),
         district: parts.length > 1 ? parts[parts.length - 2] : '',
         city: parts.length > 0 ? parts[parts.length - 1] : '',
-        price: numericPrice,
-        rooms,
-        property_type: propertyType,
-        area_m2: numericArea,
-        listing_type: kind === 'Kiralık' ? 'rent' : 'sale',
-        status: 'active',
-        description: description.trim(),
-      }).select('*').single();
-      if (error || !inserted) throw new Error('Portföy kaydedilemedi. Ofis yetkilerini ve veritabanı kurulumunu kontrol et.');
-      const p: Property = {
-        id: inserted.id, title: inserted.title, address: inserted.address, district: inserted.district || '',
-        price: Number(inserted.price), rooms: inserted.rooms || '', area: String(inserted.area_m2) + ' m²',
-        kind: inserted.listing_type === 'rent' ? 'Kiralık' : 'Satılık', status: 'Aktif',
-        agent: role === 'owner' ? 'Ofis sahibi' : 'Sen', views: 0,
-        createdAt: new Date(inserted.created_at).toLocaleDateString('tr-TR'), description: inserted.description || '',
+        price: numericPrice, rooms, property_type: propertyType, area_m2: numericArea,
+        listing_type: kind === 'Kiralık' ? 'rent' : 'sale', description: description.trim(),
       };
+      let savedId = editingPropertyId;
+      if (editingPropertyId) {
+        const {error}=await supabase.from('properties').update(payload).eq('id',editingPropertyId).eq('office_id',officeId);
+        if(error) throw error;
+      } else {
+        const {data:inserted,error}=await supabase.from('properties').insert({
+          ...payload, office_id:officeId, owner_agent_id:userResult.user.id, created_by:userResult.user.id, status:'active',
+        }).select('id').single();
+        if(error || !inserted) throw new Error('Portföy kaydedilemedi. Ofis yetkilerini ve veritabanı kurulumunu kontrol et.');
+        savedId=inserted.id;
+      }
       await loadProperties(officeId);
-      const { error: matchingError } = await supabase.functions.invoke('evaluate-matches', { body: { officeId, propertyId: inserted.id } });
-      if (!matchingError) await loadMatches(officeId);
-      else Alert.alert('Eşleştirme beklemede', 'Portföy kaydedildi ancak eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
-      setAddOpen(false); setSelected(p); setTab('portfolio');
+      const savedProperty=properties.find(p=>p.id===savedId);
+      if(savedId && !editingPropertyId) {
+        const {error:matchingError}=await supabase.functions.invoke('evaluate-matches',{body:{officeId,propertyId:savedId}});
+        if(!matchingError) await loadMatches(officeId);
+        else Alert.alert('Eşleştirme beklemede','Portföy kaydedildi ancak eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
+      }
+      setAddOpen(false); setEditingPropertyId(null);
       setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription(''); setPropertyType('apartment');
+      Alert.alert(editingPropertyId?'Portföy güncellendi':'Portföy eklendi',editingPropertyId?'Değişiklikler kaydedildi.':'Yeni portföy kaydedildi.');
     } catch (error) {
       Alert.alert('Portföy kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
     }
@@ -660,6 +682,7 @@ export default function App() {
           <ScrollView contentContainerStyle={styles.modalPage}><View style={styles.propertyHero}><View style={styles.houseIcon}><Ionicons name="home" size={52} color={palette.navy2}/></View><View style={styles.statusPill}><Text style={styles.statusText}>{selected.status}</Text></View></View>
           <Text style={styles.eyebrow}>{selected.kind.toLocaleUpperCase('tr-TR')} GAYRİMENKUL</Text><Text style={styles.detailTitle}>{selected.title}</Text><View style={styles.addressLine}><Ionicons name="location-outline" size={18} color={palette.muted}/><Text style={styles.addressText}>{selected.address}</Text></View><Text style={styles.detailPrice}>{money(selected.price)}{selected.kind==='Kiralık'?<Text style={styles.perMonth}> / ay</Text>:null}</Text>
           <View style={styles.featureRow}><Feature icon="bed-outline" label="Oda" value={selected.rooms}/><Feature icon="resize-outline" label="Alan" value={selected.area}/><Feature icon="eye-outline" label="Görüntülenme" value={String(selected.views)}/></View>
+          <View style={styles.shareRow}><Pressable style={styles.pdfButton} onPress={()=>openPropertyEditor(selected)}><Ionicons name="create-outline" size={20} color={palette.navy}/><Text style={styles.pdfButtonText}>Düzenle</Text></Pressable><Pressable style={[styles.pdfButton,{borderColor:'#DCA6A6'}]} onPress={archiveProperty}><Ionicons name="archive-outline" size={20} color="#A13D3D"/><Text style={[styles.pdfButtonText,{color:'#A13D3D'}]}>Arşivle</Text></Pressable></View>
           <Text style={styles.sectionTitle}>İlan durumunu yönet</Text><View style={styles.kindRow}>{(['Aktif','Opsiyonlu','Satıldı','Kiralandı'] as PropertyStatus[]).map(status=><Pressable key={status} onPress={()=>updatePropertyStatus(status)} style={[styles.kindButton,selected.status===status&&styles.kindButtonOn]}><Text style={[styles.kindText,selected.status===status&&styles.kindTextOn]}>{status}</Text></Pressable>)}</View>
           <Text style={styles.sectionTitle}>Açıklama</Text><Text style={styles.description}>{selected.description || 'Açıklama eklenmemiş.'}</Text>
           <Text style={styles.sectionTitle}>Konum ve paylaşım</Text><Pressable style={styles.mapButton} onPress={()=>openMap(selected)}><Ionicons name="navigate-circle-outline" size={23} color="#fff"/><View style={{flex:1}}><Text style={styles.mapButtonTitle}>Google Maps'te yol tarifi</Text><Text style={styles.mapButtonSub}>Adresi haritada aç ve navigasyonu başlat</Text></View><Ionicons name="open-outline" size={18} color="#fff"/></Pressable>
@@ -760,7 +783,7 @@ export default function App() {
       </Modal>
 
       <Modal visible={addOpen} animationType="slide" onRequestClose={()=>setAddOpen(false)}>
-        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>setAddOpen(false)} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Yeni portföy</Text><View style={{width:40}}/></View>
+        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>setAddOpen(false)} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>{editingPropertyId ? "Portföyü düzenle" : "Yeni portföy"}</Text><View style={{width:40}}/></View>
           <ScrollView contentContainerStyle={styles.formPage} keyboardShouldPersistTaps="handled"><Text style={styles.pageTitle}>Gayrimenkul ekle</Text><Text style={styles.pageSub}>İlan bilgilerini girerek portföyünü oluştur.</Text>
             <Text style={styles.fieldLabel}>İlan başlığı *</Text><TextInput value={title} onChangeText={setTitle} placeholder="Örn. Deniz manzaralı 3+1 daire" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Açık adres *</Text><TextInput value={address} onChangeText={setAddress} placeholder="Mahalle, ilçe, il" style={styles.input} placeholderTextColor={palette.muted}/>
