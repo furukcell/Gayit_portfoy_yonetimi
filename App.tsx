@@ -13,7 +13,7 @@ import { getSupabaseClient } from './src/lib/supabase';
 
 type Role = 'owner' | 'agent';
 type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
-type Customer = { id: string; fullName: string; phone: string; roles: string[]; assignedAgent: string; notes: string; active: boolean; requirementCount: number };
+type Customer = { id: string; fullName: string; phone: string; roles: string[]; assignedAgent: string; notes: string; active: boolean; requirementCount: number; nextFollowUpAt: string | null };
 type PropertyStatus = 'Aktif' | 'Opsiyonlu' | 'Satıldı' | 'Kiralandı';
 type Property = {
   id: string; title: string; address: string; district: string; price: number;
@@ -64,6 +64,7 @@ export default function App() {
   const [editCustomerName, setEditCustomerName] = useState('');
   const [editCustomerPhone, setEditCustomerPhone] = useState('');
   const [editCustomerNotes, setEditCustomerNotes] = useState('');
+  const [editFollowUpAt, setEditFollowUpAt] = useState('');
   const [customerRequirements, setCustomerRequirements] = useState<any[]>([]);
   const [customerRequirementsLoading, setCustomerRequirementsLoading] = useState(false);
   const [customerActivities, setCustomerActivities] = useState<any[]>([]);
@@ -169,13 +170,13 @@ export default function App() {
     setCustomersLoading(true);
     try {
       const supabase = getSupabaseClient();
-      const { data, error } = await supabase.from('customers').select('id,full_name,phone,roles,assigned_agent_id,notes,is_active,customer_requirements(id)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('customers').select('id,full_name,phone,roles,assigned_agent_id,notes,is_active,next_follow_up_at,customer_requirements(id)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
       if (error) throw new Error('Müşteriler yüklenemedi. Migration 003 uygulanmış olmalı.');
       const rows = data || [];
       const ids = [...new Set(rows.map((row: any) => row.assigned_agent_id))];
       const { data: profiles } = ids.length ? await supabase.from('profiles').select('id,full_name').in('id', ids) : { data: [] as any[] };
       const names = new Map((profiles || []).map((profile: any) => [profile.id, profile.full_name]));
-      setCustomers(rows.map((row: any) => ({ id: row.id, fullName: row.full_name, phone: row.phone || '', roles: row.roles || [], assignedAgent: names.get(row.assigned_agent_id) || 'Danışman', notes: row.notes || '', active: row.is_active, requirementCount: Array.isArray(row.customer_requirements) ? row.customer_requirements.length : 0 })));
+      setCustomers(rows.map((row: any) => ({ id: row.id, fullName: row.full_name, phone: row.phone || '', roles: row.roles || [], assignedAgent: names.get(row.assigned_agent_id) || 'Danışman', notes: row.notes || '', active: row.is_active, nextFollowUpAt: row.next_follow_up_at || null, requirementCount: Array.isArray(row.customer_requirements) ? row.customer_requirements.length : 0 })));
     } finally { setCustomersLoading(false); }
   };
 
@@ -246,6 +247,7 @@ export default function App() {
     setEditCustomerName(customer.fullName);
     setEditCustomerPhone(customer.phone);
     setEditCustomerNotes(customer.notes);
+    setEditFollowUpAt(customer.nextFollowUpAt ? new Date(customer.nextFollowUpAt).toISOString().slice(0,16).replace('T',' ') : '');
     setCustomerDetailOpen(true);
     setCustomerRequirementsLoading(true);
     try {
@@ -333,10 +335,11 @@ export default function App() {
         full_name: editCustomerName.trim(),
         phone: editCustomerPhone.trim(),
         notes: editCustomerNotes.trim(),
+        next_follow_up_at: editFollowUpAt.trim() ? new Date(editFollowUpAt.trim().replace(' ', 'T') + (editFollowUpAt.trim().length === 16 ? ':00' : '')).toISOString() : null,
       }).eq('id', selectedCustomer.id).eq('office_id', officeId);
       if (error) throw error;
       await loadCustomers(officeId);
-      setSelectedCustomer((current: any) => current ? {...current, fullName: editCustomerName.trim(), phone: editCustomerPhone.trim(), notes: editCustomerNotes.trim()} : current);
+      setSelectedCustomer((current: any) => current ? {...current, fullName: editCustomerName.trim(), phone: editCustomerPhone.trim(), notes: editCustomerNotes.trim(), nextFollowUpAt: editFollowUpAt.trim() || null} : current);
       Alert.alert('Kaydedildi', 'Müşteri bilgileri güncellendi.');
     } catch (error) {
       Alert.alert('Güncellenemedi', error instanceof Error ? error.message : 'Müşteri bilgileri kaydedilemedi.');
@@ -636,6 +639,7 @@ export default function App() {
             <Text style={styles.pageSub}>Müşteri bilgilerini düzenle ve kayıtlı arama taleplerini incele.</Text>
             <Text style={styles.fieldLabel}>Ad soyad *</Text><TextInput value={editCustomerName} onChangeText={setEditCustomerName} style={styles.input} placeholder="Ad soyad" placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Telefon</Text><TextInput value={editCustomerPhone} onChangeText={setEditCustomerPhone} keyboardType="phone-pad" style={styles.input} placeholder="Telefon" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Sonraki takip (YYYY-MM-DD SS:DD)</Text><TextInput value={editFollowUpAt} onChangeText={setEditFollowUpAt} style={styles.input} placeholder="2026-10-20 14:00" placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Notlar</Text><TextInput value={editCustomerNotes} onChangeText={setEditCustomerNotes} style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholder="Müşteri notları" placeholderTextColor={palette.muted}/>
             <Pressable disabled={customerEditBusy} onPress={updateCustomer} style={[styles.saveButton,customerEditBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{customerEditBusy?'Kaydediliyor...':'Müşteri bilgilerini kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
             <View style={styles.matchSection}><Text style={styles.sectionTitle}>Görüşme ve takip geçmişi</Text><Text style={styles.pageSub}>Telefon, WhatsApp, toplantı ve notları kaydet.</Text></View>
