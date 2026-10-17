@@ -53,6 +53,7 @@ export default function App() {
   const [agentAvatarUri, setAgentAvatarUri] = useState<string | null>(null);
   const [agentBusy, setAgentBusy] = useState(false);
   const [teamMembers, setTeamMembers] = useState<{name:string; username:string; role:string; avatarPath:string|null; avatarUrl:string|null; id:string}[]>([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [selected, setSelected] = useState<Property | null>(null);
@@ -100,6 +101,37 @@ export default function App() {
       else Alert.alert('PDF hazır', 'PDF dosyası oluşturuldu: ' + file.uri);
     } catch { Alert.alert('PDF oluşturulamadı', 'Lütfen tekrar deneyin.'); }
   };
+  const loadProperties = async (targetOfficeId: string) => {
+    setPropertiesLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('properties').select('*').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
+      if (error) throw new Error('Portföyler yüklenemedi.');
+      const rows = data || [];
+      const ids = [...new Set(rows.map((row: any) => row.owner_agent_id))];
+      const { data: profiles } = ids.length ? await supabase.from('profiles').select('id,full_name').in('id', ids) : { data: [] as any[] };
+      const names = new Map((profiles || []).map((profile: any) => [profile.id, profile.full_name]));
+      const mapped: Property[] = rows.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        address: row.address,
+        district: row.district || '',
+        price: Number(row.price),
+        rooms: row.rooms || '',
+        area: row.area_m2 ? String(row.area_m2) + ' m²' : '',
+        kind: row.listing_type === 'rent' ? 'Kiralık' : 'Satılık',
+        status: row.status === 'optioned' ? 'Opsiyonlu' : row.status === 'sold' ? 'Satıldı' : row.status === 'rented' ? 'Kiralandı' : 'Aktif',
+        agent: names.get(row.owner_agent_id) || 'Danışman',
+        views: 0,
+        createdAt: new Date(row.created_at).toLocaleDateString('tr-TR'),
+        description: row.description || '',
+      }));
+      setProperties(mapped);
+    } finally {
+      setPropertiesLoading(false);
+    }
+  };
+
   const loadTeamMembers = async (targetOfficeId: string) => {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
@@ -133,6 +165,7 @@ export default function App() {
       const result = await signInWithUsername(loginUsername, loginPassword);
       setRole(result.role);
       setOfficeId(result.officeId);
+      await loadProperties(result.officeId);
       if (result.role === 'owner') await loadTeamMembers(result.officeId);
       setMustChangePassword(result.mustChangePassword);
       setAuthenticated(true);
@@ -192,20 +225,47 @@ export default function App() {
     setAuthenticated(false); setMustChangePassword(false); setLoginPassword(''); setNewPassword(''); setConfirmPassword('');
   };
 
-  const saveProperty = () => {
+  const saveProperty = async () => {
     const numericPrice = Number(price.replace(/[^0-9]/g, ''));
-    if (!title.trim() || !address.trim() || !numericPrice || !area.trim()) {
+    const numericArea = Number(area.replace(/[^0-9.]/g, ''));
+    if (!title.trim() || !address.trim() || !numericPrice || !numericArea) {
       Alert.alert('Eksik bilgi', 'İlan başlığı, adres, fiyat ve metrekare alanlarını doldur.');
       return;
     }
-    const p: Property = {
-      id: `GY-${Date.now().toString().slice(-5)}`, title: title.trim(), address: address.trim(),
-      district: address.split(',')[1]?.trim() || '', price: numericPrice, rooms, area: area.trim().includes('m²') ? area.trim() : area.trim() + ' m²',
-      kind, status: 'Aktif', agent: role === 'owner' ? 'Ofis sahibi' : 'Sen', views: 0,
-      createdAt: new Date().toLocaleDateString('tr-TR'), description: description.trim(),
-    };
-    setProperties(prev => [p, ...prev]); setAddOpen(false); setSelected(p); setTab('portfolio');
-    setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription('');
+    try {
+      const supabase = getSupabaseClient();
+      const { data: userResult, error: userError } = await supabase.auth.getUser();
+      if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
+      const parts = address.split(',').map((part) => part.trim());
+      const { data: inserted, error } = await supabase.from('properties').insert({
+        office_id: officeId,
+        owner_agent_id: userResult.user.id,
+        created_by: userResult.user.id,
+        title: title.trim(),
+        address: address.trim(),
+        district: parts.length > 1 ? parts[parts.length - 2] : '',
+        city: parts.length > 0 ? parts[parts.length - 1] : '',
+        price: numericPrice,
+        rooms,
+        area_m2: numericArea,
+        listing_type: kind === 'Kiralık' ? 'rent' : 'sale',
+        status: 'active',
+        description: description.trim(),
+      }).select('*').single();
+      if (error || !inserted) throw new Error('Portföy kaydedilemedi. Ofis yetkilerini ve veritabanı kurulumunu kontrol et.');
+      const p: Property = {
+        id: inserted.id, title: inserted.title, address: inserted.address, district: inserted.district || '',
+        price: Number(inserted.price), rooms: inserted.rooms || '', area: String(inserted.area_m2) + ' m²',
+        kind: inserted.listing_type === 'rent' ? 'Kiralık' : 'Satılık', status: 'Aktif',
+        agent: role === 'owner' ? 'Ofis sahibi' : 'Sen', views: 0,
+        createdAt: new Date(inserted.created_at).toLocaleDateString('tr-TR'), description: inserted.description || '',
+      };
+      await loadProperties(officeId);
+      setAddOpen(false); setSelected(p); setTab('portfolio');
+      setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription('');
+    } catch (error) {
+      Alert.alert('Portföy kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
+    }
   };
 
   if (!authenticated || mustChangePassword) {
@@ -265,7 +325,7 @@ export default function App() {
           <Text style={styles.eyebrow}>GAYIT · PORTFÖY</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Portföyler</Text><Text style={styles.pageSub}>{role === 'owner' ? 'Ofisteki tüm gayrimenkuller' : 'Sana ait gayrimenkuller'}</Text></View><Pressable onPress={()=>setAddOpen(true)} style={styles.addButton}><Ionicons name="add" size={25} color="#fff"/></Pressable></View>
           <View style={styles.search}><Ionicons name="search-outline" size={19} color={palette.muted}/><TextInput value={search} onChangeText={setSearch} placeholder="İlan, adres veya kod ara" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
           <View style={styles.filters}>{(['Tümü','Satılık','Kiralık'] as const).map(f=><Pressable key={f} onPress={()=>setFilter(f)} style={[styles.filter,filter===f&&styles.filterOn]}><Text style={[styles.filterText,filter===f&&styles.filterTextOn]}>{f}</Text></Pressable>)}</View>
-          <Text style={styles.resultCount}>{visibleProperties.length} portföy</Text>
+          <Text style={styles.resultCount}>{propertiesLoading ? 'Portföyler yükleniyor…' : `${visibleProperties.length} portföy`}</Text>
           {visibleProperties.map(p=><PropertyRow key={p.id} property={p} onPress={()=>setSelected(p)} />)}
           {!visibleProperties.length && <View style={styles.empty}><Ionicons name="file-tray-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Portföy bulunamadı</Text><Text style={styles.pageSub}>Aramanı değiştir veya yeni ilan ekle.</Text></View>}
         </ScrollView>}
