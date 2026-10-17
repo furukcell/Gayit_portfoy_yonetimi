@@ -52,3 +52,44 @@ create policy property_transactions_update_owner on public.property_transactions
 for update to authenticated using (public.is_office_owner(office_id)) with check (public.is_office_owner(office_id));
 create policy property_transactions_delete_owner on public.property_transactions
 for delete to authenticated using (public.is_office_owner(office_id));
+
+-- Keep a per-user recent-view list, scoped to the active office.
+create table if not exists public.property_recent_views (
+  id uuid primary key default gen_random_uuid(),
+  office_id uuid not null references public.offices(id) on delete cascade,
+  property_id uuid not null references public.properties(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  viewed_at timestamptz not null default now(),
+  unique (office_id, property_id, user_id)
+);
+create index if not exists property_recent_views_user_idx
+  on public.property_recent_views(office_id, user_id, viewed_at desc);
+alter table public.property_recent_views enable row level security;
+create policy property_recent_views_select_self on public.property_recent_views
+for select to authenticated using (
+  user_id = (select auth.uid()) and public.is_active_office_member(office_id)
+);
+create policy property_recent_views_insert_self on public.property_recent_views
+for insert to authenticated with check (
+  user_id = (select auth.uid()) and public.is_active_office_member(office_id)
+  and exists (
+    select 1 from public.properties p
+    where p.id = property_recent_views.property_id
+      and p.office_id = property_recent_views.office_id
+  )
+);
+create policy property_recent_views_update_self on public.property_recent_views
+for update to authenticated using (
+  user_id = (select auth.uid()) and public.is_active_office_member(office_id)
+) with check (
+  user_id = (select auth.uid()) and public.is_active_office_member(office_id)
+  and exists (
+    select 1 from public.properties p
+    where p.id = property_recent_views.property_id
+      and p.office_id = property_recent_views.office_id
+  )
+);
+create policy property_recent_views_delete_self on public.property_recent_views
+for delete to authenticated using (
+  user_id = (select auth.uid()) and public.is_active_office_member(office_id)
+);
