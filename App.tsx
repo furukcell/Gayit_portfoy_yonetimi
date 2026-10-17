@@ -107,6 +107,8 @@ export default function App() {
   const [sortBy, setSortBy] = useState<'newest' | 'priceAsc' | 'priceDesc'>('newest');
   const [showArchived, setShowArchived] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'Tümü' | PropertyStatus>('Tümü');
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [minPriceFilter, setMinPriceFilter] = useState('');
   const [maxPriceFilter, setMaxPriceFilter] = useState('');
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
@@ -128,8 +130,37 @@ export default function App() {
     const statusMatch = statusFilter === 'Tümü' || p.status === statusFilter;
     const minMatch = minPrice === null || p.price >= minPrice;
     const maxMatch = maxPrice === null || p.price <= maxPrice;
-    return searchMatch && (showArchived ? p.status === 'Arşivde' : p.status !== 'Arşivde') && (filter === 'Tümü' || p.kind === filter) && statusMatch && minMatch && maxMatch;
-  }).sort((a,b) => sortBy === 'priceAsc' ? a.price-b.price : sortBy === 'priceDesc' ? b.price-a.price : sortBy === 'newest' ? 0 : 0), [properties, role, search, filter, sortBy, showArchived, statusFilter, minPriceFilter, maxPriceFilter]);
+    return searchMatch && (showArchived ? p.status === 'Arşivde' : p.status !== 'Arşivde') && (filter === 'Tümü' || p.kind === filter) && statusMatch && minMatch && maxMatch && (!favoritesOnly || favoriteIds.includes(p.id));
+  }).sort((a,b) => sortBy === 'priceAsc' ? a.price-b.price : sortBy === 'priceDesc' ? b.price-a.price : sortBy === 'newest' ? 0 : 0), [properties, role, search, filter, sortBy, showArchived, statusFilter, minPriceFilter, maxPriceFilter, favoritesOnly, favoriteIds]);
+
+  const loadFavorites = async () => {
+    if (!officeId) return;
+    try {
+      const { data, error } = await getSupabaseClient().from('property_favorites').select('property_id').eq('office_id', officeId);
+      if (error) throw error;
+      setFavoriteIds((data || []).map((row: any) => row.property_id));
+    } catch {
+      Alert.alert('Favoriler yüklenemedi','Supabase 011 migration dosyasını uyguladığından emin ol.');
+    }
+  };
+  const toggleFavorite = async (property: Property) => {
+    if (!officeId) return;
+    const supabase = getSupabaseClient();
+    const { data: userResult, error: userError } = await supabase.auth.getUser();
+    if (userError || !userResult.user) { Alert.alert('Oturum gerekli','Favori kaydetmek için tekrar giriş yap.'); return; }
+    const isFavorite = favoriteIds.includes(property.id);
+    try {
+      if (isFavorite) {
+        const { error } = await supabase.from('property_favorites').delete().eq('office_id',officeId).eq('property_id',property.id).eq('user_id',userResult.user.id);
+        if (error) throw error;
+        setFavoriteIds(ids=>ids.filter(id=>id!==property.id));
+      } else {
+        const { error } = await supabase.from('property_favorites').insert({office_id:officeId,property_id:property.id,user_id:userResult.user.id});
+        if (error) throw error;
+        setFavoriteIds(ids=>[...ids,property.id]);
+      }
+    } catch (error) { Alert.alert('Favori kaydedilemedi',error instanceof Error?error.message:'Supabase 011 migration dosyasını ve yetkileri kontrol et.'); }
+  };
 
   const exportPortfolioCsv = async () => {
     const escapeCsv = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
@@ -845,6 +876,7 @@ export default function App() {
           <View style={styles.search}><Ionicons name="search-outline" size={19} color={palette.muted}/><TextInput value={search} onChangeText={setSearch} placeholder="İlan, adres veya kod ara" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
           <View style={styles.filters}>{(['Tümü','Satılık','Kiralık'] as const).map(f=><Pressable key={f} onPress={()=>setFilter(f)} style={[styles.filter,filter===f&&styles.filterOn]}><Text style={[styles.filterText,filter===f&&styles.filterTextOn]}>{f}</Text></Pressable>)}</View>
           <View style={[styles.filters,{marginTop:10}]}>{([{key:'newest',label:'En yeni'},{key:'priceAsc',label:'Fiyat ↑'},{key:'priceDesc',label:'Fiyat ↓'}] as const).map(opt=><Pressable key={opt.key} onPress={()=>setSortBy(opt.key)} style={[styles.filter,sortBy===opt.key&&styles.filterOn]}><Text style={[styles.filterText,sortBy===opt.key&&styles.filterTextOn]}>{opt.label}</Text></Pressable>)}</View>
+          <Pressable onPress={()=>setFavoritesOnly(v=>!v)} style={[styles.filter,{alignSelf:'flex-start',marginTop:8},favoritesOnly&&styles.filterOn]}><Text style={[styles.filterText,favoritesOnly&&styles.filterTextOn]}>{favoritesOnly?'♥ Favoriler gösteriliyor':'♡ Yalnızca favorilerim'}</Text></Pressable>
           <Text style={[styles.sectionTitle,{marginTop:14,marginBottom:8}]}>Fiyat aralığı</Text>
           <View style={{flexDirection:'row',gap:10}}>
             <View style={[styles.search,{flex:1,marginTop:0}]}><TextInput value={minPriceFilter} onChangeText={setMinPriceFilter} keyboardType="numeric" placeholder="En düşük ₺" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
@@ -854,7 +886,7 @@ export default function App() {
           <View style={styles.filters}>{(['Tümü','Aktif','Opsiyonlu','Satıldı','Kiralandı'] as const).map(status=><Pressable key={status} onPress={()=>setStatusFilter(status)} style={[styles.filter,statusFilter===status&&styles.filterOn]}><Text style={[styles.filterText,statusFilter===status&&styles.filterTextOn]}>{status}</Text></Pressable>)}</View>
           <Pressable onPress={()=>setShowArchived(v=>!v)} style={[styles.filter,{alignSelf:'flex-start',marginTop:10},showArchived&&styles.filterOn]}><Text style={[styles.filterText,showArchived&&styles.filterTextOn]}>{showArchived ? 'Arşivden çıkış · Aktif portföyleri göster' : 'Arşivlenmiş portföyleri göster'}</Text></Pressable>
           <Text style={styles.resultCount}>{propertiesLoading ? 'Portföyler yükleniyor…' : `${visibleProperties.length} portföy`}</Text>
-          {visibleProperties.map(p=><PropertyRow key={p.id} property={p} onPress={()=>setSelected(p)} />)}
+          {visibleProperties.map(p=><View key={p.id} style={{flexDirection:'row',alignItems:'center',gap:4}}><View style={{flex:1}}><PropertyRow property={p} onPress={()=>setSelected(p)} /></View><Pressable onPress={()=>toggleFavorite(p)} accessibilityLabel={favoriteIds.includes(p.id)?'Favorilerden çıkar':'Favorilere ekle'} style={{width:40,height:48,alignItems:'center',justifyContent:'center',backgroundColor:palette.white,borderRadius:12,borderWidth:1,borderColor:palette.line,marginBottom:11}}><Ionicons name={favoriteIds.includes(p.id)?'heart':'heart-outline'} size={20} color={favoriteIds.includes(p.id)?palette.red:palette.muted}/></Pressable></View>)}
           {!visibleProperties.length && <View style={styles.empty}><Ionicons name="file-tray-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Portföy bulunamadı</Text><Text style={styles.pageSub}>Aramanı değiştir veya yeni ilan ekle.</Text></View>}
         </ScrollView>}
 
@@ -904,7 +936,7 @@ export default function App() {
         </ScrollView>}
       </View>
 
-      <View style={styles.bottomNav}>{([{key:'home',label:'Ana Sayfa',icon:'grid-outline'},{key:'portfolio',label:'Portföy',icon:'business-outline'},{key:'customers',label:'Müşteriler',icon:'people-outline'},{key:'matches',label:'Eşleşme',icon:'git-compare-outline'},{key:'more',label:'Daha Fazla',icon:'menu-outline'}] as {key:Tab;label:string;icon:keyof typeof Ionicons.glyphMap}[]).map(item=><Pressable key={item.key} onPress={()=>setTab(item.key)} style={styles.navItem}><View style={[styles.navIcon,tab===item.key&&styles.navIconOn]}><Ionicons name={item.icon} size={20} color={tab===item.key?palette.gold:palette.muted}/></View><Text style={[styles.navLabel,tab===item.key&&styles.navLabelOn]}>{item.label}</Text></Pressable>)}</View>
+      <View style={styles.bottomNav}>{([{key:'home',label:'Ana Sayfa',icon:'grid-outline'},{key:'portfolio',label:'Portföy',icon:'business-outline'},{key:'customers',label:'Müşteriler',icon:'people-outline'},{key:'matches',label:'Eşleşme',icon:'git-compare-outline'},{key:'more',label:'Daha Fazla',icon:'menu-outline'}] as {key:Tab;label:string;icon:keyof typeof Ionicons.glyphMap}[]).map(item=><Pressable key={item.key} onPress={()=>{setTab(item.key);if(item.key==='portfolio')loadFavorites();}} style={styles.navItem}><View style={[styles.navIcon,tab===item.key&&styles.navIconOn]}><Ionicons name={item.icon} size={20} color={tab===item.key?palette.gold:palette.muted}/></View><Text style={[styles.navLabel,tab===item.key&&styles.navLabelOn]}>{item.label}</Text></Pressable>)}</View>
 
       <Modal visible={!!selected} animationType="slide" onRequestClose={()=>{setSelected(null);setPropertyPhotos([]);}}>
         {selected && <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>{setSelected(null);setPropertyPhotos([]);}} style={styles.roundButton}><Ionicons name="chevron-down" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>İlan detayı</Text><Text style={styles.code}>{selected.id}</Text></View>
