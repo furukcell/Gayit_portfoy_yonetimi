@@ -1,76 +1,53 @@
 # GAYIT — Portföy Yönetimi
 
-**Emlak ofisleri ve danışmanları için mobil portföy ve ekip yönetimi uygulaması.**
+**Emlak ofisleri ve danışmanları için mobil portföy ve ekip yönetimi.**
 
-GAYIT genel kullanıma açık bir emlak ilan pazaryeri değildir. Emlak ofislerinin kendi gayrimenkul kayıtlarını, danışmanlarını, sunumlarını ve performanslarını yönetmesine yardımcı olacak bir mobil iş aracıdır.
+GAYIT genel kullanıma açık bir emlak ilan pazaryeri değildir. Ofis sahiplerinin ekiplerini ve tüm ofis portföyünü, danışmanların ise kendilerine ait portföyleri yönetebilmesi için geliştirilir.
 
 ## Teknoloji
 
-- Expo SDK 58
-- React Native 0.88
-- React 19.3
-- TypeScript
-- Expo Print + Expo Sharing (PDF sunumu)
-- Google Maps URL (adresle harita ve navigasyon)
-- WhatsApp paylaşım bağlantısı
+- Expo SDK 58, React Native 0.88, React 19.3, TypeScript
+- Expo Print + Expo Sharing: PDF çıktısı ve paylaşımı
+- Supabase Auth + Postgres + Row Level Security: planlanan kalıcı veri katmanı; henüz uygulama istemcisine bağlanmadı
+- Google Maps URL ve WhatsApp paylaşımı
 
-Resmî SDK 58 belgeleri: https://docs.expo.dev/versions/v58.0.0/
+SDK 58, 15 Ekim 2026 tarihinde yayımlandı ve React Native 0.88 kullanıyor. Resmî kaynaklar: [SDK 58 duyurusu](https://expo.dev/changelog/sdk-58) · [SDK referansı](https://docs.expo.dev/versions/v58.0.0/).
 
-## Uygulama rolleri
+> Expo Go'nun SDK 58 mağaza sürümü resmî duyuruya göre henüz yayımlanmadığından, geliştirme sırasında development build gerekebilir.
 
-### Ofis sahibi
-- Ofis portföyünü görüntüleme
-- Danışman listesi ve özet performans
-- Ofis istatistikleri
-- İlan detaylarını görüntüleme, paylaşma ve PDF sunumu oluşturma
+## Durum
 
-### Emlak danışmanı
-- Kendi portföylerini görüntüleme ve filtreleme
-- Yeni portföy kaydı oluşturma
-- Kendi performans özetini görüntüleme
-- İlanı WhatsApp üzerinden paylaşma
-- PDF sunumu oluşturma
-- Adresi Google Maps'te açma ve navigasyonu başlatma
+Şu an repo bir **mobil prototip** içerir. Ekranlarda örnek portföyler ve örnek istatistikler bulunur. Kalıcı veri, gerçek giriş ve rol yetkilendirmesi tamamlanmış değildir.
 
-## Şu anki durum
-
-Mevcut uygulama, kullanıcı akışlarını göstermek için örnek veriler kullanan mobil prototiptir. Rol seçici, ofis özeti, portföy listesi, ilan detay ekranı, yeni portföy formu, ekip ve istatistik ekranları bulunur.
-
-- Yeni portföy ekleme uygulama çalışırken bellekte tutulur; henüz kalıcı veritabanı bağlantısı yoktur.
-- Ekip ve performans rakamları demo verisidir.
-- PDF sunumu temel metin ve gayrimenkul alanlarını içerir; fotoğraf ve ofis markalaması daha sonra eklenecektir.
-- Harita, girilen adresi Google Maps'te açar; konum doğruluğu adres metnine bağlıdır.
-- WhatsApp paylaşımı, ilan metnini paylaşım bağlantısıyla açar.
-- Giriş, ofis daveti, rol tabanlı sunucu yetkilendirmesi ve çoklu cihaz senkronizasyonu henüz yapılmamıştır.
+- `App.tsx`: mevcut mobil prototip
+- `ROADMAP.md`: 10 aşamalı geliştirme planı ve durum
+- `supabase/migrations/001_initial_schema.sql`: ilk veritabanı şeması ve RLS politikaları taslağı
+- `docs/SUPABASE_SETUP.md`: Supabase kurulum notları
+- `.env.example`: yerel ortam değişkenleri şablonu
 
 ## Kurulum
 
-Node.js 22.13 veya daha yenisi önerilir.
+Node.js 22.13 veya daha yeni sürüm kullanın.
 
 ```bash
 npm install
 npx expo install --fix
 npx expo-doctor
+npm run typecheck
 npx expo start
 ```
 
-SDK 58 için Expo Go'nun mağaza sürümü henüz yayımlanmamış olabileceğinden, gerekirse bir development build kullanın. SDK 58 sürüm notları: https://expo.dev/changelog/sdk-58
+Bu kontroller henüz uzak repo üzerinde çalıştırılmış olarak raporlanmıyor; kodu yerel makinede çalıştırıp sonuçları kontrol edin.
 
 ## Yol haritası
 
-1. [x] Mobil prototip ve rol bazlı ekran taslağı
-2. [x] Yeni portföy formu ve yerel demo akışı
-3. [x] WhatsApp paylaşımı, PDF çıktısı ve Google Maps bağlantısı
-4. [ ] Supabase kimlik doğrulama ve kalıcı veritabanı
-5. [ ] Ofis oluşturma, danışman davet etme ve gerçek rol izinleri
-6. [ ] Portföy fotoğrafları ve dosya depolama
-7. [ ] Gerçek gösterim, müşteri, satış ve kiralama olaylarından istatistik üretme
-8. [ ] Ofis logosu ve danışman bilgileriyle markalı PDF şablonu
-9. [ ] Veri yedekleme, KVKK süreçleri ve güvenlik testleri
+MVP'nin 10 aşamasını, çıkış kriterlerini ve ilerleme günlüğünü [ROADMAP.md](./ROADMAP.md) dosyasından takip edin. Supabase şemasını uygulamadan önce [kurulum ve güvenlik notlarını](./docs/SUPABASE_SETUP.md) okuyun.
 
-## Önemli veri güvenliği ilkesi
+## Güvenlik
 
-Her ofisin kayıtları sunucu tarafında ofis kimliği ve rol bazlı kurallarla izole edilmelidir. Sadece arayüzde kayıtları gizlemek yetkilendirme yerine geçmez. Üretime geçmeden önce veritabanı politikaları ve erişim testleri tamamlanmalıdır.
+- `.env` dosyası repoya eklenmemelidir.
+- Mobil uygulamada Supabase publishable/anon anahtarı kullanılabilir; `service_role` anahtarı kesinlikle istemciye eklenmemelidir.
+- Güvenlik yalnızca ekrandaki kontrollerle değil, veritabanı RLS politikalarıyla sağlanmalıdır.
+- Üretime geçmeden önce iki ayrı ofis ve farklı rollerde kullanıcılarla veri izolasyonu test edilmelidir.
 
-**GAYIT — Portföy Yönetimi**  
-*Portföyünü yönet. Ekibini takip et. Sunumunu profesyonelleştir.*
+**GAYIT — Portföyünü yönet. Ekibini takip et. Sunumunu profesyonelleştir.**
