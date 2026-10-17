@@ -33,7 +33,8 @@ A starter static panel is available at `superadmin/index.html`. It asks for the 
 1. Create a Supabase project.
 2. Open SQL Editor and run `supabase/migrations/001_initial_schema.sql`, then `supabase/migrations/002_private_avatars.sql`.
 3. Copy `.env.example` to `.env` and fill in the project URL and publishable/anon key.
-4. Do not use the `service_role` key in the mobile app, EAS variables exposed to the client, or any committed file.
+4. Set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in the local `.env` file for the mobile app.
+5. Do not use the `service_role` key in the mobile app, EAS variables exposed to the client, or any committed file.
 5. Configure Auth email settings and redirect URLs before testing sign-in.
 
 ## Initial schema
