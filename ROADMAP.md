@@ -20,10 +20,12 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 
 ### 2. Veri modeli ve güvenlik — IN PROGRESS
 - [x] Ofisler, kullanıcı profilleri, ofis üyelikleri, portföyler ve portföy fotoğrafları için ilk şema taslağı.
-- [x] Supabase/Postgres Row Level Security (RLS) politikalarının ilk taslağı.
+- [x] Müşteriler, çoklu müşteri talepleri, eşleşme geçmişi, bildirimler, müşteri aktiviteleri ve randevular için migration 003 taslağı.
+- [x] CRM tabloları için rol bazlı RLS politikaları ve aynı ofise ait olma doğrulamaları için ilk taslak.
+- [x] Mobil ekran akışı ve CRM veri modelini `docs/PRODUCT_FLOWS_AND_DATA_MODEL.md` içinde belgele.
 - [x] Örnek ortam dosyası ve güvenli anahtar kullanım notları.
-- [ ] Şemayı geçici Supabase projesinde çalıştırıp SQL hatalarını kontrol et.
-- [ ] Ofisler arası veri izolasyonu için yetki testlerini çalıştır (kontrol listesi: `docs/RLS_VALIDATION_CHECKLIST.md`).
+- [ ] Migration 001–003'ü geçici Supabase projesinde sırayla çalıştırıp SQL hatalarını kontrol et.
+- [ ] Ofisler arası veri izolasyonu ve CRM rol izinleri için yetki testlerini çalıştır (kontrol listesi: `docs/RLS_VALIDATION_CHECKLIST.md`).
 **Çıkış kriteri:** Her ofisin verisi sunucu tarafında ayrılmış, izinler test edilebilir.
 
 ### 3. Kimlik doğrulama ve ofis kurulumu — IN PROGRESS
@@ -37,8 +39,9 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 
 ### 4. Portföy yönetimi (CRUD)
 - [x] Portföy oluşturma ve listeleme Supabase veritabanına bağlandı.
+- [x] Ürün kararı: tek portföy listesi, üstte Tümü / Satılık / Kiralık hızlı filtresi.
 - [ ] Portföy detay, düzenleme, arşivleme ve durum değiştirme.
-- [ ] Satılık/kiralık, fiyat, oda, metrekare, adres, açıklama ve durum alanları.
+- [ ] Gayrimenkul tipi, fiyat, oda, metrekare, adres, açıklama ve durum alanlarını formda tamamlama.
 - [ ] Arama, filtreleme, sıralama ve form doğrulama.
 - [ ] Ofis sahibi tüm ofis portföylerini, danışman kendi portföylerini görebilir.
 **Çıkış kriteri:** Portföyler uygulama kapatılıp açıldığında kaybolmaz ve rol izinleri uygulanır.
@@ -67,14 +70,23 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [ ] Ofis portföyleri ve danışman bazlı özetler gerçek verilerden hesaplansın.
 **Çıkış kriteri:** Ofis sahibi ekibini ve ofisin tamamını yönetebilir.
 
-### 8. İstatistikler ve iş takibi
+### 8. Müşteriler, eşleştirme ve iş takibi
+- [x] Müşteri CRM, çoklu talep, eşleşme, bildirim, aktivite ve randevu tabloları için ilk migration taslağı.
+- [x] Eşleşme ekranı tasarım kararı: tam eşleşmeler ve açıklamalı alternatifler iki ayrı bölümde gösterilecek.
+- [ ] Müşteri liste/ekle/detay ve bir müşteriye birden fazla talep ekleme ekranları.
+- [ ] Yeni müşteri/talep kaydında aktif portföyle deterministik eşleştirme.
+- [ ] Yeni/ güncellenen ilanda aktif müşteri talepleriyle eşleştirme.
+- [ ] Eşleşme gerekçeleri, tekrar bildirimini önleme ve bildirim merkezi.
+- [ ] Müşteri görüşme geçmişi, takip tarihi ve randevu ekranları.
+
+### 9. İstatistikler ve iş takibi
 - [ ] Aktif, opsiyonlu, satılmış ve kiralanmış portföy sayıları.
 - [ ] Danışman bazlı portföy dağılımı ve fiyat toplamları.
 - [ ] Görüntülenme/etkileşim metrikleri yalnızca gerçek ölçüm kaynağı varsa gösterilir.
 - [ ] Veri yoksa demo rakamı göstermek yerine boş durum.
 **Çıkış kriteri:** Gerçek kayıtlarla tutarlı, rol kapsamına uygun istatistikler.
 
-### 9. Kalite, gizlilik ve mağaza hazırlığı
+### 10. Kalite, gizlilik ve mağaza hazırlığı
 - [ ] TypeScript ve lint/format kontrolleri.
 - [ ] Android ve iOS geliştirme derlemesi.
 - [ ] Giriş, izinler, veri izolasyonu, portföy CRUD ve paylaşım için test senaryoları.
@@ -82,7 +94,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [ ] Uygulama ikonu, açılış ekranı, sürüm numarası ve mağaza varlıkları.
 **Çıkış kriteri:** Bilinen kritik hata kalmamış, test sonuçları belgelenmiş.
 
-### 10. MVP yayına hazırlık ve teslim
+### 11. MVP yayına hazırlık ve teslim
 - [ ] Üretim ortamı değişkenlerini ayarlama; gizli anahtarları repoya koymama.
 - [ ] Yedekleme, hata izleme ve temel operasyon dokümantasyonu.
 - [ ] Son kabul testi ve bilinen sınırlamaların listesi.
@@ -91,7 +103,8 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 
 ## İlerleme günlüğü
 
-- 2026-10-17: 10 aşamalı MVP planı oluşturuldu; ilk repo/bağımlılık denetimi, GitHub Actions kalite kontrolü ve Supabase veri modeli/RLS taslağı eklendi. SQL henüz gerçek Supabase projesinde çalıştırılmadı ve RLS yetki testleri yapılmadı. Başlangıçtaki demo ekranları tamamlanmış ürün olarak sayılmıyor; kalıcı veritabanı, gerçek oturum ve sunucu tarafı rol yetkileri zorunlu bitiş koşullarıdır.
+- 2026-10-17: İlk repo/bağımlılık denetimi, GitHub Actions kalite kontrolü ve temel Supabase veri modeli/RLS taslağı eklendi. SQL henüz gerçek Supabase projesinde çalıştırılmadı ve RLS yetki testleri yapılmadı. Başlangıçtaki demo ekranları tamamlanmış ürün olarak sayılmıyor; kalıcı veritabanı, gerçek oturum ve sunucu tarafı rol yetkileri zorunlu bitiş koşullarıdır.
+- 2026-10-17: Ürün kararı netleştirildi: aynı mobil uygulamada role göre farklı ekran/veri kapsamı; alt gezinme (Ana Sayfa, Portföy, Müşteriler, Eşleşmeler, Daha Fazla); tam eşleşmeler ve alternatifler ayrı bölümler. Migration 003 ile müşteri CRM/eşleştirme veri modeli ve tasarım dokümanı eklendi. Migration uygulanmadı; UI ve eşleştirme motoru henüz yazılmadı.
 
 ## Çalışma kuralları
 1. Bir aşama ancak kodu ve çıkış kriteri kontrol edildiğinde tamamlandı olarak işaretlenir.
