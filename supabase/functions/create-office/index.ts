@@ -37,6 +37,19 @@ Deno.serve(async (req) => {
     return respond({ error: "Süperadmin yetkisi gerekli." }, 403);
   }
 
+  // The role claim alone is not enough: disabled accounts may still hold a
+  // valid JWT until it expires, so check the current server-side profile state.
+  const { data: profile, error: profileError } = await adminClient
+    .from("profiles")
+    .select("account_status")
+    .eq("id", caller.id)
+    .maybeSingle();
+
+  if (profileError) return respond({ error: "Account status check failed" }, 500);
+  if (!profile || profile.account_status !== "active") {
+    return respond({ error: "Hesabınız etkin değil." }, 403);
+  }
+
   let body: { officeName?: string; ownerUsername?: string; ownerPassword?: string; ownerFullName?: string };
   try { body = await req.json(); } catch { return respond({ error: "Invalid JSON body" }, 400); }
 
