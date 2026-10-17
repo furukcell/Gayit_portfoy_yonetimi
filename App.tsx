@@ -13,7 +13,7 @@ import { getSupabaseClient } from './src/lib/supabase';
 
 type Role = 'owner' | 'agent';
 type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
-type Customer = { id: string; fullName: string; phone: string; roles: string[]; assignedAgent: string; notes: string; active: boolean; requirementCount: number; nextFollowUpAt: string | null };
+type Customer = { id: string; fullName: string; phone: string; roles: string[]; assignedAgent: string; notes: string; active: boolean; requirementCount: number; nextFollowUpAt: string | null; assignedAgentId: string };
 type PropertyStatus = 'Aktif' | 'Opsiyonlu' | 'Satıldı' | 'Kiralandı';
 type Property = {
   id: string; title: string; address: string; district: string; price: number;
@@ -71,6 +71,11 @@ export default function App() {
   const [activitySummary, setActivitySummary] = useState('');
   const [activityType, setActivityType] = useState<'call'|'whatsapp'|'meeting'|'property_viewing'|'note'>('note');
   const [activityBusy, setActivityBusy] = useState(false);
+  const [customerAppointments, setCustomerAppointments] = useState<any[]>([]);
+  const [appointmentTitle, setAppointmentTitle] = useState('Müşteri görüşmesi');
+  const [appointmentStartsAt, setAppointmentStartsAt] = useState('');
+  const [appointmentNotes, setAppointmentNotes] = useState('');
+  const [appointmentBusy, setAppointmentBusy] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerRoles, setCustomerRoles] = useState<string[]>(['buyer']);
@@ -176,7 +181,7 @@ export default function App() {
       const ids = [...new Set(rows.map((row: any) => row.assigned_agent_id))];
       const { data: profiles } = ids.length ? await supabase.from('profiles').select('id,full_name').in('id', ids) : { data: [] as any[] };
       const names = new Map((profiles || []).map((profile: any) => [profile.id, profile.full_name]));
-      setCustomers(rows.map((row: any) => ({ id: row.id, fullName: row.full_name, phone: row.phone || '', roles: row.roles || [], assignedAgent: names.get(row.assigned_agent_id) || 'Danışman', notes: row.notes || '', active: row.is_active, nextFollowUpAt: row.next_follow_up_at || null, requirementCount: Array.isArray(row.customer_requirements) ? row.customer_requirements.length : 0 })));
+      setCustomers(rows.map((row: any) => ({ id: row.id, fullName: row.full_name, phone: row.phone || '', roles: row.roles || [], assignedAgent: names.get(row.assigned_agent_id) || 'Danışman', assignedAgentId: row.assigned_agent_id, notes: row.notes || '', active: row.is_active, nextFollowUpAt: row.next_follow_up_at || null, requirementCount: Array.isArray(row.customer_requirements) ? row.customer_requirements.length : 0 })));
     } finally { setCustomersLoading(false); }
   };
 
@@ -262,12 +267,44 @@ export default function App() {
         .eq('customer_id', customer.id).order('occurred_at', { ascending: false }).limit(50);
       if (activityError) throw activityError;
       setCustomerActivities(activities || []);
+      const { data: appointments, error: appointmentError } = await supabase.from('appointments')
+        .select('id,title,starts_at,ends_at,location,notes,status')
+        .eq('customer_id', customer.id).order('starts_at', { ascending: true }).limit(50);
+      if (appointmentError) throw appointmentError;
+      setCustomerAppointments(appointments || []);
     } catch (error) {
       setCustomerRequirements([]);
       Alert.alert('Talepler yüklenemedi', error instanceof Error ? error.message : 'Müşteri talepleri yüklenemedi.');
     } finally {
       setCustomerRequirementsLoading(false);
     }
+  };
+
+  const addCustomerAppointment = async () => {
+    if (!selectedCustomer || !appointmentStartsAt.trim()) {
+      Alert.alert('Tarih eksik', 'Randevu tarih ve saatini YYYY-MM-DD SS:DD biçiminde gir.');
+      return;
+    }
+    const parsedDate = new Date(appointmentStartsAt.trim().replace(' ', 'T') + (appointmentStartsAt.trim().length === 16 ? ':00' : ''));
+    if (Number.isNaN(parsedDate.getTime())) {
+      Alert.alert('Tarih hatalı', 'Randevu tarih ve saatini YYYY-MM-DD SS:DD biçiminde gir.');
+      return;
+    }
+    setAppointmentBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('appointments').insert({
+        office_id: officeId, customer_id: selectedCustomer.id, assigned_agent_id: selectedCustomer.assignedAgentId,
+        title: appointmentTitle.trim() || 'Müşteri görüşmesi', starts_at: parsedDate.toISOString(),
+        notes: appointmentNotes.trim(), status: 'scheduled',
+      }).select('id,title,starts_at,ends_at,location,notes,status').single();
+      if (error) throw error;
+      setCustomerAppointments(current => [...current, data].sort((a,b)=>new Date(a.starts_at).getTime()-new Date(b.starts_at).getTime()));
+      setAppointmentStartsAt(''); setAppointmentNotes('');
+      Alert.alert('Randevu oluşturuldu', 'Randevu müşteri detayına kaydedildi.');
+    } catch (error) {
+      Alert.alert('Randevu oluşturulamadı', error instanceof Error ? error.message : 'Randevu kaydedilemedi.');
+    } finally { setAppointmentBusy(false); }
   };
 
   const addCustomerActivity = async () => {
@@ -646,6 +683,13 @@ export default function App() {
             <Text style={styles.fieldLabel}>Sonraki takip (YYYY-MM-DD SS:DD)</Text><TextInput value={editFollowUpAt} onChangeText={setEditFollowUpAt} style={styles.input} placeholder="2026-10-20 14:00" placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Notlar</Text><TextInput value={editCustomerNotes} onChangeText={setEditCustomerNotes} style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholder="Müşteri notları" placeholderTextColor={palette.muted}/>
             <Pressable disabled={customerEditBusy} onPress={updateCustomer} style={[styles.saveButton,customerEditBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{customerEditBusy?'Kaydediliyor...':'Müşteri bilgilerini kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
+            <View style={styles.matchSection}><Text style={styles.sectionTitle}>Randevular</Text><Text style={styles.pageSub}>Bu müşteri için görüşme veya yer gösterme planla.</Text></View>
+            <Text style={styles.fieldLabel}>Randevu başlığı</Text><TextInput value={appointmentTitle} onChangeText={setAppointmentTitle} style={styles.input} placeholder="Müşteri görüşmesi" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Tarih ve saat (YYYY-MM-DD SS:DD)</Text><TextInput value={appointmentStartsAt} onChangeText={setAppointmentStartsAt} style={styles.input} placeholder="2026-10-20 14:00" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Randevu notu</Text><TextInput value={appointmentNotes} onChangeText={setAppointmentNotes} style={styles.input} placeholder="Görüşme ayrıntısı (isteğe bağlı)" placeholderTextColor={palette.muted}/>
+            <Pressable disabled={appointmentBusy} onPress={addCustomerAppointment} style={[styles.saveButton,appointmentBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{appointmentBusy?'Kaydediliyor...':'Randevu oluştur'}</Text><Ionicons name="calendar-outline" size={21} color="#fff"/></Pressable>
+            {customerAppointments.map((a:any)=><View key={a.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{a.title}</Text><Text style={styles.teamRole}>{new Date(a.starts_at).toLocaleString('tr-TR')}</Text><Text style={styles.teamMeta}>{a.status==='scheduled'?'Planlandı':a.status==='completed'?'Tamamlandı':a.status==='cancelled'?'İptal edildi':'Gelmedi'}{a.notes?' · '+a.notes:''}</Text></View></View>)}
+            {!customerAppointments.length && <Text style={styles.pageSub}>Henüz randevu yok.</Text>}
             <View style={styles.matchSection}><Text style={styles.sectionTitle}>Görüşme ve takip geçmişi</Text><Text style={styles.pageSub}>Telefon, WhatsApp, toplantı ve notları kaydet.</Text></View>
             <View style={styles.kindRow}>{([{key:'call',label:'Arama'},{key:'whatsapp',label:'WhatsApp'},{key:'meeting',label:'Toplantı'},{key:'property_viewing',label:'Yer gösterme'},{key:'note',label:'Not'}] as const).map(a=><Pressable key={a.key} onPress={()=>setActivityType(a.key)} style={[styles.kindButton,activityType===a.key&&styles.kindButtonOn]}><Text style={[styles.kindText,activityType===a.key&&styles.kindTextOn]}>{a.label}</Text></Pressable>)}</View>
             <TextInput value={activitySummary} onChangeText={setActivitySummary} style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholder="Görüşme sonucu, müşterinin geri bildirimi veya sonraki adım" placeholderTextColor={palette.muted}/>
