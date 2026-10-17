@@ -19,7 +19,7 @@ type PropertyPhoto = { id: string; storagePath: string; url: string; sortOrder: 
 type Property = {
   id: string; title: string; address: string; district: string; price: number;
   rooms: string; area: string; propertyType?: string; kind: 'Satılık' | 'Kiralık'; status: PropertyStatus;
-  agent: string; views: number; createdAt: string; description: string;
+  agent: string; ownerAgentId: string; views: number; createdAt: string; description: string;
 };
 
 const palette = {
@@ -29,9 +29,9 @@ const palette = {
   amberSoft: '#FFF3D9', red: '#B54747', redSoft: '#FCEBEC',
 };
 const initialProperties: Property[] = [
-  { id: 'GY-1024', title: 'Modern Aile Dairesi', address: 'İsmetpaşa Mahallesi, Milas, Muğla', district: 'Milas', price: 4250000, rooms: '3+1', area: '145 m²', kind: 'Satılık', status: 'Aktif', agent: 'Mert Yılmaz', views: 126, createdAt: '12 Ekim 2026', description: 'Aydınlık salonu, kullanışlı planı ve merkezi konumuyla öne çıkan aile dairesi.' },
-  { id: 'GY-1023', title: 'Bahçeli Müstakil Villa', address: 'Konacık Mahallesi, Bodrum, Muğla', district: 'Bodrum', price: 125000, rooms: '4+1', area: '220 m²', kind: 'Kiralık', status: 'Opsiyonlu', agent: 'Elif Demir', views: 94, createdAt: '10 Ekim 2026', description: 'Özel bahçeli, ferah yaşam alanlarına sahip müstakil villa.' },
-  { id: 'GY-1022', title: 'Merkezi Konumda 2+1', address: 'Güllük Mahallesi, Milas, Muğla', district: 'Milas', price: 3150000, rooms: '2+1', area: '105 m²', kind: 'Satılık', status: 'Aktif', agent: 'Sen', views: 78, createdAt: '8 Ekim 2026', description: 'Ulaşım noktalarına yakın, bakımlı daire.' },
+  { id: 'GY-1024', title: 'Modern Aile Dairesi', address: 'İsmetpaşa Mahallesi, Milas, Muğla', district: 'Milas', price: 4250000, rooms: '3+1', area: '145 m²', kind: 'Satılık', status: 'Aktif', agent: 'Mert Yılmaz', ownerAgentId: 'demo-agent-1', views: 0, createdAt: '12 Ekim 2026', description: 'Aydınlık salonu, kullanışlı planı ve merkezi konumuyla öne çıkan aile dairesi.' },
+  { id: 'GY-1023', title: 'Bahçeli Müstakil Villa', address: 'Konacık Mahallesi, Bodrum, Muğla', district: 'Bodrum', price: 125000, rooms: '4+1', area: '220 m²', kind: 'Kiralık', status: 'Opsiyonlu', agent: 'Elif Demir', ownerAgentId: 'demo-agent-2', views: 0, createdAt: '10 Ekim 2026', description: 'Özel bahçeli, ferah yaşam alanlarına sahip müstakil villa.' },
+  { id: 'GY-1022', title: 'Merkezi Konumda 2+1', address: 'Güllük Mahallesi, Milas, Muğla', district: 'Milas', price: 3150000, rooms: '2+1', area: '105 m²', kind: 'Satılık', status: 'Aktif', agent: 'Sen', ownerAgentId: 'demo-owner', views: 0, createdAt: '8 Ekim 2026', description: 'Ulaşım noktalarına yakın, bakımlı daire.' },
 ];
 const money = (n: number) => '₺' + new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(n);
 const propertyTypeLabel = (type?: string) => ({ apartment: 'Daire', villa: 'Villa', land: 'Arsa', commercial: 'İş yeri', house: 'Müstakil ev', other: 'Diğer' } as Record<string, string>)[type || 'apartment'] || 'Daire';
@@ -229,6 +229,7 @@ export default function App() {
         kind: row.listing_type === 'rent' ? 'Kiralık' : 'Satılık',
         status: row.status === 'optioned' ? 'Opsiyonlu' : row.status === 'sold' ? 'Satıldı' : row.status === 'rented' ? 'Kiralandı' : row.status === 'archived' ? 'Arşivde' : 'Aktif',
         agent: names.get(row.owner_agent_id) || 'Danışman',
+        ownerAgentId: row.owner_agent_id,
         views: 0,
         createdAt: new Date(row.created_at).toLocaleDateString('tr-TR'),
         description: row.description || '',
@@ -773,7 +774,10 @@ export default function App() {
           <View style={styles.bigMetric}><Text style={styles.metricLabel}>Toplam portföy değeri</Text><Text style={styles.metricValue}>{money(roleProperties.reduce((sum,p)=>sum+p.price,0))}</Text><Text style={styles.metricFoot}>Satılık ve kiralık ilanların fiyat toplamı; piyasa değeri değildir.</Text></View>
           <View style={styles.statGrid}><Stat icon="home-outline" label="Satılık" value={String(roleProperties.filter(p=>p.kind==='Satılık').length)} note="İlan adedi"/><Stat icon="key-outline" label="Kiralık" value={String(roleProperties.filter(p=>p.kind==='Kiralık').length)} note="İlan adedi"/><Stat icon="eye-outline" label="Görüntülenme" value="—" note="Ölçüm kurulmadı"/><Stat icon="checkmark-done-outline" label="Tamamlanan" value={String(roleProperties.filter(p=>p.status==='Satıldı'||p.status==='Kiralandı').length)} note="Satış/kiralama"/></View>
           <Text style={styles.sectionTitle}>İlan durumları</Text>
-          {(['Aktif','Opsiyonlu','Satıldı','Kiralandı'] as PropertyStatus[]).map(status=>{const count=roleProperties.filter(p=>p.status===status).length;return <View key={status} style={styles.progressRow}><Text style={styles.progressLabel}>{status}</Text><View style={styles.progressTrack}><View style={[styles.progressFill,{width:`${roleProperties.length ? count/roleProperties.length*100 : 0}%`,backgroundColor:status==='Aktif'?palette.green:status==='Opsiyonlu'?palette.gold:palette.navy2}]}/></View><Text style={styles.progressCount}>{count}</Text></View>})}
+          {(['Aktif','Opsiyonlu','Satıldı','Kiralandı','Arşivde'] as PropertyStatus[]).map(status=>{const count=roleProperties.filter(p=>p.status===status).length;return <View key={status} style={styles.progressRow}><Text style={styles.progressLabel}>{status}</Text><View style={styles.progressTrack}><View style={[styles.progressFill,{width:`${roleProperties.length ? count/roleProperties.length*100 : 0}%`,backgroundColor:status==='Aktif'?palette.green:status==='Opsiyonlu'?palette.gold:status==='Arşivde'?palette.muted:palette.navy2}]}/></View><Text style={styles.progressCount}>{count}</Text></View>})}
+          {role==='owner'&&<><Text style={styles.sectionTitle}>Danışman bazlı portföy</Text><Text style={styles.pageSub}>Yalnızca veritabanından yüklenen portföy kayıtları sayılır. Görüntülenme verisi ölçülmediği için dahil edilmez.</Text>
+          {teamMembers.filter(person=>person.role==='agent').map(person=>{const agentProperties=roleProperties.filter(p=>p.ownerAgentId===person.id);const activeCount=agentProperties.filter(p=>p.status==='Aktif'||p.status==='Opsiyonlu').length;const totalValue=agentProperties.reduce((sum,p)=>sum+p.price,0);return <View key={person.id} style={styles.teamCard}><View style={{flex:1}}><Text style={styles.teamName}>{person.name}</Text><Text style={styles.teamRole}>{agentProperties.length} portföy · {activeCount} aktif/opsiyonlu</Text><Text style={styles.teamMeta}>Fiyat toplamı: {money(totalValue)}</Text></View></View>})}
+          {!teamMembers.some(person=>person.role==='agent')&&<View style={styles.empty}><Text style={styles.pageSub}>Danışman verisi bulunamadı.</Text></View>}</>}
         </ScrollView>}
       </View>
 
