@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { changeInitialPassword, signInWithUsername } from './src/lib/usernameAuth';
 import {
   Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar,
   StyleSheet, Text, TextInput, View
@@ -34,6 +35,14 @@ const htmlEscape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
 export default function App() {
   const [role, setRole] = useState<Role>('owner');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [authError, setAuthError] = useState('');
   const [tab, setTab] = useState<Tab>('home');
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [selected, setSelected] = useState<Property | null>(null);
@@ -81,6 +90,37 @@ export default function App() {
       else Alert.alert('PDF hazır', 'PDF dosyası oluşturuldu: ' + file.uri);
     } catch { Alert.alert('PDF oluşturulamadı', 'Lütfen tekrar deneyin.'); }
   };
+  const handleLogin = async () => {
+    setAuthBusy(true); setAuthError('');
+    try {
+      const result = await signInWithUsername(loginUsername, loginPassword);
+      setRole(result.role);
+      setMustChangePassword(result.mustChangePassword);
+      setAuthenticated(true);
+      setLoginPassword('');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Giriş yapılamadı.');
+    } finally { setAuthBusy(false); }
+  };
+
+  const handleInitialPasswordChange = async () => {
+    setAuthError('');
+    if (newPassword !== confirmPassword) { setAuthError('Şifreler eşleşmiyor.'); return; }
+    setAuthBusy(true);
+    try {
+      await changeInitialPassword(newPassword);
+      setMustChangePassword(false); setNewPassword(''); setConfirmPassword('');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Şifre değiştirilemedi.');
+    } finally { setAuthBusy(false); }
+  };
+
+  const handleSignOut = async () => {
+    const { getSupabaseClient } = await import('./src/lib/supabase');
+    await getSupabaseClient().auth.signOut();
+    setAuthenticated(false); setMustChangePassword(false); setLoginPassword(''); setNewPassword(''); setConfirmPassword('');
+  };
+
   const saveProperty = () => {
     const numericPrice = Number(price.replace(/[^0-9]/g, ''));
     if (!title.trim() || !address.trim() || !numericPrice || !area.trim()) {
@@ -97,15 +137,40 @@ export default function App() {
     setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription('');
   };
 
+  if (!authenticated || mustChangePassword) {
+    return <SafeAreaView style={styles.safe} edges={['top','left','right','bottom']}>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView contentContainerStyle={styles.authPage} keyboardShouldPersistTaps="handled">
+        <View style={styles.authBrandMark}><Ionicons name="business" size={32} color={palette.gold}/></View>
+        <Text style={styles.authBrand}>GAYIT<Text style={styles.brandDot}>.</Text></Text>
+        <Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text>
+        <Text style={styles.authTitle}>{mustChangePassword ? 'Yeni şifreni belirle' : 'Tekrar hoş geldin'}</Text>
+        <Text style={styles.authSubtitle}>{mustChangePassword ? 'Güvenliğin için ilk giriş şifreni değiştirmen gerekiyor.' : 'Ofis yöneticinin verdiği kullanıcı adı ve şifreyle giriş yap.'}</Text>
+        {mustChangePassword ? <>
+          <Text style={styles.fieldLabel}>Yeni şifre (en az 10 karakter)</Text>
+          <TextInput value={newPassword} onChangeText={setNewPassword} secureTextEntry autoCapitalize="none" style={styles.input} placeholder="Yeni şifren" placeholderTextColor={palette.muted}/>
+          <Text style={styles.fieldLabel}>Yeni şifre tekrar</Text>
+          <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" style={styles.input} placeholder="Yeni şifreni tekrar gir" placeholderTextColor={palette.muted}/>
+          <Pressable disabled={authBusy} onPress={handleInitialPasswordChange} style={[styles.authSubmit,authBusy&&{opacity:0.6}]}><Text style={styles.authSubmitText}>{authBusy?'İşleniyor...':'Şifreyi değiştir'}</Text></Pressable>
+        </> : <>
+          <Text style={styles.fieldLabel}>Kullanıcı adı</Text>
+          <TextInput value={loginUsername} onChangeText={setLoginUsername} autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Kullanıcı adın" placeholderTextColor={palette.muted}/>
+          <Text style={styles.fieldLabel}>Şifre</Text>
+          <TextInput value={loginPassword} onChangeText={setLoginPassword} secureTextEntry autoCapitalize="none" style={styles.input} placeholder="Şifren" placeholderTextColor={palette.muted} onSubmitEditing={handleLogin}/>
+          <Pressable disabled={authBusy} onPress={handleLogin} style={[styles.authSubmit,authBusy&&{opacity:0.6}]}><Text style={styles.authSubmitText}>{authBusy?'Giriş yapılıyor...':'Giriş yap'}</Text></Pressable>
+          <Text style={styles.authHint}>Hesap oluşturmak için ofis yöneticinle iletişime geç.</Text>
+        </>}
+        {!!authError && <View style={styles.authError}><Ionicons name="alert-circle-outline" size={18} color={palette.red}/><Text style={styles.authErrorText}>{authError}</Text></View>}
+      </ScrollView>
+    </SafeAreaView>;
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.topbar}>
         <View><Text style={styles.brand}>GAYIT<Text style={styles.brandDot}>.</Text></Text><Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text></View>
-        <View style={styles.roleSwitch}>
-          <Pressable onPress={() => { setRole('owner'); setTab('home'); }} style={[styles.roleButton, role === 'owner' && styles.roleActive]}><Text style={[styles.roleText, role === 'owner' && styles.roleTextActive]}>Ofis sahibi</Text></Pressable>
-          <Pressable onPress={() => { setRole('agent'); setTab('home'); }} style={[styles.roleButton, role === 'agent' && styles.roleActive]}><Text style={[styles.roleText, role === 'agent' && styles.roleTextActive]}>Danışman</Text></Pressable>
-        </View>
+        <Pressable onPress={handleSignOut} style={styles.signOutButton}><Ionicons name="log-out-outline" size={17} color={palette.navy}/><Text style={styles.signOutText}>Çıkış</Text></Pressable>
       </View>
 
       <View style={styles.body}>
@@ -199,7 +264,7 @@ function Feature({icon,label,value}:{icon:keyof typeof Ionicons.glyphMap;label:s
 }
 
 const styles = StyleSheet.create({
-  safe:{flex:1,backgroundColor:palette.bg}, topbar:{paddingHorizontal:20,paddingTop:8,paddingBottom:12,flexDirection:'row',justifyContent:'space-between',alignItems:'center'},
+  safe:{flex:1,backgroundColor:palette.bg}, authPage:{flexGrow:1,justifyContent:'center',paddingHorizontal:26,paddingVertical:36},authBrandMark:{width:64,height:64,borderRadius:20,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center',alignSelf:'center',marginBottom:14},authBrand:{fontSize:32,fontWeight:'900',letterSpacing:1.5,color:palette.navy,textAlign:'center'},authTitle:{fontSize:25,fontWeight:'900',color:palette.ink,marginTop:38},authSubtitle:{fontSize:13,lineHeight:20,color:palette.muted,marginTop:8,marginBottom:12},authSubmit:{backgroundColor:palette.navy,borderRadius:13,padding:16,alignItems:'center',marginTop:24},authSubmitText:{fontSize:14,fontWeight:'900',color:'#fff'},authHint:{fontSize:11,color:palette.muted,textAlign:'center',marginTop:15,lineHeight:17},authError:{flexDirection:'row',alignItems:'flex-start',gap:8,padding:12,borderRadius:12,backgroundColor:palette.redSoft,marginTop:16},authErrorText:{flex:1,fontSize:12,lineHeight:17,color:palette.red},signOutButton:{flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:11,paddingVertical:9,backgroundColor:'#E8ECF1',borderRadius:10},signOutText:{fontSize:11,fontWeight:'800',color:palette.navy}, topbar:{paddingHorizontal:20,paddingTop:8,paddingBottom:12,flexDirection:'row',justifyContent:'space-between',alignItems:'center'},
   brand:{fontSize:25,fontWeight:'900',letterSpacing:1.1,color:palette.navy},brandDot:{color:palette.gold},brandSub:{fontSize:8,fontWeight:'900',letterSpacing:1.6,color:palette.muted,marginTop:1},
   roleSwitch:{flexDirection:'row',backgroundColor:'#E8ECF1',padding:3,borderRadius:12},roleButton:{paddingHorizontal:10,paddingVertical:8,borderRadius:9},roleActive:{backgroundColor:palette.navy},roleText:{fontSize:10,fontWeight:'700',color:palette.muted},roleTextActive:{color:'#fff'},
   body:{flex:1},page:{paddingHorizontal:20,paddingTop:14,paddingBottom:28},eyebrow:{fontSize:10,fontWeight:'900',letterSpacing:1.5,color:palette.gold},pageTitle:{fontSize:27,fontWeight:'900',letterSpacing:-.6,color:palette.ink,marginTop:7},pageSub:{fontSize:12,color:palette.muted,marginTop:5,lineHeight:18},
