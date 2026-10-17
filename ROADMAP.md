@@ -84,6 +84,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [ ] Edge Function'ı gerçek Supabase projesinde deploy edip yetki/tekrar-bildirim testlerini çalıştır.\n- [x] Eşleştirme fonksiyonunda danışman sorgularını kendi müşterileri ve ilanlarıyla sınırla.\n- [x] Migration 005 ile danışman aktivite düzenleme kapsamını ve bildirim güncelleme kolonlarını daralt.
 - [x] create-agent fonksiyonunda devre dışı hesap/ofis kontrolü ekle.
 - [x] create-office fonksiyonunda süperadmin rolüne ek olarak güncel hesap durumu kontrolü ekle.
+- [x] Avatar Storage politikalarında kullanıcı kontrollü klasör yolunun UUID cast hatası riskini kaldır; üyelik/ofis sahipliğini metin karşılaştırması ve aktif üyelikle doğrula.
 - [x] Müşteri görüşme geçmişi: telefon, WhatsApp, toplantı, yer gösterme ve not kaydı.
 - [x] Müşteri detayında sonraki takip tarihi düzenleme alanı ve randevu oluşturma/listeleme akışı.
 
