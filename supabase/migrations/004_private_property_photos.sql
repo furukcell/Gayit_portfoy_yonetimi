@@ -11,8 +11,8 @@ using (
   and (storage.foldername(name))[2] ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   and exists (
     select 1 from public.properties p
-    where p.id = ((storage.foldername(name))[2])::uuid
-      and p.office_id = ((storage.foldername(name))[1])::uuid
+    where lower(p.id::text) = lower((storage.foldername(name))[2])
+      and lower(p.office_id::text) = lower((storage.foldername(name))[1])
       and (
         public.is_office_owner(p.office_id)
         or (public.is_office_agent(p.office_id) and p.owner_agent_id = (select auth.uid()))
@@ -28,8 +28,8 @@ with check (
   and (storage.foldername(name))[2] ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   and exists (
     select 1 from public.properties p
-    where p.id = ((storage.foldername(name))[2])::uuid
-      and p.office_id = ((storage.foldername(name))[1])::uuid
+    where lower(p.id::text) = lower((storage.foldername(name))[2])
+      and lower(p.office_id::text) = lower((storage.foldername(name))[1])
       and (
         public.is_office_owner(p.office_id)
         or (public.is_office_agent(p.office_id) and p.owner_agent_id = (select auth.uid()))
@@ -45,8 +45,8 @@ using (
   and (storage.foldername(name))[2] ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   and exists (
     select 1 from public.properties p
-    where p.id = ((storage.foldername(name))[2])::uuid
-      and p.office_id = ((storage.foldername(name))[1])::uuid
+    where lower(p.id::text) = lower((storage.foldername(name))[2])
+      and lower(p.office_id::text) = lower((storage.foldername(name))[1])
       and (
         public.is_office_owner(p.office_id)
         or (public.is_office_agent(p.office_id) and p.owner_agent_id = (select auth.uid()))
