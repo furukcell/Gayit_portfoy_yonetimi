@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GAYIT · Süperadmin</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;color:#17283b;background:#f4f6f9}
+*{box-sizing:border-box}body{margin:0;min-height:100vh}.shell{max-width:1040px;margin:auto;padding:28px 18px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:30px}.brand{font-size:27px;font-weight:950;letter-spacing:1px;color:#10243a}.brand span{color:#c99a4a}.sub{font-size:10px;font-weight:800;letter-spacing:2px;color:#778597;margin-top:2px}
+.pill{border:1px solid #e3e8ef;background:white;border-radius:999px;padding:8px 12px;color:#778597;font-size:11px;font-weight:800}
+h1{font-size:30px;letter-spacing:-.8px;margin:0 0 8px}p{color:#778597;line-height:1.6;font-size:13px}.layout{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}
+.card{background:#fff;border:1px solid #e3e8ef;border-radius:20px;padding:22px;box-shadow:0 10px 28px #10243a08}.card h2{font-size:17px;margin:0 0 7px}
+label{display:block;font-size:11px;font-weight:850;color:#34465b;margin:16px 0 7px}input{width:100%;padding:12px 13px;border:1px solid #dfe5ec;border-radius:11px;font-size:13px;color:#17283b;background:#fff;outline:none}input:focus{border-color:#c99a4a;box-shadow:0 0 0 3px #c99a4a22}
+button{border:0;background:#10243a;color:#fff;padding:13px 16px;border-radius:11px;font-size:12px;font-weight:850;cursor:pointer;width:100%;margin-top:18px}button:disabled{opacity:.55;cursor:wait}.secondary{background:#e8ecf1;color:#10243a}
+.status{display:none;margin-top:14px;padding:12px;border-radius:11px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}.status.ok{display:block;background:#e5f5ed;color:#176849}.status.err{display:block;background:#fcebec;color:#a13232}
+.hidden{display:none!important}.wide{grid-column:1/-1}.record{padding:12px;border:1px solid #e3e8ef;border-radius:11px;margin-top:10px;font-size:12px}.record strong{display:block;color:#10243a;margin-bottom:4px}
+.foot{margin-top:22px;font-size:11px;color:#778597;line-height:1.6}
+@media(max-width:720px){.layout{grid-template-columns:1fr}.wide{grid-column:auto}header{align-items:flex-start;flex-direction:column}h1{font-size:25px}}
+</style>
+</head>
+<body><div class="shell">
+<header><div><div class="brand">GAYIT<span>.</span></div><div class="sub">SÜPERADMİN PANELİ</div></div><div class="pill" id="sessionPill">Oturum açılmadı</div></header>
+<h1>Ofisleri merkezden yönet.</h1>
+<p>Bu panel yalnızca GAYIT süperadmini içindir. Buradan emlak ofisi ve ofis sahibinin ilk hesabı oluşturulur. Danışman hesapları mobil uygulamadaki ofis sahibi panelinden açılır.</p>
+<div class="layout">
+<section class="card" id="connectionCard"><h2>Güvenli bağlantı</h2><p>Supabase proje bilgilerini bu oturum için gir. Bilgiler bu sayfada saklanmaz.</p>
+<label for="projectUrl">Supabase Project URL</label><input id="projectUrl" type="url" placeholder="https://....supabase.co" autocomplete="url">
+<label for="anonKey">Publishable / anon key</label><input id="anonKey" type="password" placeholder="sb_publishable_... veya anon key" autocomplete="off">
+<label for="adminUsername">Süperadmin kullanıcı adı</label><input id="adminUsername" autocomplete="username" placeholder="superadmin">
+<label for="adminPassword">Şifre</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Süperadmin şifresi">
+<button id="loginBtn">Güvenli giriş yap</button><div id="loginStatus" class="status"></div>
+<div id="logoutArea" class="hidden"><button id="logoutBtn" class="secondary">Oturumu kapat</button></div>
+</section>
+<section class="card" id="officeCard"><h2>Yeni emlak ofisi</h2><p>Giriş yaptıktan sonra yeni ofis ve yetkili hesabı oluşturabilirsin.</p>
+<label for="officeName">Ofis adı</label><input id="officeName" placeholder="Örn. Karia Gayrimenkul">
+<label for="ownerFullName">Ofis sahibi adı soyadı</label><input id="ownerFullName" placeholder="Örn. Ahmet Yılmaz">
+<label for="ownerUsername">Ofis sahibi kullanıcı adı</label><input id="ownerUsername" autocomplete="off" placeholder="ahmet.yilmaz">
+<label for="ownerPassword">İlk şifre (en az 10 karakter)</label><input id="ownerPassword" type="password" autocomplete="new-password" placeholder="İlk giriş şifresi">
+<button id="createBtn" disabled>Ofisi ve sahibi oluştur</button><div id="createStatus" class="status"></div>
+</section>
+<section class="card wide"><h2>İşleyiş ve güvenlik</h2><div class="record"><strong>1 · Süperadmin</strong>Hesaplar yalnızca yetkili sunucu fonksiyonu üzerinden oluşturulur. Süperadmin rolü bu panelden atanamaz.</div><div class="record"><strong>2 · Ofis sahibi</strong>Ofis sahibi kullanıcı adı ve ilk şifresiyle mobil uygulamaya giriş yapar; ilk girişte şifresini değiştirmelidir.</div><div class="record"><strong>3 · Danışman</strong>Ofis sahibi mobil uygulamadaki Ekip bölümünden danışman hesabı, kullanıcı adı, ilk şifre ve profil fotoğrafı oluşturur.</div><div class="foot">Kurulum gereksinimi: Supabase SQL migration'ları uygulanmış ve <code>create-office</code> Edge Function deploy edilmiş olmalı. Bu statik paneli herkese açık şekilde paylaşma; üretimde ayrıca erişim kontrolü ve HTTPS barındırma yapılandır.</div></section>
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  let client = null;
+  const $ = (id) => document.getElementById(id);
+  const status = (id, message, ok=false) => { const el=$(id); el.textContent=message; el.className='status '+(ok?'ok':'err'); };
+  const validUsername = (s) => /^[a-z0-9._-]{3,32}$/.test(s.trim().toLowerCase());
+  $('loginBtn').addEventListener('click', async () => {
+    const url=$('projectUrl').value.trim(), key=$('anonKey').value.trim();
+    const username=$('adminUsername').value.trim().toLowerCase(), password=$('adminPassword').value;
+    if(!url||!key||!validUsername(username)||!password){status('loginStatus','Proje URL, anahtar, geçerli kullanıcı adı ve şifre gerekli.');return;}
+    $('loginBtn').disabled=true;
+    try {
+      client=window.supabase.createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+      const {data,error}=await client.auth.signInWithPassword({email:username+'@accounts.gayit.invalid',password});
+      if(error||!data.user) throw new Error('Kullanıcı adı veya şifre hatalı.');
+      if(data.user.app_metadata?.role!=='superadmin'){await client.auth.signOut();throw new Error('Bu hesapta süperadmin yetkisi yok.');}
+      $('createBtn').disabled=false;$('sessionPill').textContent='Süperadmin oturumu açık';
+      $('logoutArea').classList.remove('hidden');$('loginBtn').classList.add('hidden');
+      status('loginStatus','Güvenli oturum açıldı. Ofis oluşturabilirsin.',true);
+    } catch(e){client=null;status('loginStatus',e.message||'Giriş başarısız.');}
+    finally{$('loginBtn').disabled=false;}
+  });
+  $('createBtn').addEventListener('click',async()=>{
+    const officeName=$('officeName').value.trim(),ownerFullName=$('ownerFullName').value.trim();
+    const ownerUsername=$('ownerUsername').value.trim().toLowerCase(),ownerPassword=$('ownerPassword').value;
+    if(!officeName||!ownerFullName||!validUsername(ownerUsername)||ownerPassword.length<10){status('createStatus','Tüm alanları doldur. Kullanıcı adı 3-32 karakter, şifre en az 10 karakter olmalı.');return;}
+    $('createBtn').disabled=true;
+    try{
+      const {data,error}=await client.functions.invoke('create-office',{body:{officeName,ownerFullName,ownerUsername,ownerPassword}});
+      if(error||!data?.success) throw new Error(data?.error||error?.message||'Ofis oluşturulamadı.');
+      status('createStatus','Ofis oluşturuldu: '+data.office.name+' · Ofis sahibi kullanıcı adı: '+data.owner.username+'. İlk şifreyi güvenli şekilde teslim et.',true);
+      $('officeName').value='';$('ownerFullName').value='';$('ownerUsername').value='';$('ownerPassword').value='';
+    }catch(e){status('createStatus',e.message||'İşlem başarısız.');}
+    finally{$('createBtn').disabled=false;}
+  });
+  $('logoutBtn').addEventListener('click',async()=>{if(client)await client.auth.signOut();client=null;$('createBtn').disabled=true;$('sessionPill').textContent='Oturum kapalı';$('logoutArea').classList.add('hidden');$('loginBtn').classList.remove('hidden');status('loginStatus','Oturum kapatıldı.',true);});
+})();
+</script></body></html>
