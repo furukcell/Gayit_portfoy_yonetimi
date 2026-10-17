@@ -145,4 +145,4 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 
 - 2026-10-17: Portföy kaydetme doğrulaması güçlendirildi: zorunlu alanlar, başlık/adres uzunluğu, fiyatın pozitif ve güvenli tamsayı olması, metrekare için virgüllü ondalık desteği ve geçersiz biçimlerin reddi. Kaydet butonu işlem boyunca devre dışı kalır. Cihaz ve gerçek Supabase testleri henüz yapılmadı.
 
-- 2026-10-17: Fotoğraf silme akışı hata dayanıklılığı açısından iyileştirildi. İşlem sırasında silme kontrolleri devre dışı kalır; metadata silme hatası ile Storage dosya silme hatası ayrı ele alınır. Storage silme başarısızlığında kullanıcıya kayıt kaldırıldığı ve depolama temizliğinin ayrıca gerektiği açıkça bildirilir. Supabase üzerinde hata enjeksiyonu/gerçek cihaz testi henüz yapılmadı.
+- 2026-10-17: Fotoğraf silme akışı hata dayanıklılığı açısından iyileştirildi. Önce Storage dosyası silinir; Storage hatasında metadata galeride tutulur ve yeniden deneme mümkün kalır. Dosya silinip metadata silinemezse kullanıcıya bu kısmi durum ayrı bildirilir. Supabase üzerinde hata enjeksiyonu/gerçek cihaz testi henüz yapılmadı.
