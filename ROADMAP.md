@@ -85,7 +85,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 
 ## İlerleme günlüğü
 
-- 2026-10-17: 10 aşamalı MVP planı oluşturuldu; ilk repo/bağımlılık denetimi, GitHub Actions kalite kontrolü ve Supabase veri modeli/RLS taslağı eklendi. SQL ve RLS testleri henüz çalıştırılmadı. SQL henüz gerçek Supabase projesinde çalıştırılmadı ve yetki testleri yapılmadı. Başlangıçtaki demo ekranları tamamlanmış ürün olarak sayılmıyor; kalıcı veritabanı, gerçek oturum ve sunucu tarafı rol yetkileri zorunlu bitiş koşullarıdır.
+- 2026-10-17: 10 aşamalı MVP planı oluşturuldu; ilk repo/bağımlılık denetimi, GitHub Actions kalite kontrolü ve Supabase veri modeli/RLS taslağı eklendi. SQL henüz gerçek Supabase projesinde çalıştırılmadı ve RLS yetki testleri yapılmadı. Başlangıçtaki demo ekranları tamamlanmış ürün olarak sayılmıyor; kalıcı veritabanı, gerçek oturum ve sunucu tarafı rol yetkileri zorunlu bitiş koşullarıdır.
 
 ## Çalışma kuralları
 1. Bir aşama ancak kodu ve çıkış kriteri kontrol edildiğinde tamamlandı olarak işaretlenir.
