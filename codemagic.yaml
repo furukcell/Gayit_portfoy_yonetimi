@@ -11,10 +11,6 @@ workflows:
         # Codemagic > Code signing identities > Android keystores bölümündeki
         # mevcut GAYIT keystore referansı. Referans adı farklıysa burada düzelt.
         - gayit
-      vars:
-        EXPO_PUBLIC_SUPABASE_URL: ${EXPO_PUBLIC_SUPABASE_URL}
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: ${EXPO_PUBLIC_SUPABASE_ANON_KEY}
-
     triggering:
       events:
         - push
@@ -22,7 +18,7 @@ workflows:
       branch_patterns:
         - pattern: main
           include: true
-          source: true
+          source: false
 
     scripts:
       - name: Check required public app configuration
