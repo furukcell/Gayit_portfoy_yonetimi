@@ -173,18 +173,32 @@ export default function App() {
   };
 
   const removePropertyPhoto = async (photo: PropertyPhoto) => {
-    if (!selected) return;
+    if (!selected || photosBusy) return;
+    const propertyId = selected.id;
     Alert.alert('Fotoğrafı sil', 'Bu fotoğraf ilandan kaldırılacak.', [
       { text: 'Vazgeç', style: 'cancel' },
       { text: 'Sil', style: 'destructive', onPress: async () => {
+        if (photosBusy) return;
+        setPhotosBusy(true);
         try {
           const supabase = getSupabaseClient();
-          const { error } = await supabase.from('property_photos').delete().eq('id', photo.id).eq('property_id', selected.id);
-          if (error) throw error;
+          // Remove the metadata first so the gallery no longer advertises a file
+          // that failed to delete. Storage cleanup errors are reported separately.
+          const { error: rowError } = await supabase.from('property_photos')
+            .delete().eq('id', photo.id).eq('property_id', propertyId);
+          if (rowError) throw rowError;
+          setPropertyPhotos(current => current.filter(item => item.id !== photo.id));
           const { error: storageError } = await supabase.storage.from('property-photos').remove([photo.storagePath]);
-          if (storageError) throw storageError;
-          await loadPropertyPhotos(selected.id);
-        } catch (error) { Alert.alert('Fotoğraf silinemedi', error instanceof Error ? error.message : 'Tekrar deneyin.'); }
+          if (storageError) {
+            Alert.alert('Fotoğraf kaydı kaldırıldı', 'Fotoğraf galeriden kaldırıldı ancak depolamadaki dosya silinemedi. Supabase Storage izinlerini kontrol et; dosyanın temizliği ayrıca yapılmalı.');
+            return;
+          }
+          await loadPropertyPhotos(propertyId);
+        } catch (error) {
+          Alert.alert('Fotoğraf silinemedi', error instanceof Error ? error.message : 'Fotoğraf kaydı silinemedi. Tekrar deneyin.');
+        } finally {
+          setPhotosBusy(false);
+        }
       }}
     ]);
   };
@@ -812,7 +826,7 @@ export default function App() {
           <ScrollView contentContainerStyle={styles.modalPage}><View style={styles.propertyHero}><View style={styles.houseIcon}><Ionicons name="home" size={52} color={palette.navy2}/></View><View style={styles.statusPill}><Text style={styles.statusText}>{selected.status}</Text></View></View>
           <View style={{marginBottom:18}}>
   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:10}}><Text style={styles.sectionTitle}>İlan fotoğrafları ({propertyPhotos.length})</Text><Pressable onPress={addPropertyPhoto} disabled={photosBusy} style={[styles.pdfButton,{flex:0,paddingHorizontal:14,paddingVertical:9}]}><Ionicons name="add-circle-outline" size={18} color={palette.navy}/><Text style={styles.pdfButtonText}>{photosBusy ? 'İşleniyor…' : 'Fotoğraf ekle'}</Text></Pressable></View>
-  {photosBusy && propertyPhotos.length===0 ? <Text style={styles.noticeText}>Fotoğraflar yükleniyor…</Text> : propertyPhotos.length===0 ? <Text style={styles.noticeText}>Henüz fotoğraf eklenmedi. Galeriden fotoğraf seçerek ilana ekleyebilirsin.</Text> : <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>{propertyPhotos.map(photo=><View key={photo.id} style={{width:'48%',height:145,borderRadius:12,overflow:'hidden',backgroundColor:palette.line}}><Image source={{uri:photo.url}} style={{width:'100%',height:'100%'}} resizeMode="cover"/><Pressable onPress={()=>removePropertyPhoto(photo)} style={{position:'absolute',right:7,top:7,backgroundColor:'#FFFFFFE8',borderRadius:18,padding:6}}><Ionicons name="trash-outline" size={17} color={palette.red}/></Pressable></View>)}</View>}
+  {photosBusy && propertyPhotos.length===0 ? <Text style={styles.noticeText}>Fotoğraflar yükleniyor…</Text> : propertyPhotos.length===0 ? <Text style={styles.noticeText}>Henüz fotoğraf eklenmedi. Galeriden fotoğraf seçerek ilana ekleyebilirsin.</Text> : <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>{propertyPhotos.map(photo=><View key={photo.id} style={{width:'48%',height:145,borderRadius:12,overflow:'hidden',backgroundColor:palette.line}}><Image source={{uri:photo.url}} style={{width:'100%',height:'100%'}} resizeMode="cover"/><Pressable disabled={photosBusy} onPress={()=>removePropertyPhoto(photo)} style={{position:'absolute',right:7,top:7,backgroundColor:'#FFFFFFE8',borderRadius:18,padding:6,opacity:photosBusy?0.5:1}}><Ionicons name={photosBusy?"time-outline":"trash-outline"} size={17} color={palette.red}/></Pressable></View>)}</View>}
 </View>
 <Text style={styles.eyebrow}>{propertyTypeLabel(selected.propertyType).toLocaleUpperCase('tr-TR')} · {selected.kind.toLocaleUpperCase('tr-TR')}</Text><Text style={styles.detailTitle}>{selected.title}</Text><View style={styles.addressLine}><Ionicons name="location-outline" size={18} color={palette.muted}/><Text style={styles.addressText}>{selected.address}</Text></View><Text style={styles.detailPrice}>{money(selected.price)}{selected.kind==='Kiralık'?<Text style={styles.perMonth}> / ay</Text>:null}</Text>
           <View style={styles.featureRow}><Feature icon="bed-outline" label="Oda" value={selected.rooms}/><Feature icon="resize-outline" label="Alan" value={selected.area}/><Feature icon="eye-outline" label="Görüntülenme" value={String(selected.views)}/></View>
