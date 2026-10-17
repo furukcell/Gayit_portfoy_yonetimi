@@ -1,6 +1,18 @@
 # Supabase setup
 
-GAYIT uses Supabase Auth + Postgres with Row Level Security (RLS). Database policies are the security boundary; hiding buttons in the app is not authorization.
+GAYIT is planned to use Supabase Auth + Postgres with Row Level Security (RLS). Database policies are the security boundary; hiding buttons in the app is not authorization.
+
+## GAYIT account model (important)
+
+- There is no public email-registration flow.
+- A trusted superadmin creates an office and its owner account.
+- The office owner creates agent accounts from the mobile app using username, an initial password and a profile photo.
+- Usernames are unique; users sign in with username + password. The backend may map usernames to private Auth identities internally, but users do not need to enter an email address.
+- Account creation must run through a trusted server-side Edge Function using the Supabase service-role key stored only as a server secret. Never call Auth admin APIs from the mobile client and never bundle the service-role key in the app.
+- The server must validate that the requester is an active office owner before creating an agent, set the office membership and role itself, enforce username uniqueness, and return no other office data.
+- Initial passwords must be delivered securely and changed on first sign-in. Add rate limiting and a safe password-reset/recovery process; username-only accounts have no email recovery unless another verified recovery channel is designed.
+- Superadmin access must be a separate protected web console and server-side authorization role, not a selectable role in the mobile app.
+
 
 ## Configure
 
