@@ -20,6 +20,7 @@ Two initial server-side functions are included:
 
 - `supabase/functions/create-office/index.ts`: checks the authenticated user's `app_metadata.role === superadmin` before provisioning an office owner and office.
 - `supabase/functions/create-agent/index.ts`: checks the authenticated user is an active owner of the target office before creating an agent and membership.
+- `supabase/functions/complete-first-login/index.ts`: lets an authenticated user set a new initial password and clears the first-login flag through a trusted server-side update.
 
 Deploy these only after validating the schema in a disposable project. The initial superadmin must be provisioned out-of-band by a trusted administrator using Supabase Auth admin tooling; never let the public client assign its own superadmin role.
 
