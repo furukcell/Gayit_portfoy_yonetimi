@@ -72,13 +72,13 @@ Deno.serve(async (req) => {
     if (!avatarPath.startsWith(`${officeId}/`) || avatarPath.includes("..")) {
       return respond({ error: "Profil fotoğrafı bu ofise ait değil." }, 400);
     }
-    const { data: avatarObject, error: avatarError } = await adminClient
-      .schema("storage").from("objects")
-      .select("name")
-      .eq("bucket_id", "avatars")
-      .eq("name", avatarPath)
-      .maybeSingle();
-    if (avatarError || !avatarObject) return respond({ error: "Profil fotoğrafı bulunamadı." }, 400);
+    const avatarName = avatarPath.slice(officeId.length + 1);
+    const { data: avatarObjects, error: avatarError } = await adminClient.storage
+      .from("avatars")
+      .list(officeId, { search: avatarName, limit: 10 });
+    if (avatarError || !avatarObjects?.some((object) => object.name === avatarName)) {
+      return respond({ error: "Profil fotoğrafı bulunamadı." }, 400);
+    }
   }
 
   // Check requester is an active owner of this exact office.
