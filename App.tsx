@@ -423,7 +423,7 @@ export default function App() {
       if (!matchingError) await loadMatches(officeId);
       else Alert.alert('Eşleştirme beklemede', 'Portföy kaydedildi ancak eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
       setAddOpen(false); setSelected(p); setTab('portfolio');
-      setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription('');
+      setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription(''); setPropertyType('apartment');
     } catch (error) {
       Alert.alert('Portföy kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
     }
@@ -616,12 +616,12 @@ export default function App() {
             <Text style={styles.fieldLabel}>İlan başlığı *</Text><TextInput value={title} onChangeText={setTitle} placeholder="Örn. Deniz manzaralı 3+1 daire" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Açık adres *</Text><TextInput value={address} onChangeText={setAddress} placeholder="Mahalle, ilçe, il" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>İlan türü</Text><View style={styles.kindRow}>{(['Satılık','Kiralık'] as const).map(k=><Pressable key={k} onPress={()=>setKind(k)} style={[styles.kindButton,kind===k&&styles.kindButtonOn]}><Text style={[styles.kindText,kind===k&&styles.kindTextOn]}>{k}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>Gayrimenkul tipi</Text><View style={styles.kindRow}>{([{key:'apartment',label:'Daire'},{key:'villa',label:'Villa'},{key:'land',label:'Arsa'},{key:'commercial',label:'İş yeri'},{key:'house',label:'Müstakil ev'},{key:'other',label:'Diğer'}]).map(t=><Pressable key={t.key} onPress={()=>setPropertyType(t.key)} style={[styles.kindButton,propertyType===t.key&&styles.kindButtonOn]}><Text style={[styles.kindText,propertyType===t.key&&styles.kindTextOn]}>{t.label}</Text></Pressable>)}</View>
             <Text style={styles.fieldLabel}>Fiyat (TL) *</Text><TextInput value={price} onChangeText={setPrice} keyboardType="numeric" placeholder="4250000" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Oda sayısı</Text><View style={styles.kindRow}>{['1+1','2+1','3+1','4+1','5+1'].map(r=><Pressable key={r} onPress={()=>setRooms(r)} style={[styles.roomButton,rooms===r&&styles.kindButtonOn]}><Text style={[styles.kindText,rooms===r&&styles.kindTextOn]}>{r}</Text></Pressable>)}</View>
             <Text style={styles.fieldLabel}>Metrekare *</Text><TextInput value={area} onChangeText={setArea} keyboardType="numeric" placeholder="145" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Açıklama</Text><TextInput value={description} onChangeText={setDescription} placeholder="Gayrimenkul hakkında kısa bilgi" style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholderTextColor={palette.muted}/>
             <Pressable onPress={saveProperty} style={styles.saveButton}><Text style={styles.saveButtonText}>Portföye kaydet</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
-            <Text style={styles.noticeText}>Bu ilk sürümde kayıtlar uygulama belleğinde tutulur; uygulama kapanınca kalıcı olmaz. Kalıcı kayıt için veritabanı bağlantısı gereklidir.</Text>
           </ScrollView>
         </SafeAreaView>
       </Modal>
