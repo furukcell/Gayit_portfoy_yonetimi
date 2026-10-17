@@ -33,6 +33,21 @@ Deno.serve(async (req) => {
   const propertyId = body.propertyId?.trim();
   if (!officeId || (!customerId && !propertyId)) return respond({ error: "officeId ve customerId veya propertyId zorunludur." }, 400);
 
+  // Reject disabled accounts and inactive offices even if a previously issued JWT is still valid.
+  const { data: profile, error: profileError } = await admin.from("profiles")
+    .select("account_status").eq("id", auth.user.id).maybeSingle();
+  if (profileError) return respond({ error: "Account status check failed" }, 500);
+  if (!profile || profile.account_status !== "active") {
+    return respond({ error: "Hesabınız etkin değil." }, 403);
+  }
+
+  const { data: office, error: officeError } = await admin.from("offices")
+    .select("is_active").eq("id", officeId).maybeSingle();
+  if (officeError) return respond({ error: "Office status check failed" }, 500);
+  if (!office || office.is_active !== true) {
+    return respond({ error: "Ofis bulunamadı veya etkin değil." }, 403);
+  }
+
   const { data: membership, error: membershipError } = await admin.from("office_members")
     .select("role,status").eq("office_id", officeId).eq("user_id", auth.user.id).maybeSingle();
   if (membershipError) return respond({ error: "Membership check failed" }, 500);
