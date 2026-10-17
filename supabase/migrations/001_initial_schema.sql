@@ -225,18 +225,24 @@ create policy "office_members_select_same_office"
 on public.office_members for select to authenticated
 using (public.is_active_office_member(office_id));
 
-create policy "office_members_owner_insert"
+-- Owners may invite/manage agents but cannot grant additional owner roles through
+-- the client-facing membership table. Owner membership is created by the DB trigger.
+create policy "office_members_owner_insert_agent"
 on public.office_members for insert to authenticated
-with check (public.is_office_owner(office_id));
+with check (
+  public.is_office_owner(office_id)
+  and role = 'agent'
+  and status = 'invited'
+);
 
-create policy "office_members_owner_update"
+create policy "office_members_owner_update_agent"
 on public.office_members for update to authenticated
-using (public.is_office_owner(office_id))
-with check (public.is_office_owner(office_id));
+using (public.is_office_owner(office_id) and role = 'agent')
+with check (public.is_office_owner(office_id) and role = 'agent');
 
-create policy "office_members_owner_delete"
+create policy "office_members_owner_delete_agent"
 on public.office_members for delete to authenticated
-using (public.is_office_owner(office_id));
+using (public.is_office_owner(office_id) and role = 'agent');
 
 create policy "properties_select_by_role"
 on public.properties for select to authenticated
