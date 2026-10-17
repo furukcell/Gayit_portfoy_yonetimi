@@ -67,15 +67,8 @@ export async function changeInitialPassword(newPassword: string): Promise<void> 
   }
 
   const supabase = getSupabaseClient();
-  const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
-  if (authError) throw new Error("Şifre değiştirilemedi. Lütfen tekrar deneyin.");
-
-  // The migration's profile-field trigger intentionally blocks client changes
-  // to must_change_password. Clear it through a trusted Edge Function instead.
   const { error } = await supabase.functions.invoke("complete-first-login", {
-    body: {},
+    body: { newPassword },
   });
-  if (error) {
-    throw new Error("Şifre değişti ancak ilk giriş adımı tamamlanamadı. Uygulamadan çıkış yapmadan yöneticinizle görüşün.");
-  }
+  if (error) throw new Error("Şifre değiştirilemedi. Lütfen tekrar deneyin.");
 }
