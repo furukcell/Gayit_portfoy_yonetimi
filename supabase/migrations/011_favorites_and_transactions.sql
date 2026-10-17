@@ -15,7 +15,7 @@ for select to authenticated using (user_id = (select auth.uid()) and public.is_a
 create policy property_favorites_insert_self on public.property_favorites
 for insert to authenticated with check (
   user_id = (select auth.uid()) and public.is_active_office_member(office_id)
-  and exists (select 1 from public.properties p where p.id = property_id and p.office_id = office_id)
+  and exists (select 1 from public.properties p where p.id = property_favorites.property_id and p.office_id = property_favorites.office_id)
 );
 create policy property_favorites_delete_self on public.property_favorites
 for delete to authenticated using (user_id = (select auth.uid()) and public.is_active_office_member(office_id));
@@ -46,7 +46,7 @@ create policy property_transactions_insert_office on public.property_transaction
 for insert to authenticated with check (
   public.is_active_office_member(office_id) and created_by = (select auth.uid())
   and (public.is_office_owner(office_id) or agent_id = (select auth.uid()))
-  and (property_id is null or exists (select 1 from public.properties p where p.id = property_id and p.office_id = office_id))
+  and (property_id is null or exists (select 1 from public.properties p where p.id = property_transactions.property_id and p.office_id = property_transactions.office_id))
 );
 create policy property_transactions_update_owner on public.property_transactions
 for update to authenticated using (public.is_office_owner(office_id)) with check (public.is_office_owner(office_id));
