@@ -24,6 +24,9 @@ SDK 58, 15 Ekim 2026 tarihinde yayımlandı ve React Native 0.88 kullanıyor. Re
 - `ROADMAP.md`: 10 aşamalı geliştirme planı ve durum
 - `supabase/migrations/001_initial_schema.sql`: ilk veritabanı şeması ve RLS politikaları taslağı
 - `docs/SUPABASE_SETUP.md`: Supabase kurulum notları
+- `docs/USERNAME_AUTH.md`: kullanıcı adıyla giriş mimarisi ve yapılacaklar
+- `supabase/functions/create-office/index.ts`: süperadmin kontrollü ofis oluşturma taslağı
+- `supabase/functions/create-agent/index.ts`: ofis sahibi kontrollü danışman oluşturma taslağı
 - `.env.example`: yerel ortam değişkenleri şablonu
 
 ## Kurulum
