@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       return respond({ error: "Profil fotoğrafı bu ofise ait değil." }, 400);
     }
     const { data: avatarObject, error: avatarError } = await adminClient
-      .from("objects")
+      .schema("storage").from("objects")
       .select("name")
       .eq("bucket_id", "avatars")
       .eq("name", avatarPath)
