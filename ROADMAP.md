@@ -60,7 +60,8 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 
 ### 7. Ofis sahibi paneli ve ekip yönetimi
 - [x] Danışman hesabı oluşturma isteği sunucu tarafında ofis sahibi rolüyle doğrulanır.
-- [ ] Çalışan listesi gerçek profiller ve üyeliklerden yüklensin.
+- [x] Çalışan listesi gerçek profiller ve üyeliklerden yükleniyor.
+- [x] Danışman ekleme formu Edge Function'a bağlandı; fotoğraf yükleme akışı eklendi.
 - [ ] Danışmanları devre dışı bırakma ve üyelik yönetimi.
 - [ ] Ofis portföyleri ve danışman bazlı özetler gerçek verilerden hesaplansın.
 **Çıkış kriteri:** Ofis sahibi ekibini ve ofisin tamamını yönetebilir.
