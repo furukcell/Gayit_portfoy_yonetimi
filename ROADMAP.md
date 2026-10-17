@@ -41,7 +41,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Portföy oluşturma ve listeleme Supabase veritabanına bağlandı.
 - [x] Ürün kararı: tek portföy listesi, üstte Tümü / Satılık / Kiralık hızlı filtresi.
 - [ ] Portföy detay, düzenleme, arşivleme ve durum değiştirme.
-- [ ] Gayrimenkul tipi, fiyat, oda, metrekare, adres, açıklama ve durum alanlarını formda tamamlama.
+- [x] Gayrimenkul tipi, fiyat, oda, metrekare, adres ve açıklama alanları forma eklendi; durum ve ofis/portföy kapsamı veritabanında tutuluyor.
 - [ ] Arama, filtreleme, sıralama ve form doğrulama.
 - [ ] Ofis sahibi tüm ofis portföylerini, danışman kendi portföylerini görebilir.
 **Çıkış kriteri:** Portföyler uygulama kapatılıp açıldığında kaybolmaz ve rol izinleri uygulanır.
@@ -75,9 +75,11 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Eşleşme ekranı tasarım kararı: tam eşleşmeler ve açıklamalı alternatifler iki ayrı bölümde gösterilecek.
 - [x] İlk müşteri listeleme ve müşteri + arama talebi oluşturma ekranları.
 - [x] Müşteri detay/düzenleme ekranı ve aynı müşteriye birden fazla arama talebi ekleme akışı.
-- [ ] Yeni müşteri/talep kaydında aktif portföyle deterministik eşleştirme.
-- [ ] Yeni/ güncellenen ilanda aktif müşteri talepleriyle eşleştirme.
-- [ ] Eşleşme gerekçeleri, tekrar bildirimini önleme ve bildirim merkezi. Eşleşme ekranı için başlangıç görünümü eklendi; otomatik eşleştirme henüz çalışmıyor.
+- [x] Yeni müşteri/talep kaydında aktif portföyle deterministik eşleştirme için evaluate-matches Edge Function taslağı ve çağrıları eklendi.
+- [x] Yeni ilanda aktif müşteri talepleriyle eşleştirme çağrısı eklendi.
+- [x] Eşleşme türü (exact / alternative), puan ve kriter gerekçeleri için alanlar eklendi; aynı talep/ilan çifti tekrar oluşturulmaz.
+- [ ] Bildirim merkezinin ekranı ve eşleşme durumlarının iş akışı.
+- [ ] Edge Function'ı gerçek Supabase projesinde deploy edip yetki/tekrar-bildirim testlerini çalıştır.
 - [ ] Müşteri görüşme geçmişi, takip tarihi ve randevu ekranları.
 
 ### 9. İstatistikler ve iş takibi
@@ -107,7 +109,8 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - 2026-10-17: İlk repo/bağımlılık denetimi, GitHub Actions kalite kontrolü ve temel Supabase veri modeli/RLS taslağı eklendi. SQL henüz gerçek Supabase projesinde çalıştırılmadı ve RLS yetki testleri yapılmadı. Başlangıçtaki demo ekranları tamamlanmış ürün olarak sayılmıyor; kalıcı veritabanı, gerçek oturum ve sunucu tarafı rol yetkileri zorunlu bitiş koşullarıdır.
 - 2026-10-17: Ürün kararı netleştirildi: aynı mobil uygulamada role göre farklı ekran/veri kapsamı; alt gezinme (Ana Sayfa, Portföy, Müşteriler, Eşleşmeler, Daha Fazla); tam eşleşmeler ve alternatifler ayrı bölümler. Migration 003 ile müşteri CRM/eşleştirme veri modeli ve tasarım dokümanı eklendi. Migration uygulanmadı; UI ve eşleştirme motoru henüz yazılmadı.
 - 2026-10-17: Mobil uygulamaya müşteri listesi, müşteri/arama talebi oluşturma formu, başlangıç eşleşme ekranı ve beş sekmeli alt navigasyon eklendi. Ana sayfadaki örnek ekip/görüntülenme değerleri kaldırıldı; görüntülenme verisi yoksa sahte sayı yerine ölçüm kurulmadı durumu gösteriliyor.
-- 2026-10-17: Müşteri kartından detay ekranı açılması, temel müşteri bilgilerinin düzenlenmesi, kayıtlı arama taleplerinin görüntülenmesi ve aynı müşteriye birden fazla talep ekleme akışı eklendi. Supabase migration 003 uygulanmadan canlı veri akışı doğrulanmış sayılmaz. Sıradaki iş portföy alanlarını eşleştirme için tamamlamak ve güvenilir eşleştirme motorunu kurmak.
+- 2026-10-17: Müşteri kartından detay ekranı açılması, temel müşteri bilgilerinin düzenlenmesi, kayıtlı arama taleplerinin görüntülenmesi ve aynı müşteriye birden fazla talep ekleme akışı eklendi.
+- 2026-10-17: Portföy formuna gayrimenkul tipi eklendi. evaluate-matches Edge Function taslağı; işlem türü, il/ilçe, tip, bütçe toleransı, oda ve metrekare kriterlerine göre tam/alternatif eşleşme hesaplayacak şekilde eklendi. Müşteri/talep ve portföy kayıtlarından fonksiyona çağrı bağlandı. Migration 003 ve Edge Function gerçek Supabase ortamında henüz uygulanmadı/deploy edilmedi; CI ve gerçek RLS testleri bekleniyor.
 
 ## Çalışma kuralları
 1. Bir aşama ancak kodu ve çıkış kriteri kontrol edildiğinde tamamlandı olarak işaretlenir.
