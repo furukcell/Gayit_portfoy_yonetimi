@@ -85,8 +85,10 @@ Deno.serve(async (req) => {
       else if (typeReq && typeReq !== "any") reasons.push("Gayrimenkul tipi uyuyor");
       if (reqMin != null && price < reqMin) exactFailures.push("Fiyat alt bütçenin altında");
       if (reqMax != null && price > reqMax) {
-        if (price <= reqMax * 1.1) reasons.push("Fiyat bütçeyi en fazla %10 aşıyor");
-        else exactFailures.push("Fiyat bütçeyi %10'dan fazla aşıyor");
+        if (price <= reqMax * 1.1) {
+          exactFailures.push("Fiyat bütçeyi aşıyor");
+          reasons.push("Fiyat bütçeyi en fazla %10 aşıyor");
+        } else exactFailures.push("Fiyat bütçeyi %10'dan fazla aşıyor");
       } else if (reqMax != null) reasons.push("Bütçe uyuyor");
       if (reqRooms.length && !reqRooms.includes(propRooms)) exactFailures.push("Oda sayısı farklı");
       else if (reqRooms.length) reasons.push("Oda sayısı uyuyor");
@@ -97,7 +99,7 @@ Deno.serve(async (req) => {
       }
       const hardMismatch = exactFailures.some(reason => !["İlçe farklı", "Fiyat bütçeyi %10'dan fazla aşıyor"].includes(reason));
       const alternativeEligible = !hardMismatch && exactFailures.length > 0 &&
-        exactFailures.every(reason => reason === "İlçe farklı" || reason === "Fiyat bütçeyi %10'dan fazla aşıyor") &&
+        exactFailures.every(reason => reason === "İlçe farklı" || reason === "Fiyat bütçeyi aşıyor") &&
         !(reqMax != null && price > reqMax * 1.1);
       const exact = exactFailures.length === 0;
       if (!exact && !alternativeEligible) continue;
