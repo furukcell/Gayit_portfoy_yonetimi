@@ -58,10 +58,10 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 **Çıkış kriteri:** Gerçek portföy fotoğraflarıyla müşteriye gönderilebilir PDF.
 
 ### 6. WhatsApp ve harita/navigasyon
-- [ ] İlan başlığı, fiyatı, özellikleri ve bağlantısını içeren WhatsApp paylaşımı.
-- [ ] Adresi Google Maps aramasında açma.
-- [ ] Navigasyonu başlatma bağlantısı ve harita uygulaması yoksa web fallback.
-- [ ] Eksik/hatalı adres için anlaşılır geri bildirim.
+- [x] İlan başlığı, fiyatı ve özelliklerini içeren WhatsApp paylaşımı (bağlantı alanı ayrıca eklenebilir).
+- [x] Adresi Google Maps aramasında açma.
+- [x] Harita bağlantısı açılamazsa anlaşılır geri bildirim.
+- [ ] Doğrudan navigasyon hedefi ve harita uygulaması yoksa web fallback akışını cihazlarda doğrula.
 **Çıkış kriteri:** Android ve iOS üzerinde paylaşım ve harita akışları denenmiş.
 
 ### 7. Ofis sahibi paneli ve ekip yönetimi
@@ -69,7 +69,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Çalışan listesi gerçek profiller ve üyeliklerden yükleniyor.
 - [x] Danışman ekleme formu Edge Function'a bağlandı; fotoğraf yükleme akışı eklendi.
 - [x] Ekip panelinden danışman üyeliğini devre dışı bırakma ve yeniden etkinleştirme kontrolü.
-- [ ] Ofis portföyleri ve danışman bazlı özetler gerçek verilerden hesaplansın.
+- [x] Ofis portföyleri ve danışman bazlı özetler gerçek verilerden hesaplansın (portföy durumu, danışman portföy adedi ve fiyat toplamı).
 **Çıkış kriteri:** Ofis sahibi ekibini ve ofisin tamamını yönetebilir.
 
 ### 8. Müşteriler, eşleştirme ve iş takibi
@@ -92,10 +92,10 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Müşteri detayında sonraki takip tarihi düzenleme alanı ve randevu oluşturma/listeleme akışı.
 
 ### 9. İstatistikler ve iş takibi
-- [ ] Aktif, opsiyonlu, satılmış ve kiralanmış portföy sayıları.
-- [ ] Danışman bazlı portföy dağılımı ve fiyat toplamları.
-- [ ] Görüntülenme/etkileşim metrikleri yalnızca gerçek ölçüm kaynağı varsa gösterilir.
-- [ ] Veri yoksa demo rakamı göstermek yerine boş durum.
+- [x] Aktif, opsiyonlu, satılmış, kiralanmış ve arşivlenmiş portföy sayıları.
+- [x] Ofis sahibi için danışman bazlı portföy dağılımı ve fiyat toplamları.
+- [x] Görüntülenme/etkileşim metrikleri gerçek ölçüm kaynağı yoksa 'ölçüm kurulmadı' olarak gösterilir.
+- [x] Gerçek veri olmayan metrikler için demo rakamı gösterilmez.
 **Çıkış kriteri:** Gerçek kayıtlarla tutarlı, rol kapsamına uygun istatistikler.
 
 ### 10. Kalite, gizlilik ve mağaza hazırlığı
@@ -121,6 +121,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - 2026-10-17: Müşteri kartından detay ekranı açılması, temel müşteri bilgilerinin düzenlenmesi, kayıtlı arama taleplerinin görüntülenmesi ve aynı müşteriye birden fazla talep ekleme akışı eklendi.
 - 2026-10-17: Portföy düzenleme ve arşivleme akışları; arşivlileri varsayılan listeden gizleme ve arşiv görünümünü aç/kapat; fiyat sıralaması eklendi. Düzenleme formunda mevcut gayrimenkul tipini koruma düzeltmesi yapıldı.
 - 2026-10-17: Portföy fotoğraf galerisi eklendi: özel Supabase Storage bucket, ofis/ilan bazlı erişim politikaları, fotoğraf ekleme-silme ve PDF sunumuna fotoğraf dahil etme. Migration 004 henüz gerçek Supabase ortamında uygulanmadı.
+- 2026-10-17: İstatistik ekranı gerçek yüklenen portföylerden hesaplanacak şekilde genişletildi: tüm durumlar (arşiv dahil) ve ofis sahibine danışman bazlı portföy adedi/fiyat toplamı. Görüntülenme sayısı uydurulmaz; ölçüm yoksa boş/ölçülmemiş kalır. Gerçek Supabase veri ve cihaz testleri hâlâ gerekli.
 - 2026-10-17: Eşleştirme Edge Function'ında danışman kapsamı daraltıldı: danışman yalnızca kendisine atanmış müşteriler ve kendi portföyleri üzerinde eşleştirme çalıştırabilir. RLS kontrol listesine fotoğraf depolama ve eşleştirme kapsam testleri eklendi; gerçek Supabase testleri hâlâ yapılmalı.
 - 2026-10-17: Portföy formuna gayrimenkul tipi eklendi. evaluate-matches Edge Function taslağı; işlem türü, il/ilçe, tip, bütçe toleransı, oda ve metrekare kriterlerine göre tam/alternatif eşleşme hesaplayacak şekilde eklendi. Müşteri/talep ve portföy kayıtlarından fonksiyona çağrı bağlandı. Bildirim merkezi, müşteri görüşme geçmişi, takip tarihi ve randevu akışı da eklendi. Migration 003 ve Edge Function gerçek Supabase ortamında henüz uygulanmadı/deploy edilmedi; CI ve gerçek RLS testleri bekleniyor.
 
