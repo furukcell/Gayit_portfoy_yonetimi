@@ -15,6 +15,7 @@ type Role = 'owner' | 'agent';
 type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
 type Customer = { id: string; fullName: string; phone: string; roles: string[]; assignedAgent: string; notes: string; active: boolean; requirementCount: number; nextFollowUpAt: string | null; assignedAgentId: string };
 type PropertyStatus = 'Aktif' | 'Opsiyonlu' | 'Satıldı' | 'Kiralandı' | 'Arşivde';
+type PropertyPhoto = { id: string; storagePath: string; url: string; sortOrder: number };
 type Property = {
   id: string; title: string; address: string; district: string; price: number;
   rooms: string; area: string; propertyType?: string; kind: 'Satılık' | 'Kiralık'; status: PropertyStatus;
@@ -102,6 +103,8 @@ export default function App() {
   const [filter, setFilter] = useState<'Tümü' | 'Satılık' | 'Kiralık'>('Tümü');
   const [sortBy, setSortBy] = useState<'newest' | 'priceAsc' | 'priceDesc'>('newest');
   const [showArchived, setShowArchived] = useState(false);
+  const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
+  const [photosBusy, setPhotosBusy] = useState(false);
   const [title, setTitle] = useState('');
   const [address, setAddress] = useState('');
   const [price, setPrice] = useState('');
@@ -125,15 +128,74 @@ export default function App() {
     const url = `https://wa.me/?text=${encodeURIComponent(shareText(p))}`;
     try { await Linking.openURL(url); } catch { await Share.share({ message: shareText(p) }); }
   };
+  const loadPropertyPhotos = async (propertyId: string) => {
+    setPhotosBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('property_photos').select('id,storage_path,sort_order').eq('property_id', propertyId).order('sort_order', { ascending: true });
+      if (error) throw error;
+      const photos: PropertyPhoto[] = await Promise.all((data || []).map(async (row: any) => {
+        const { data: signed, error: signError } = await supabase.storage.from('property-photos').createSignedUrl(row.storage_path, 60 * 60);
+        if (signError) throw signError;
+        return { id: row.id, storagePath: row.storage_path, url: signed.signedUrl, sortOrder: row.sort_order || 0 };
+      }));
+      setPropertyPhotos(photos);
+    } catch (error) {
+      setPropertyPhotos([]);
+      Alert.alert('Fotoğraflar yüklenemedi', 'Supabase 004 migration ve Storage izinlerini kontrol edin.');
+    } finally { setPhotosBusy(false); }
+  };
+
+  const addPropertyPhoto = async () => {
+    if (!selected) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { Alert.alert('Galeri izni gerekli', 'İlan fotoğrafı seçmek için galeri izni vermelisin.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.85 });
+    if (result.canceled || !result.assets[0]) return;
+    setPhotosBusy(true);
+    try {
+      const asset = result.assets[0];
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      const ext = asset.mimeType === 'image/png' ? 'png' : 'jpg';
+      const storagePath = officeId + '/' + selected.id + '/' + Date.now() + '.' + ext;
+      const supabase = getSupabaseClient();
+      const { error: uploadError } = await supabase.storage.from('property-photos').upload(storagePath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
+      if (uploadError) throw uploadError;
+      const { error: rowError } = await supabase.from('property_photos').insert({ property_id: selected.id, office_id: officeId, storage_path: storagePath, sort_order: propertyPhotos.length });
+      if (rowError) { await supabase.storage.from('property-photos').remove([storagePath]); throw rowError; }
+      await loadPropertyPhotos(selected.id);
+    } catch (error) { Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : 'Supabase migration ve Storage izinlerini kontrol edin.'); }
+    finally { setPhotosBusy(false); }
+  };
+
+  const removePropertyPhoto = async (photo: PropertyPhoto) => {
+    if (!selected) return;
+    Alert.alert('Fotoğrafı sil', 'Bu fotoğraf ilandan kaldırılacak.', [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try {
+          const supabase = getSupabaseClient();
+          const { error } = await supabase.from('property_photos').delete().eq('id', photo.id).eq('property_id', selected.id);
+          if (error) throw error;
+          const { error: storageError } = await supabase.storage.from('property-photos').remove([photo.storagePath]);
+          if (storageError) throw storageError;
+          await loadPropertyPhotos(selected.id);
+        } catch (error) { Alert.alert('Fotoğraf silinemedi', error instanceof Error ? error.message : 'Tekrar deneyin.'); }
+      }}
+    ]);
+  };
   const createPdf = async (p: Property) => {
     try {
+      const photosForPdf = selected?.id === p.id ? propertyPhotos : [];
+      const photoHtml = photosForPdf.map(photo => '<img class="property-photo" src="' + photo.url + '" />').join('');
       const html = `<!doctype html><html><head><meta charset="utf-8"><style>
       body{font-family:Arial,sans-serif;color:#17283b;padding:32px} .brand{background:#10243a;color:white;padding:24px;border-radius:16px}
       .brand small{color:#e4c58d;letter-spacing:2px} h1{font-size:28px;margin:12px 0} .price{font-size:25px;color:#10243a;font-weight:bold;margin:24px 0}
       .pill{display:inline-block;background:#f6ebdd;padding:8px 12px;border-radius:8px;margin-right:6px}
-      .section{margin-top:24px;border-top:1px solid #e3e8ef;padding-top:16px}.muted{color:#778597}
+      .section{margin-top:24px;border-top:1px solid #e3e8ef;padding-top:16px}.muted{color:#778597}.gallery{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.property-photo{width:48%;height:190px;object-fit:cover;border-radius:10px}
       </style></head><body><div class="brand"><small>GAYIT · PORTFÖY YÖNETİMİ</small><h1>${htmlEscape(p.title)}</h1><div>${htmlEscape(p.address)}</div></div>
-      <div class="price">${money(p.price)}${p.kind === 'Kiralık' ? ' / ay' : ''}</div>
+      <div class="gallery">${photoHtml}</div><div class="price">${money(p.price)}${p.kind === 'Kiralık' ? ' / ay' : ''}</div>
       <span class="pill">${p.kind}</span><span class="pill">${htmlEscape(p.rooms)}</span><span class="pill">${htmlEscape(p.area)}</span><span class="pill">${p.status}</span>
       <div class="section"><h3>Gayrimenkul hakkında</h3><p>${htmlEscape(p.description || 'Detaylı bilgi için danışmanımızla iletişime geçebilirsiniz.')}</p></div>
       <div class="section"><h3>Konum</h3><p>${htmlEscape(p.address)}</p></div>
@@ -682,10 +744,14 @@ export default function App() {
 
       <View style={styles.bottomNav}>{([{key:'home',label:'Ana Sayfa',icon:'grid-outline'},{key:'portfolio',label:'Portföy',icon:'business-outline'},{key:'customers',label:'Müşteriler',icon:'people-outline'},{key:'matches',label:'Eşleşme',icon:'git-compare-outline'},{key:'more',label:'Daha Fazla',icon:'menu-outline'}] as {key:Tab;label:string;icon:keyof typeof Ionicons.glyphMap}[]).map(item=><Pressable key={item.key} onPress={()=>setTab(item.key)} style={styles.navItem}><View style={[styles.navIcon,tab===item.key&&styles.navIconOn]}><Ionicons name={item.icon} size={20} color={tab===item.key?palette.gold:palette.muted}/></View><Text style={[styles.navLabel,tab===item.key&&styles.navLabelOn]}>{item.label}</Text></Pressable>)}</View>
 
-      <Modal visible={!!selected} animationType="slide" onRequestClose={()=>setSelected(null)}>
-        {selected && <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>setSelected(null)} style={styles.roundButton}><Ionicons name="chevron-down" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>İlan detayı</Text><Text style={styles.code}>{selected.id}</Text></View>
+      <Modal visible={!!selected} animationType="slide" onRequestClose={()=>{setSelected(null);setPropertyPhotos([]);}}>
+        {selected && <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>{setSelected(null);setPropertyPhotos([]);}} style={styles.roundButton}><Ionicons name="chevron-down" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>İlan detayı</Text><Text style={styles.code}>{selected.id}</Text></View>
           <ScrollView contentContainerStyle={styles.modalPage}><View style={styles.propertyHero}><View style={styles.houseIcon}><Ionicons name="home" size={52} color={palette.navy2}/></View><View style={styles.statusPill}><Text style={styles.statusText}>{selected.status}</Text></View></View>
-          <Text style={styles.eyebrow}>{selected.kind.toLocaleUpperCase('tr-TR')} GAYRİMENKUL</Text><Text style={styles.detailTitle}>{selected.title}</Text><View style={styles.addressLine}><Ionicons name="location-outline" size={18} color={palette.muted}/><Text style={styles.addressText}>{selected.address}</Text></View><Text style={styles.detailPrice}>{money(selected.price)}{selected.kind==='Kiralık'?<Text style={styles.perMonth}> / ay</Text>:null}</Text>
+          <View style={{marginBottom:18}}>
+  <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:10}}><Text style={styles.sectionTitle}>İlan fotoğrafları ({propertyPhotos.length})</Text><Pressable onPress={addPropertyPhoto} disabled={photosBusy} style={[styles.pdfButton,{flex:0,paddingHorizontal:14,paddingVertical:9}]}><Ionicons name="add-circle-outline" size={18} color={palette.navy}/><Text style={styles.pdfButtonText}>{photosBusy ? 'İşleniyor…' : 'Fotoğraf ekle'}</Text></Pressable></View>
+  {photosBusy && propertyPhotos.length===0 ? <Text style={styles.noticeText}>Fotoğraflar yükleniyor…</Text> : propertyPhotos.length===0 ? <Text style={styles.noticeText}>Henüz fotoğraf eklenmedi. Galeriden fotoğraf seçerek ilana ekleyebilirsin.</Text> : <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>{propertyPhotos.map(photo=><View key={photo.id} style={{width:'48%',height:145,borderRadius:12,overflow:'hidden',backgroundColor:palette.line}}><Image source={{uri:photo.url}} style={{width:'100%',height:'100%'}} resizeMode="cover"/><Pressable onPress={()=>removePropertyPhoto(photo)} style={{position:'absolute',right:7,top:7,backgroundColor:'#FFFFFFE8',borderRadius:18,padding:6}}><Ionicons name="trash-outline" size={17} color={palette.red}/></Pressable></View>)}</View>}
+</View>
+<Text style={styles.eyebrow}>{selected.kind.toLocaleUpperCase('tr-TR')} GAYRİMENKUL</Text><Text style={styles.detailTitle}>{selected.title}</Text><View style={styles.addressLine}><Ionicons name="location-outline" size={18} color={palette.muted}/><Text style={styles.addressText}>{selected.address}</Text></View><Text style={styles.detailPrice}>{money(selected.price)}{selected.kind==='Kiralık'?<Text style={styles.perMonth}> / ay</Text>:null}</Text>
           <View style={styles.featureRow}><Feature icon="bed-outline" label="Oda" value={selected.rooms}/><Feature icon="resize-outline" label="Alan" value={selected.area}/><Feature icon="eye-outline" label="Görüntülenme" value={String(selected.views)}/></View>
           <View style={styles.shareRow}><Pressable style={styles.pdfButton} onPress={()=>openPropertyEditor(selected)}><Ionicons name="create-outline" size={20} color={palette.navy}/><Text style={styles.pdfButtonText}>Düzenle</Text></Pressable><Pressable style={[styles.pdfButton,{borderColor:'#DCA6A6'}]} onPress={archiveProperty}><Ionicons name="archive-outline" size={20} color="#A13D3D"/><Text style={[styles.pdfButtonText,{color:'#A13D3D'}]}>Arşivle</Text></Pressable></View>
           <Text style={styles.sectionTitle}>İlan durumunu yönet</Text><View style={styles.kindRow}>{(['Aktif','Opsiyonlu','Satıldı','Kiralandı'] as PropertyStatus[]).map(status=><Pressable key={status} onPress={()=>updatePropertyStatus(status)} style={[styles.kindButton,selected.status===status&&styles.kindButtonOn]}><Text style={[styles.kindText,selected.status===status&&styles.kindTextOn]}>{status}</Text></Pressable>)}</View>
