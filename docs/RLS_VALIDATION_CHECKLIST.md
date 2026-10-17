@@ -17,6 +17,10 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] A user who is not a member cannot read any office, member, property or photo metadata.
 - [ ] Photo metadata must reference a property in the same office.
 - [ ] Anonymous requests cannot read protected tables.
+- [ ] Disabled profile with an unexpired JWT cannot use office/member/property/CRM RLS policies.
+- [ ] Inactive office blocks all member RLS helper checks.
+- [ ] Disabled profile cannot create an office directly through the authenticated table API.
+- [ ] Customer activity creator cannot be changed, including by the office owner.
 - [ ] Malformed avatar storage paths return a denied/empty result without a UUID-cast error.
 - [ ] Agents can read office avatars but cannot upload, overwrite or delete avatar objects.
 
