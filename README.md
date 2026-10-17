@@ -27,6 +27,8 @@ SDK 58, 15 Ekim 2026 tarihinde yayımlandı ve React Native 0.88 kullanıyor. Re
 - `docs/USERNAME_AUTH.md`: kullanıcı adıyla giriş mimarisi ve yapılacaklar
 - `supabase/functions/create-office/index.ts`: süperadmin kontrollü ofis oluşturma taslağı
 - `supabase/functions/create-agent/index.ts`: ofis sahibi kontrollü danışman oluşturma taslağı
+- `supabase/functions/complete-first-login/index.ts`: ilk girişte şifre değiştirme taslağı
+- `src/lib/supabase.ts` ve `src/lib/usernameAuth.ts`: Supabase istemcisi ve kullanıcı adıyla giriş yardımcıları
 - `.env.example`: yerel ortam değişkenleri şablonu
 
 ## Kurulum
