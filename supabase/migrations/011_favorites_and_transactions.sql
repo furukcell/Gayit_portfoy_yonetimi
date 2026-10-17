@@ -93,3 +93,9 @@ create policy property_recent_views_delete_self on public.property_recent_views
 for delete to authenticated using (
   user_id = (select auth.uid()) and public.is_active_office_member(office_id)
 );
+
+-- Optional office identity fields used by branded PDF presentations.
+alter table public.offices
+  add column if not exists contact_phone text,
+  add column if not exists contact_email text,
+  add column if not exists logo_url text;
