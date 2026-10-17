@@ -79,6 +79,13 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Follow-up date is optional; malformed client input is rejected before save.
 
 
+## Static review findings to resolve before production
+
+- [ ] Review the `property_photos_select_by_role` and `property_photos_delete_by_role` policies in migration 001: their property lookup should explicitly require `p.office_id = property_photos.office_id`, matching the insert policy.
+- [ ] Add a database trigger or equivalent constraint preventing photo metadata from referencing a property in a different office on both insert and update.
+- [ ] Test a user who is an active agent in two offices and owns a listing in one office; metadata rows with a mismatched office_id must not expose or delete the other office's photo records.
+- [ ] Keep Storage object access tests separate from metadata-table RLS tests; passing one does not prove the other is safe.
+
 ## Property photo storage (after migration 004)
 
 - [ ] Office owner can upload and view photos for listings in their office.
