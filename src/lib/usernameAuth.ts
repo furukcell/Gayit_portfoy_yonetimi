@@ -16,6 +16,7 @@ export type UsernameLoginResult = {
   user: User;
   profile: GayitProfile;
   mustChangePassword: boolean;
+  role: "owner" | "agent";
 };
 
 /**
@@ -54,10 +55,23 @@ export async function signInWithUsername(
     throw new Error("Hesabınız devre dışı bırakılmış. Ofis yöneticinizle görüşün.");
   }
 
+  const { data: membership, error: membershipError } = await supabase
+    .from("office_members")
+    .select("role,status")
+    .eq("user_id", data.user.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (membershipError || !membership || (membership.role !== "owner" && membership.role !== "agent")) {
+    await supabase.auth.signOut();
+    throw new Error("Aktif ofis üyeliği bulunamadı. Yöneticinizle görüşün.");
+  }
+
   return {
     user: data.user,
     profile: profile as GayitProfile,
     mustChangePassword: profile.must_change_password,
+    role: membership.role,
   };
 }
 
