@@ -52,12 +52,16 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Disabled profile cannot call create-agent even if its JWT has not expired.
 - [ ] Disabled or missing profile cannot call create-office with a stale superadmin JWT.
 - [ ] Inactive office cannot create agent accounts.
-- [ ] Non-owner and inactive office members cannot create agent accounts.\n- [ ] Disabled profile cannot call evaluate-matches even if its JWT has not expired.\n- [ ] Inactive office cannot run evaluate-matches.
+- [ ] Non-owner and inactive office members cannot create agent accounts.
+- [ ] Disabled profile cannot call evaluate-matches even if its JWT has not expired.
+- [ ] Inactive office cannot run evaluate-matches.
 - [ ] Agent can evaluate matches only for an office where their membership is active.
 - [ ] Match evaluation only uses active properties and active requirements and does not create duplicate requirement/property pairs.
 - [ ] Existing match re-evaluation updates score/reasons but does not send another new-match notification.
 - [ ] New match notification is delivered only to the customer's assigned agent.
-- [ ] User can mark only their own notifications as read.\n- [ ] Authenticated clients cannot edit notification title, body, recipient, or linked record IDs; only `read_at` is writable.\n- [ ] An agent who created an activity cannot edit it after the customer is reassigned to another agent.
+- [ ] User can mark only their own notifications as read.
+- [ ] Authenticated clients cannot edit notification title, body, recipient, or linked record IDs; only `read_at` is writable.
+- [ ] An agent who created an activity cannot edit it after the customer is reassigned to another agent.
 - [ ] Appointment assigned_agent_id must be an active member with an active profile in the same active office.
 - [ ] Customer assignment rejects disabled profiles and inactive offices.
 - [ ] Customer created_by cannot be changed after insertion.
