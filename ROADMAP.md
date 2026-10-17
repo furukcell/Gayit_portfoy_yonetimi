@@ -126,3 +126,8 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 2. Yapılamayan testler açıkça belirtilir; çalıştırılmamış test başarılı sayılmaz.
 3. Supabase `service_role` anahtarı veya başka bir gizli anahtar mobil uygulamaya ya da repoya eklenmez.
 4. Önce küçük, doğrulanabilir commit'ler yapılır; sonraki aşamaya geçerken yol haritası güncellenir.
+
+### CRM assignment validation hardening
+- Migration 006 adds database-level checks that customer assignments and appointment assignees belong to an active office and have an active profile.
+- Customer creator attribution (`created_by`) is immutable after insert.
+- Regression checks are recorded in `docs/RLS_VALIDATION_CHECKLIST.md`; migration remains unverified until applied to a disposable Supabase project.
