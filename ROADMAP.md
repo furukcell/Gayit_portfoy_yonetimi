@@ -114,6 +114,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - 2026-10-17: Mobil uygulamaya müşteri listesi, müşteri/arama talebi oluşturma formu, başlangıç eşleşme ekranı ve beş sekmeli alt navigasyon eklendi. Ana sayfadaki örnek ekip/görüntülenme değerleri kaldırıldı; görüntülenme verisi yoksa sahte sayı yerine ölçüm kurulmadı durumu gösteriliyor.
 - 2026-10-17: Müşteri kartından detay ekranı açılması, temel müşteri bilgilerinin düzenlenmesi, kayıtlı arama taleplerinin görüntülenmesi ve aynı müşteriye birden fazla talep ekleme akışı eklendi.
 - 2026-10-17: Portföy düzenleme ve arşivleme akışları; arşivlileri varsayılan listeden gizleme ve arşiv görünümünü aç/kapat; fiyat sıralaması eklendi. Düzenleme formunda mevcut gayrimenkul tipini koruma düzeltmesi yapıldı.
+- 2026-10-17: Portföy fotoğraf galerisi eklendi: özel Supabase Storage bucket, ofis/ilan bazlı erişim politikaları, fotoğraf ekleme-silme ve PDF sunumuna fotoğraf dahil etme. Migration 004 henüz gerçek Supabase ortamında uygulanmadı.
 - 2026-10-17: Portföy formuna gayrimenkul tipi eklendi. evaluate-matches Edge Function taslağı; işlem türü, il/ilçe, tip, bütçe toleransı, oda ve metrekare kriterlerine göre tam/alternatif eşleşme hesaplayacak şekilde eklendi. Müşteri/talep ve portföy kayıtlarından fonksiyona çağrı bağlandı. Bildirim merkezi, müşteri görüşme geçmişi, takip tarihi ve randevu akışı da eklendi. Migration 003 ve Edge Function gerçek Supabase ortamında henüz uygulanmadı/deploy edilmedi; CI ve gerçek RLS testleri bekleniyor.
 
 ## Çalışma kuralları
