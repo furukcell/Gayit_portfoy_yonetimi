@@ -83,6 +83,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Bildirim merkezi listesi, okunmadı göstergesi ve okundu işaretleme ekranı eklendi.
 - [ ] Edge Function'ı gerçek Supabase projesinde deploy edip yetki/tekrar-bildirim testlerini çalıştır.\n- [x] Eşleştirme fonksiyonunda danışman sorgularını kendi müşterileri ve ilanlarıyla sınırla.\n- [x] Migration 005 ile danışman aktivite düzenleme kapsamını ve bildirim güncelleme kolonlarını daralt.
 - [x] create-agent fonksiyonunda devre dışı hesap/ofis kontrolü ekle.
+- [x] create-office fonksiyonunda süperadmin rolüne ek olarak güncel hesap durumu kontrolü ekle.
 - [x] Müşteri görüşme geçmişi: telefon, WhatsApp, toplantı, yer gösterme ve not kaydı.
 - [x] Müşteri detayında sonraki takip tarihi düzenleme alanı ve randevu oluşturma/listeleme akışı.
 
