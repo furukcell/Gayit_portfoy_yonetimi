@@ -21,10 +21,6 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#10243A"
       }
-    },
-    "plugins": [
-      "expo-print",
-      "expo-sharing"
-    ]
+    }
   }
 }
