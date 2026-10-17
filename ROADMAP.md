@@ -53,7 +53,9 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Danışman profil fotoğrafı seçimi ve özel Storage bucket'a yükleme için mobil form.
 - [x] Ofis kapsamlı profil fotoğrafları için ilk Storage RLS migration taslağı.
 - [x] Portföy galerisi için fotoğraf seçme, özel Storage bucket'a yükleme ve imzalı URL ile görüntüleme (migration 004 taslağı).
-- [x] Fotoğraf silme ve yükleme/işlem durumu göstergeleri.\n- [ ] Fotoğraf sıralama ve kapak fotoğrafı.
+- [x] Fotoğraf silme ve yükleme/işlem durumu göstergeleri.
+- [x] Fotoğraf silmede veritabanı kaydı ile Storage dosyası hatalarını ayır; işlem sırasında tekrar dokunmayı engelle.
+- [ ] Storage dosyası silinemezse sahipsiz dosyalar için güvenilir yeniden deneme/temizlik akışı ekle.\n- [ ] Fotoğraf sıralama ve kapak fotoğrafı.
 - [x] GAYIT markalı portföy PDF sunumu ve galeri fotoğraflarını ekleme.
 - [x] PDF'i cihazda oluşturup paylaşma akışı.\n- [ ] Gerçek iOS/Android cihazlarda PDF ve fotoğraf akışını doğrula.
 **Çıkış kriteri:** Gerçek portföy fotoğraflarıyla müşteriye gönderilebilir PDF.
@@ -142,3 +144,5 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - Validate stale JWT and direct table API cases using separate sessions in a disposable Supabase project before production.
 
 - 2026-10-17: Portföy kaydetme doğrulaması güçlendirildi: zorunlu alanlar, başlık/adres uzunluğu, fiyatın pozitif ve güvenli tamsayı olması, metrekare için virgüllü ondalık desteği ve geçersiz biçimlerin reddi. Kaydet butonu işlem boyunca devre dışı kalır. Cihaz ve gerçek Supabase testleri henüz yapılmadı.
+
+- 2026-10-17: Fotoğraf silme akışı hata dayanıklılığı açısından iyileştirildi. İşlem sırasında silme kontrolleri devre dışı kalır; metadata silme hatası ile Storage dosya silme hatası ayrı ele alınır. Storage silme başarısızlığında kullanıcıya kayıt kaldırıldığı ve depolama temizliğinin ayrıca gerektiği açıkça bildirilir. Supabase üzerinde hata enjeksiyonu/gerçek cihaz testi henüz yapılmadı.
