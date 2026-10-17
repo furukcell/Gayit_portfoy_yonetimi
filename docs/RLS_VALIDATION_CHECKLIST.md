@@ -34,9 +34,9 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 
 ## Known limitations before production
 
-- Migrations 001–003 are drafts until applied to a disposable Supabase project and verified.
-- The schema creates the CRM/matching data model, but does not implement the matching evaluator, notification creation, reminder scheduling or the corresponding mobile screens.
-- Photo upload uses the private bucket/policies in migration 002, but still requires end-to-end validation.
+- Migrations 001–004 are drafts until applied to a disposable Supabase project and verified.
+- The matching evaluator exists as a Supabase Edge Function draft, but must be deployed and tested against real data before production use.
+- Private property-photo upload uses migration 004 and must pass the role-isolation and upload/delete checks below before production use.
 - Invitation acceptance, account deletion and the full KVKK retention/deletion flow are not implemented yet.
 
 
@@ -56,3 +56,19 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Customer activities and appointments cannot reference a customer/property from another office.
 - [ ] Follow-up date is optional; malformed client input is rejected before save.
 
+
+## Property photo storage (after migration 004)
+
+- [ ] Office owner can upload and view photos for listings in their office.
+- [ ] Agent can upload/view photos only for listings assigned to them.
+- [ ] Agent cannot read, upload, or delete storage objects for another agent's listing.
+- [ ] Office A users cannot access Office B photo objects, even if they know the object path.
+- [ ] Upload rejects unsupported MIME types and files larger than 10 MB.
+- [ ] PDF presentation includes signed photo URLs only for the selected listing.
+- [ ] Removing a photo removes its metadata and storage object; failed storage deletion is surfaced for cleanup.
+
+## Edge Function record scope
+
+- [ ] Agent calling evaluate-matches with their office ID only evaluates customers assigned to them and listings owned by them.
+- [ ] Agent-supplied IDs for another agent's customer or listing return not found and create no matches/notifications.
+- [ ] Owner can evaluate matches across the active office only.
