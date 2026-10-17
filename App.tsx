@@ -686,7 +686,7 @@ export default function App() {
             <Stat icon="people-outline" label={role === 'owner' ? 'Danışmanlar' : 'Müşteriler'} value={String(role === 'owner' ? teamMembers.filter(m=>m.role==='agent').length : customers.length)} note="Gerçek kayıtlar" />
           </View>
           <View style={styles.sectionHead}><Text style={styles.sectionTitle}>{role === 'owner' ? 'Son portföy hareketleri' : 'Portföyümden'}</Text><Pressable onPress={()=>setTab('portfolio')}><Text style={styles.link}>Tümünü gör</Text></Pressable></View>
-          {roleProperties.slice(0,3).map(p=><PropertyRow key={p.id} property={p} onPress={()=>setSelected(p)} />)}
+          {roleProperties.slice(0,3).map(p=><PropertyRow key={p.id} property={p} onPress={()=>{setSelected(p);setPropertyPhotos([]);void loadPropertyPhotos(p.id);}} />)}
           <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Portföy ve ekip kayıtları bağlı Supabase veritabanından yüklenir. Görüntülenme analitiği ve otomatik eşleştirme henüz etkin değil.</Text></View>
         </ScrollView>}
 
