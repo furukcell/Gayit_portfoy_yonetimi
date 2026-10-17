@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Alert, Linking, Modal, Platform, Pressable, ScrollView, Share, StatusBar,
+  Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar,
   StyleSheet, Text, TextInput, View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -98,7 +98,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor={palette.bg} />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.topbar}>
         <View><Text style={styles.brand}>GAYIT<Text style={styles.brandDot}>.</Text></Text><Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text></View>
         <View style={styles.roleSwitch}>
