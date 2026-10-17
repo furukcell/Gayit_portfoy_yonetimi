@@ -46,7 +46,7 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Agent sees only assigned customers and matches; cannot read another agent's customer notes or activity history.
 - [ ] Attempt to create a customer requirement for a customer in another office must fail.
 - [ ] Attempt to create a match whose property, customer or requirement belongs to another office must fail.
-- [ ] Attempt to call evaluate-matches with a non-member officeId must return 403.
+- [ ] Attempt to call evaluate-matches with a non-member officeId must return 403.\n- [ ] Disabled profile cannot call evaluate-matches even if its JWT has not expired.\n- [ ] Inactive office cannot run evaluate-matches.
 - [ ] Agent can evaluate matches only for an office where their membership is active.
 - [ ] Match evaluation only uses active properties and active requirements and does not create duplicate requirement/property pairs.
 - [ ] Existing match re-evaluation updates score/reasons but does not send another new-match notification.
