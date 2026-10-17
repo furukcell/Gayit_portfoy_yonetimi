@@ -26,11 +26,13 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [ ] Ofisler arası veri izolasyonu için yetki testlerini çalıştır (kontrol listesi: `docs/RLS_VALIDATION_CHECKLIST.md`).
 **Çıkış kriteri:** Her ofisin verisi sunucu tarafında ayrılmış, izinler test edilebilir.
 
-### 3. Kimlik doğrulama ve ofis kurulumu
-- [ ] E-posta ile kayıt/giriş/çıkış ve oturumun korunması.
-- [ ] İlk kullanıcı için ofis oluşturma ve ofis sahibi rolü.
-- [ ] Davet bağlantısı/kodu ile danışman ekleme.
-- [ ] Bekleyen davet, pasif üyelik ve hata durumları.
+### 3. Kimlik doğrulama ve ofis kurulumu — IN PROGRESS
+- [x] Kullanıcı adı + şifre giriş ekranı ve oturum başlatma istemci bağlantısı.
+- [x] İlk girişte şifre değiştirme ekranı ve sunucu fonksiyonu çağrısı.
+- [x] Ofis sahibi için kullanıcı adı, ilk şifre ve profil fotoğrafıyla danışman ekleme formu.
+- [x] Danışman hesabı oluşturma Edge Function taslağı.
+- [ ] Süperadmin web panelini oluşturup ofis oluşturma fonksiyonuna bağla.
+- [ ] Hesap oluşturma ve giriş akışlarını Supabase projesinde uçtan uca test et.
 **Çıkış kriteri:** Demo rol seçimi yerine gerçek hesap ve gerçek yetkilendirme.
 
 ### 4. Portföy yönetimi (CRUD)
@@ -41,7 +43,9 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 **Çıkış kriteri:** Portföyler uygulama kapatılıp açıldığında kaybolmaz ve rol izinleri uygulanır.
 
 ### 5. Fotoğraflar ve profesyonel portföy PDF'i
-- [ ] Galeriden fotoğraf seçme ve güvenli yükleme.
+- [x] Danışman profil fotoğrafı seçimi ve özel Storage bucket'a yükleme için mobil form.
+- [x] Ofis kapsamlı profil fotoğrafları için ilk Storage RLS migration taslağı.
+- [ ] Portföy galerisi için fotoğraf seçme ve güvenli yükleme.
 - [ ] Fotoğraf sıralama, kapak fotoğrafı ve yükleme durumları.
 - [ ] GAYIT markalı, okunaklı, çok sayfalı PDF portföy sunumu.
 - [ ] PDF'i cihazda önizleme/kaydetme/paylaşma ve hataları ele alma.
@@ -55,10 +59,10 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 **Çıkış kriteri:** Android ve iOS üzerinde paylaşım ve harita akışları denenmiş.
 
 ### 7. Ofis sahibi paneli ve ekip yönetimi
-- [ ] Çalışan listesi, rol ve üyelik durumu.
-- [ ] Danışman davet etme, devre dışı bırakma ve ofis üyeliği yönetimi.
-- [ ] Ofis portföyleri ve danışman bazlı özetler.
-- [ ] Sahip yetkilerini sunucu tarafında doğrulama.
+- [x] Danışman hesabı oluşturma isteği sunucu tarafında ofis sahibi rolüyle doğrulanır.
+- [ ] Çalışan listesi gerçek profiller ve üyeliklerden yüklensin.
+- [ ] Danışmanları devre dışı bırakma ve üyelik yönetimi.
+- [ ] Ofis portföyleri ve danışman bazlı özetler gerçek verilerden hesaplansın.
 **Çıkış kriteri:** Ofis sahibi ekibini ve ofisin tamamını yönetebilir.
 
 ### 8. İstatistikler ve iş takibi
