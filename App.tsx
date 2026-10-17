@@ -230,6 +230,33 @@ export default function App() {
     }
   };
 
+  const addRequirementForSelectedCustomer = async () => {
+    if (!selectedCustomer) return;
+    const maxPrice = Number(requirementMaxPrice.replace(/[^0-9]/g, ''));
+    if (!requirementDistrict.trim() && !requirementCity.trim() && !requirementMaxPrice.trim() && !requirementRooms.trim()) {
+      Alert.alert('Arama kriteri eksik', 'En azından konum, bütçe veya oda kriterlerinden birini gir.');
+      return;
+    }
+    setCustomerEditBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('customer_requirements').insert({
+        office_id: officeId, customer_id: selectedCustomer.id, intent: requirementIntent,
+        property_type: requirementType, city: requirementCity.trim(), district: requirementDistrict.trim(),
+        max_price: maxPrice > 0 ? maxPrice : null,
+        rooms: requirementRooms.trim() ? [requirementRooms.trim()] : [], is_active: true,
+      }).select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,must_have,notes,is_active,created_at').single();
+      if (error) throw error;
+      setCustomerRequirements(current => [data, ...current]);
+      await loadCustomers(officeId);
+      setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla');
+      setRequirementDistrict(''); setRequirementMaxPrice(''); setRequirementRooms('');
+      Alert.alert('Talep eklendi', 'Müşteriye yeni arama talebi kaydedildi.');
+    } catch (error) {
+      Alert.alert('Talep eklenemedi', error instanceof Error ? error.message : 'Arama talebi kaydedilemedi.');
+    } finally { setCustomerEditBusy(false); }
+  };
+
   const updateCustomer = async () => {
     if (!selectedCustomer || !editCustomerName.trim()) {
       Alert.alert('Eksik bilgi', 'Müşteri adı boş bırakılamaz.');
@@ -538,7 +565,15 @@ export default function App() {
             <View style={styles.matchSection}><Text style={styles.sectionTitle}>Arama talepleri</Text><Text style={styles.pageSub}>Bu müşterinin kayıtlı gayrimenkul kriterleri.</Text></View>
             {customerRequirementsLoading && <Text style={styles.pageSub}>Talepler yükleniyor…</Text>}
             {!customerRequirementsLoading && customerRequirements.map((r:any)=><View key={r.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{r.intent==='rent'?'Kiralık arıyor':'Satılık arıyor'} · {({apartment:'Daire',villa:'Villa',land:'Arsa',commercial:'İş yeri',house:'Ev',other:'Diğer',any:'Tümü'} as Record<string,string>)[r.property_type] || r.property_type}</Text><Text style={styles.teamRole}>{[r.city,r.district,r.neighborhood].filter(Boolean).join(' · ') || 'Konum fark etmez'}</Text><Text style={styles.teamMeta}>{r.max_price ? 'Azami '+money(Number(r.max_price)) : 'Bütçe belirtilmemiş'}{r.rooms?.length ? ' · '+r.rooms.join(', ') : ''}</Text>{!r.is_active && <Text style={styles.customerRoles}>Pasif talep</Text>}</View></View>)}
-            {!customerRequirementsLoading && !customerRequirements.length && <View style={styles.empty}><Ionicons name="search-outline" size={28} color={palette.muted}/><Text style={styles.teamName}>Henüz arama talebi yok</Text><Text style={styles.pageSub}>Müşteri için arama talebi ekleme akışı sıradaki geliştirme adımında.</Text></View>}
+            {!customerRequirementsLoading && !customerRequirements.length && <View style={styles.empty}><Ionicons name="search-outline" size={28} color={palette.muted}/><Text style={styles.teamName}>Henüz arama talebi yok</Text><Text style={styles.pageSub}>Aşağıdan bu müşteri için ilk talebi ekleyebilirsin.</Text></View>}
+            <View style={styles.matchSection}><Text style={styles.sectionTitle}>Yeni arama talebi ekle</Text><Text style={styles.pageSub}>Aynı müşteriye birden fazla farklı talep kaydedebilirsin.</Text></View>
+            <Text style={styles.fieldLabel}>İşlem türü</Text><View style={styles.kindRow}>{([{key:'sale',label:'Satılık'},{key:'rent',label:'Kiralık'}] as const).map(r=><Pressable key={r.key} onPress={()=>setRequirementIntent(r.key)} style={[styles.kindButton,requirementIntent===r.key&&styles.kindButtonOn]}><Text style={[styles.kindText,requirementIntent===r.key&&styles.kindTextOn]}>{r.label}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>Gayrimenkul tipi</Text><View style={styles.kindRow}>{([{key:'any',label:'Fark etmez'},{key:'apartment',label:'Daire'},{key:'villa',label:'Villa'},{key:'land',label:'Arsa'},{key:'commercial',label:'İş yeri'}]).map(r=><Pressable key={r.key} onPress={()=>setRequirementType(r.key)} style={[styles.kindButton,requirementType===r.key&&styles.kindButtonOn]}><Text style={[styles.kindText,requirementType===r.key&&styles.kindTextOn]}>{r.label}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>İl</Text><TextInput value={requirementCity} onChangeText={setRequirementCity} style={styles.input} placeholder="Muğla" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>İlçe</Text><TextInput value={requirementDistrict} onChangeText={setRequirementDistrict} style={styles.input} placeholder="Milas, Bodrum..." placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Azami bütçe (TL)</Text><TextInput value={requirementMaxPrice} onChangeText={setRequirementMaxPrice} keyboardType="numeric" style={styles.input} placeholder="5000000" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Oda sayısı</Text><TextInput value={requirementRooms} onChangeText={setRequirementRooms} style={styles.input} placeholder="3+1 (isteğe bağlı)" placeholderTextColor={palette.muted}/>
+            <Pressable disabled={customerEditBusy} onPress={addRequirementForSelectedCustomer} style={[styles.saveButton,customerEditBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{customerEditBusy?'Kaydediliyor...':'Bu müşteriye talep ekle'}</Text><Ionicons name="add-circle-outline" size={21} color="#fff"/></Pressable>
           </ScrollView>
         </SafeAreaView>
       </Modal>
