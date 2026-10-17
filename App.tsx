@@ -172,6 +172,32 @@ export default function App() {
     finally { setPhotosBusy(false); }
   };
 
+  const movePropertyPhoto = async (photo: PropertyPhoto, direction: -1 | 1) => {
+    if (!selected || photosBusy) return;
+    const current = [...propertyPhotos].sort((a, b) => a.sortOrder - b.sortOrder);
+    const index = current.findIndex(item => item.id === photo.id);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= current.length) return;
+    const reordered = [...current];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    setPhotosBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      // Persist sequential sort_order values; index 0 is the cover photo.
+      for (let i = 0; i < reordered.length; i++) {
+        const { error } = await supabase.from('property_photos')
+          .update({ sort_order: i }).eq('id', reordered[i].id).eq('property_id', selected.id);
+        if (error) throw error;
+      }
+      setPropertyPhotos(reordered.map((item, i) => ({ ...item, sortOrder: i })));
+    } catch (error) {
+      await loadPropertyPhotos(selected.id);
+      Alert.alert('Sıralama kaydedilemedi', error instanceof Error ? error.message : 'Fotoğraf sırası güncellenemedi.');
+    } finally {
+      setPhotosBusy(false);
+    }
+  };
+
   const removePropertyPhoto = async (photo: PropertyPhoto) => {
     if (!selected || photosBusy) return;
     const propertyId = selected.id;
@@ -758,6 +784,11 @@ export default function App() {
           <Text style={styles.pageTitle}>{role === 'owner' ? 'Ofis özeti' : 'Portföyüm'}</Text>
           <Text style={styles.pageSub}>{role === 'owner' ? 'Ekibin ve portföyün tek bakışta.' : 'İlanlarını, performansını ve fırsatlarını yönet.'}</Text>
           <View style={styles.hero}><View style={{ flex: 1 }}><Text style={styles.heroKicker}>GAYIT İŞ ASİSTANI</Text><Text style={styles.heroTitle}>{role === 'owner' ? 'Ofisin kontrol altında.' : 'İyi portföy, doğru sunum.'}</Text><Text style={styles.heroBody}>{role === 'owner' ? 'Ekibin performansını izle, kararlarını veriye dayandır.' : 'Portföyünü hızlıca paylaş, müşterine profesyonel sun.'}</Text></View><View style={styles.heroIcon}><Ionicons name={role === 'owner' ? 'business' : 'key'} size={30} color={palette.gold}/></View></View>
+          <Pressable onPress={()=>setTab('customers')} style={{marginTop:16,marginBottom:4,padding:15,borderRadius:16,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line}}>
+            <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:8}}><Text style={styles.sectionTitle}>Bugünün müşteri takipleri</Text><Ionicons name="chevron-forward" size={17} color={palette.muted}/></View>
+            {customers.filter(c=>c.active&&c.nextFollowUpAt&&new Date(c.nextFollowUpAt).getTime()<=new Date(new Date().toDateString()).getTime()+24*60*60*1000).sort((a,b)=>new Date(a.nextFollowUpAt||0).getTime()-new Date(b.nextFollowUpAt||0).getTime()).slice(0,3).map(c=><Pressable key={c.id} onPress={()=>openCustomerDetail(c)} style={{paddingVertical:9,borderTopWidth:1,borderTopColor:palette.line,flexDirection:'row',alignItems:'center',gap:10}}><View style={{width:34,height:34,borderRadius:11,backgroundColor:palette.goldSoft,alignItems:'center',justifyContent:'center'}}><Ionicons name="calendar-outline" size={17} color={palette.navy}/></View><View style={{flex:1}}><Text style={styles.teamName}>{c.fullName}</Text><Text style={styles.teamMeta}>{new Date(c.nextFollowUpAt||'').toLocaleString('tr-TR',{dateStyle:'medium',timeStyle:'short'})}</Text></View><Ionicons name="chevron-forward" size={15} color={palette.muted}/></Pressable>)}
+            {!customers.some(c=>c.active&&c.nextFollowUpAt&&new Date(c.nextFollowUpAt).getTime()<=new Date(new Date().toDateString()).getTime()+24*60*60*1000)&&<Text style={styles.pageSub}>Bugün veya gecikmiş takip yok. Müşteri detayından takip tarihi ekleyebilirsin.</Text>}
+          </Pressable>
           <View style={styles.statGrid}>
             <Stat icon="business-outline" label={role === 'owner' ? 'Toplam portföy' : 'Portföyüm'} value={String(role === 'owner' ? properties.length : properties.filter(p => p.agent === 'Sen').length)} note="Aktif kayıtlar" />
             <Stat icon="eye-outline" label="Görüntülenme" value="—" note="Ölçüm kurulmadı" />
@@ -831,7 +862,7 @@ export default function App() {
           <ScrollView contentContainerStyle={styles.modalPage}><View style={styles.propertyHero}><View style={styles.houseIcon}><Ionicons name="home" size={52} color={palette.navy2}/></View><View style={styles.statusPill}><Text style={styles.statusText}>{selected.status}</Text></View></View>
           <View style={{marginBottom:18}}>
   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:10}}><Text style={styles.sectionTitle}>İlan fotoğrafları ({propertyPhotos.length})</Text><Pressable onPress={addPropertyPhoto} disabled={photosBusy} style={[styles.pdfButton,{flex:0,paddingHorizontal:14,paddingVertical:9}]}><Ionicons name="add-circle-outline" size={18} color={palette.navy}/><Text style={styles.pdfButtonText}>{photosBusy ? 'İşleniyor…' : 'Fotoğraf ekle'}</Text></Pressable></View>
-  {photosBusy && propertyPhotos.length===0 ? <Text style={styles.noticeText}>Fotoğraflar yükleniyor…</Text> : propertyPhotos.length===0 ? <Text style={styles.noticeText}>Henüz fotoğraf eklenmedi. Galeriden fotoğraf seçerek ilana ekleyebilirsin.</Text> : <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>{propertyPhotos.map(photo=><View key={photo.id} style={{width:'48%',height:145,borderRadius:12,overflow:'hidden',backgroundColor:palette.line}}><Image source={{uri:photo.url}} style={{width:'100%',height:'100%'}} resizeMode="cover"/><Pressable disabled={photosBusy} onPress={()=>removePropertyPhoto(photo)} style={{position:'absolute',right:7,top:7,backgroundColor:'#FFFFFFE8',borderRadius:18,padding:6,opacity:photosBusy?0.5:1}}><Ionicons name={photosBusy?"time-outline":"trash-outline"} size={17} color={palette.red}/></Pressable></View>)}</View>}
+  {photosBusy && propertyPhotos.length===0 ? <Text style={styles.noticeText}>Fotoğraflar yükleniyor…</Text> : propertyPhotos.length===0 ? <Text style={styles.noticeText}>Henüz fotoğraf eklenmedi. Galeriden fotoğraf seçerek ilana ekleyebilirsin.</Text> : <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>{[...propertyPhotos].sort((a,b)=>a.sortOrder-b.sortOrder).map((photo,index)=><View key={photo.id} style={{width:'48%',height:174,borderRadius:12,overflow:'hidden',backgroundColor:palette.line}}><Image source={{uri:photo.url}} style={{width:'100%',height:145}} resizeMode="cover"/>{index===0&&<View style={{position:'absolute',left:6,top:6,backgroundColor:palette.gold,borderRadius:7,paddingHorizontal:7,paddingVertical:4}}><Text style={{fontSize:9,fontWeight:'900',color:palette.navy}}>KAPAK</Text></View>}<View style={{height:29,flexDirection:'row',alignItems:'center',justifyContent:'space-around',backgroundColor:palette.white}}><Pressable disabled={photosBusy||index===0} onPress={()=>movePropertyPhoto(photo,-1)} style={{paddingHorizontal:8,opacity:index===0||photosBusy?0.3:1}}><Ionicons name="chevron-back" size={16} color={palette.navy}/></Pressable><Text style={{fontSize:9,color:palette.muted}}>{index===0?'Kapak fotoğrafı':String(index+1)+'. fotoğraf'}</Text><Pressable disabled={photosBusy||index===propertyPhotos.length-1} onPress={()=>movePropertyPhoto(photo,1)} style={{paddingHorizontal:8,opacity:index===propertyPhotos.length-1||photosBusy?0.3:1}}><Ionicons name="chevron-forward" size={16} color={palette.navy}/></Pressable><Pressable disabled={photosBusy} onPress={()=>removePropertyPhoto(photo)} style={{paddingHorizontal:8,opacity:photosBusy?0.4:1}}><Ionicons name="trash-outline" size={15} color={palette.red}/></Pressable></View></View>)}</View>}
 </View>
 <Text style={styles.eyebrow}>{propertyTypeLabel(selected.propertyType).toLocaleUpperCase('tr-TR')} · {selected.kind.toLocaleUpperCase('tr-TR')}</Text><Text style={styles.detailTitle}>{selected.title}</Text><View style={styles.addressLine}><Ionicons name="location-outline" size={18} color={palette.muted}/><Text style={styles.addressText}>{selected.address}</Text></View><Text style={styles.detailPrice}>{money(selected.price)}{selected.kind==='Kiralık'?<Text style={styles.perMonth}> / ay</Text>:null}</Text>
           <View style={styles.featureRow}><Feature icon="bed-outline" label="Oda" value={selected.rooms}/><Feature icon="resize-outline" label="Alan" value={selected.area}/><Feature icon="eye-outline" label="Görüntülenme" value={String(selected.views)}/></View>
