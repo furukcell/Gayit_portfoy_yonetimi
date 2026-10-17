@@ -24,6 +24,10 @@ Two initial server-side functions are included:
 
 Deploy these only after validating the schema in a disposable project. The initial superadmin must be provisioned out-of-band by a trusted administrator using Supabase Auth admin tooling; never let the public client assign its own superadmin role.
 
+## Superadmin panel
+
+A starter static panel is available at `superadmin/index.html`. It asks for the Supabase project URL, public anon/publishable key, and the existing superadmin username/password. It invokes `create-office` only after the authenticated user metadata contains `role: superadmin`. The first superadmin must be provisioned out-of-band by a trusted administrator. Do not publish this page as an unrestricted admin portal; host over HTTPS and add appropriate access controls.
+
 ## Configure
 
 1. Create a Supabase project.
