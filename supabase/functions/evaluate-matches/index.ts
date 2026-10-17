@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
 
   let customerQuery = admin.from("customers").select("id,office_id,assigned_agent_id,is_active,full_name").eq("office_id", officeId).eq("is_active", true);
   if (customerId) customerQuery = customerQuery.eq("id", customerId);
+  if (membership.role === "agent") customerQuery = customerQuery.eq("assigned_agent_id", auth.user.id);
   const { data: customers, error: customerError } = await customerQuery;
   if (customerError) return respond({ error: "Customers query failed" }, 500);
   if (customerId && !customers?.length) return respond({ error: "Müşteri bulunamadı veya bu ofise ait değil." }, 404);
@@ -49,6 +50,7 @@ Deno.serve(async (req) => {
   let propertyQuery = admin.from("properties").select("id,office_id,owner_agent_id,title,listing_type,status,price,rooms,area_m2,property_type,city,district,neighborhood")
     .eq("office_id", officeId).eq("status", "active");
   if (propertyId) propertyQuery = propertyQuery.eq("id", propertyId);
+  if (membership.role === "agent") propertyQuery = propertyQuery.eq("owner_agent_id", auth.user.id);
   const { data: properties, error: propertyError } = await propertyQuery;
   if (propertyError) return respond({ error: "Properties query failed" }, 500);
   if (propertyId && !properties?.length) return respond({ error: "Aktif ilan bulunamadı veya bu ofise ait değil." }, 404);
