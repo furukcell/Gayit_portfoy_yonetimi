@@ -52,6 +52,7 @@ export default function App() {
   const [agentPassword, setAgentPassword] = useState('');
   const [agentAvatarUri, setAgentAvatarUri] = useState<string | null>(null);
   const [agentBusy, setAgentBusy] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<{name:string; username:string; role:string; avatarPath:string|null; id:string}[]>([]);
   const [tab, setTab] = useState<Tab>('home');
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [selected, setSelected] = useState<Property | null>(null);
@@ -99,12 +100,31 @@ export default function App() {
       else Alert.alert('PDF hazır', 'PDF dosyası oluşturuldu: ' + file.uri);
     } catch { Alert.alert('PDF oluşturulamadı', 'Lütfen tekrar deneyin.'); }
   };
+  const loadTeamMembers = async (targetOfficeId: string) => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('office_members')
+      .select('role,status,profiles(id,full_name,username,avatar_path)')
+      .eq('office_id', targetOfficeId)
+      .eq('status', 'active');
+    if (error) throw new Error('Ekip bilgileri yüklenemedi.');
+    const mapped = (data || []).map((row: any) => ({
+      id: row.profiles?.id || row.user_id || '',
+      name: row.profiles?.full_name || 'İsimsiz danışman',
+      username: row.profiles?.username || '',
+      role: row.role,
+      avatarPath: row.profiles?.avatar_path || null,
+    }));
+    setTeamMembers(mapped);
+  };
+
   const handleLogin = async () => {
     setAuthBusy(true); setAuthError('');
     try {
       const result = await signInWithUsername(loginUsername, loginPassword);
       setRole(result.role);
       setOfficeId(result.officeId);
+      if (result.role === 'owner') await loadTeamMembers(result.officeId);
       setMustChangePassword(result.mustChangePassword);
       setAuthenticated(true);
       setLoginPassword('');
@@ -149,6 +169,7 @@ export default function App() {
       }
       const { data, error } = await supabase.functions.invoke('create-agent', { body: { officeId, username: agentUsername, password: agentPassword, fullName: agentName, avatarPath } });
       if (error || !data?.success) throw new Error(data?.error || error?.message || 'Danışman oluşturulamadı.');
+      await loadTeamMembers(officeId);
       Alert.alert('Danışman eklendi', agentName.trim() + ' için hesap oluşturuldu. İlk girişte şifresini değiştirmesi gerekecek.');
       setAgentModalOpen(false); setAgentName(''); setAgentUsername(''); setAgentPassword(''); setAgentAvatarUri(null);
     } catch (error) {
@@ -242,14 +263,9 @@ export default function App() {
 
         {tab === 'team' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>EKİP YÖNETİMİ</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Danışmanlar</Text><Text style={styles.pageSub}>Ofis ekibinin portföy ve performans özeti.</Text></View><Pressable onPress={()=>setAgentModalOpen(true)} style={styles.addButton}><Ionicons name="person-add-outline" size={22} color="#fff"/></Pressable></View>
-          {[
-            {name:'Mert Yılmaz', role:'Kıdemli danışman', count:'12 portföy', performance:'8 gösterim', initials:'MY'},
-            {name:'Elif Demir', role:'Gayrimenkul danışmanı', count:'9 portföy', performance:'6 gösterim', initials:'ED'},
-            {name:'Can Aydın', role:'Gayrimenkul danışmanı', count:'7 portföy', performance:'4 gösterim', initials:'CA'},
-            {name:'Sen', role:'Ofis sahibi', count:`${properties.length} portföy`, performance:'Ofis yöneticisi', initials:'GY'},
-          ].map((person,i)=><View key={person.name} style={styles.teamCard}><View style={styles.avatar}><Text style={styles.avatarText}>{person.initials}</Text></View><View style={{flex:1}}><Text style={styles.teamName}>{person.name}</Text><Text style={styles.teamRole}>{person.role}</Text><Text style={styles.teamMeta}>{person.count} · {person.performance}</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></View>)}
-          <View style={styles.notice}><Ionicons name="shield-checkmark-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Ekip listesi demo verisidir. Gerçek çalışan daveti, rol izinleri ve hesap yönetimi kimlik doğrulama entegrasyonuyla eklenecek.</Text></View>
-        </ScrollView>}
+          {teamMembers.map((person)=><View key={person.id || person.username} style={styles.teamCard}><View style={styles.avatar}><Text style={styles.avatarText}>{person.name.split(/\s+/).map((part:string)=>part[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')}</Text></View><View style={{flex:1}}><Text style={styles.teamName}>{person.name}</Text><Text style={styles.teamRole}>{person.role === 'owner' ? 'Ofis sahibi' : 'Gayrimenkul danışmanı'}</Text><Text style={styles.teamMeta}>@{person.username || 'kullanıcı adı yok'}</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></View>)}
+          {!teamMembers.length && <View style={styles.empty}><Ionicons name="people-outline" size={30} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz ekip üyesi yok</Text><Text style={styles.pageSub}>Sağ üstteki butondan ilk danışmanını ekleyebilirsin.</Text></View>}
+          <View style={styles.notice}><Ionicons name="shield-checkmark-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Ekip üyeleri oturum açmış ofisin veritabanından yüklenir. Hesap oluşturma fonksiyonunun deploy edilmiş ve Supabase bağlantısının ayarlanmış olması gerekir.</Text></View>        </ScrollView>}
 
         {tab === 'stats' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>PERFORMANS ANALİZİ</Text><Text style={styles.pageTitle}>{role === 'owner' ? 'Ofis istatistikleri' : 'Performansım'}</Text><Text style={styles.pageSub}>Portföy ve görüntülenme metrikleri.</Text>
