@@ -9,7 +9,9 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] An Office A owner can read and update Office A details.
 - [ ] An Office A owner cannot read or update Office B details.
 - [ ] An Office A owner can list Office A members, but cannot promote an agent to owner through the membership client API.
-- [ ] An owner cannot change an existing membership's office_id, role, or linked user_id through the client API.
+- [ ] An owner cannot change an existing membership's office_id, role, invite email, or linked user_id through the client API.
+- [ ] An owner cannot insert a membership already bound to an existing profile; client-created invites require user_id null and invited_email set.
+- [ ] Only trusted server functions can bind an existing profile to an invite.
 - [ ] An owner can update an agent membership's permitted status fields without changing its identity.
 - [ ] An Office A agent can see active colleagues' profiles in their office, but cannot see unrelated profiles.
 - [ ] An Office A agent can read/update only properties assigned to that agent.
@@ -43,7 +45,7 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 
 ## Known limitations before production
 
-- Migrations 001–009 are drafts until applied to a disposable Supabase project and verified.
+- Migrations 001–010 are drafts until applied to a disposable Supabase project and verified.
 - The matching evaluator exists as a Supabase Edge Function draft, but must be deployed and tested against real data before production use.
 - Private property-photo upload uses migration 004 and must pass the role-isolation and upload/delete checks below before production use.
 - Invitation acceptance, account deletion and the full KVKK retention/deletion flow are not implemented yet.
