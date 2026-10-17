@@ -156,14 +156,14 @@ Bu paket test ve canlı ortam doğrulamalarından ayrı geliştirme adımlarıd�
 - [x] Ana sayfada bugün ve gecikmiş müşteri takiplerini gösterme; satıra dokunarak müşteri detayına gitme.
 - [x] İstatistik ekranından portföy durumları ve fiyat toplamını içeren paylaşılabilir rapor oluşturma.
 - [x] Portföy favorileri için kalıcı veri modeli ve uygulama akışı.
-- [ ] Son görüntülenenler listesi.
+- [x] Son görüntülenen portföyler için kullanıcı/ofis kapsamlı kalıcı geçmiş ve hızlı filtre.
 - [x] Satış/kiralama işlem kaydı ve komisyon takibi için veri modeli ve kayıt ekranı.
 - [x] GAYIT CSV metnini yapıştırarak portföyleri toplu içe aktarma.
 - [ ] Dosya seçerek Excel/CSV içe aktarma ve mevcut kayıtları güncelleme.
 - [x] Portföyü CSV metni olarak dışa aktarma/paylaşma.
 - [x] Portföy listesinde durum ve fiyat aralığı filtreleri.
-- [ ] Ofis logosu/iletişim bilgileriyle PDF şablonunu markalama.
+- [ ] Ofis sahibi için marka/iletişim düzenleme ekranı ve PDF'e logo/iletişim alanlarını bağlama (migration 011 alanları hazır).
 - [ ] Daha kapsamlı il/ilçe/mahalle ve fiyat/oda filtreleri.
 - [ ] Ofis başına abonelik, paket ve kullanım limitleri.
 
-Not: Favoriler ve işlem/komisyon özellikleri için `supabase/migrations/011_favorites_and_transactions.sql` migration'ı Supabase ortamına uygulanmalıdır. Fotoğraf sıralama özelliği Supabase `property_photos` tablosunda `sort_order` güncelleme izni gerektirir. Müşteri takip listesi mevcut `next_follow_up_at` verisini kullanır. Paylaşım raporu gerçek portföy kayıtlarından oluşturulur; görüntülenme veya gerçekleşmiş komisyon gibi tutulmayan metrikler üretilmez.
+Not: Favoriler, son görüntülenenler, işlem/komisyon özellikleri ve ofis marka alanları için `supabase/migrations/011_favorites_and_transactions.sql` migration'ı Supabase ortamına uygulanmalıdır. Fotoğraf sıralama özelliği Supabase `property_photos` tablosunda `sort_order` güncelleme izni gerektirir. Müşteri takip listesi mevcut `next_follow_up_at` verisini kullanır. Paylaşım raporu gerçek portföy kayıtlarından oluşturulur; görüntülenme veya gerçekleşmiş komisyon gibi tutulmayan metrikler üretilmez.
