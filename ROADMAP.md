@@ -157,7 +157,9 @@ Bu paket test ve canlı ortam doğrulamalarından ayrı geliştirme adımlarıd�
 - [x] İstatistik ekranından portföy durumları ve fiyat toplamını içeren paylaşılabilir rapor oluşturma.
 - [ ] Portföy favorileri ve son görüntülenenler için kalıcı veri modeli.
 - [ ] Satış/kiralama işlem kaydı ve komisyon takibi için veri modeli ve ekranlar.
-- [ ] Excel/CSV portföy içe aktarma ve dışa aktarma.
+- [ ] Excel/CSV portföy içe aktarma.
+- [x] Portföyü CSV metni olarak dışa aktarma/paylaşma.
+- [x] Portföy listesinde durum ve fiyat aralığı filtreleri.
 - [ ] Ofis logosu/iletişim bilgileriyle PDF şablonunu markalama.
 - [ ] Daha kapsamlı il/ilçe/mahalle ve fiyat/oda filtreleri.
 - [ ] Ofis başına abonelik, paket ve kullanım limitleri.
