@@ -48,6 +48,7 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Attempt to create a match whose property, customer or requirement belongs to another office must fail.
 - [ ] Attempt to call evaluate-matches with a non-member officeId must return 403.
 - [ ] Disabled profile cannot call create-agent even if its JWT has not expired.
+- [ ] Disabled or missing profile cannot call create-office with a stale superadmin JWT.
 - [ ] Inactive office cannot create agent accounts.
 - [ ] Non-owner and inactive office members cannot create agent accounts.\n- [ ] Disabled profile cannot call evaluate-matches even if its JWT has not expired.\n- [ ] Inactive office cannot run evaluate-matches.
 - [ ] Agent can evaluate matches only for an office where their membership is active.
