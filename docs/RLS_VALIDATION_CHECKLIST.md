@@ -94,3 +94,12 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Agent calling evaluate-matches with their office ID only evaluates customers assigned to them and listings owned by them.
 - [ ] Agent-supplied IDs for another agent's customer or listing return not found and create no matches/notifications.
 - [ ] Owner can evaluate matches across the active office only.
+
+## Additional defense-in-depth checks (migration 011 proposed)
+
+- [ ] A direct update to a customer requirement fails if its customer belongs to a different office than the requirement's office.
+- [ ] A direct delete of a requirement is allowed only when its customer belongs to the same office and is assigned to the requesting agent.
+- [ ] An agent cannot read or create customer activity rows whose customer office differs from the activity office.
+- [ ] After customer reassignment, the previous agent cannot read or modify the customer's activity history.
+- [ ] Confirm these constraints through direct authenticated PostgREST requests, not only the mobile UI.
+
