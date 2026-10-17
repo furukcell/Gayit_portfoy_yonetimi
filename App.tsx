@@ -106,6 +106,24 @@ export default function App() {
   const [filter, setFilter] = useState<'Tümü' | 'Satılık' | 'Kiralık'>('Tümü');
   const [sortBy, setSortBy] = useState<'newest' | 'priceAsc' | 'priceDesc'>('newest');
   const [showArchived, setShowArchived] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'Tümü' | PropertyStatus>('Tümü');
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [recentOnly, setRecentOnly] = useState(false);
+  const [recentPropertyIds, setRecentPropertyIds] = useState<string[]>([]);
+  const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [transactionPropertyId, setTransactionPropertyId] = useState('');
+  const [transactionFinalPrice, setTransactionFinalPrice] = useState('');
+  const [transactionOfficeCommission, setTransactionOfficeCommission] = useState('');
+  const [transactionAgentCommission, setTransactionAgentCommission] = useState('');
+  const [transactionDate, setTransactionDate] = useState(new Date().toISOString().slice(0,10));
+  const [transactionNotes, setTransactionNotes] = useState('');
+  const [transactionBusy, setTransactionBusy] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [csvImportText, setCsvImportText] = useState('');
+  const [csvImportBusy, setCsvImportBusy] = useState(false);
+  const [minPriceFilter, setMinPriceFilter] = useState('');
+  const [maxPriceFilter, setMaxPriceFilter] = useState('');
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
   const [photosBusy, setPhotosBusy] = useState(false);
   const [title, setTitle] = useState('');
@@ -120,8 +138,163 @@ export default function App() {
   const roleProperties = useMemo(() => properties, [properties]);
   const visibleProperties = useMemo(() => properties.filter(p => {
     const searchMatch = `${p.title} ${p.address} ${p.id}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR'));
-    return searchMatch && (showArchived ? p.status === 'Arşivde' : p.status !== 'Arşivde') && (filter === 'Tümü' || p.kind === filter);
-  }).sort((a,b) => sortBy === 'priceAsc' ? a.price-b.price : sortBy === 'priceDesc' ? b.price-a.price : 0), [properties, role, search, filter, sortBy, showArchived]);
+    const minPrice = minPriceFilter.trim() ? Number(minPriceFilter.replace(/[^0-9]/g, '')) : null;
+    const maxPrice = maxPriceFilter.trim() ? Number(maxPriceFilter.replace(/[^0-9]/g, '')) : null;
+    const statusMatch = statusFilter === 'Tümü' || p.status === statusFilter;
+    const minMatch = minPrice === null || p.price >= minPrice;
+    const maxMatch = maxPrice === null || p.price <= maxPrice;
+    return searchMatch && (showArchived ? p.status === 'Arşivde' : p.status !== 'Arşivde') && (filter === 'Tümü' || p.kind === filter) && statusMatch && minMatch && maxMatch && (!favoritesOnly || favoriteIds.includes(p.id)) && (!recentOnly || recentPropertyIds.includes(p.id));
+  }).sort((a,b) => sortBy === 'priceAsc' ? a.price-b.price : sortBy === 'priceDesc' ? b.price-a.price : sortBy === 'newest' ? 0 : 0), [properties, role, search, filter, sortBy, showArchived, statusFilter, minPriceFilter, maxPriceFilter, favoritesOnly, favoriteIds, recentOnly, recentPropertyIds]);
+
+  const saveTransaction = async () => {
+    if (transactionBusy) return;
+    const finalPrice = Number(transactionFinalPrice.replace(/[^0-9]/g,''));
+    const officeCommission = Number(transactionOfficeCommission.replace(/[^0-9]/g,'') || 0);
+    const agentCommission = Number(transactionAgentCommission.replace(/[^0-9]/g,'') || 0);
+    if (!transactionPropertyId || !Number.isSafeInteger(finalPrice) || finalPrice <= 0) { Alert.alert('Eksik bilgi','Portföy seç ve gerçekleşen satış/kiralama bedelini gir.'); return; }
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(transactionDate) || officeCommission < 0 || agentCommission < 0 || officeCommission + agentCommission > finalPrice) { Alert.alert('Bilgileri kontrol et','Tarih YYYY-AA-GG olmalı; komisyonlar negatif olamaz ve toplamı işlem bedelini aşamaz.'); return; }
+    setTransactionBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data:userResult,error:userError } = await supabase.auth.getUser();
+      if(userError||!userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
+      const property = properties.find(p=>p.id===transactionPropertyId);
+      if(!property) throw new Error('Seçilen portföy bulunamadı.');
+      const { error } = await supabase.from('property_transactions').insert({
+        office_id:officeId, property_id:property.id, agent_id:userResult.user.id,
+        transaction_type:property.kind==='Kiralık'?'rent':'sale', final_price:finalPrice,
+        office_commission:officeCommission, agent_commission:agentCommission,
+        closed_on:transactionDate, notes:transactionNotes.trim(), created_by:userResult.user.id,
+      });
+      if(error) throw error;
+      await getSupabaseClient().from('properties').update({status:property.kind==='Kiralık'?'rented':'sold'}).eq('id',property.id).eq('office_id',officeId);
+      await loadProperties(officeId);
+      setTransactionModalOpen(false); setTransactionPropertyId(''); setTransactionFinalPrice(''); setTransactionOfficeCommission(''); setTransactionAgentCommission(''); setTransactionNotes('');
+      Alert.alert('İşlem kaydedildi','Satış/kiralama ve komisyon kaydı oluşturuldu.');
+    } catch(error) { Alert.alert('İşlem kaydedilemedi',error instanceof Error?error.message:'Supabase 011 migration dosyasını ve ofis yetkilerini kontrol et.'); }
+    finally { setTransactionBusy(false); }
+  };
+
+  const loadRecentViews = async () => {
+    if (!officeId) return;
+    try {
+      const { data, error } = await getSupabaseClient().from('property_recent_views').select('property_id,viewed_at').eq('office_id',officeId).order('viewed_at',{ascending:false}).limit(50);
+      if (error) throw error;
+      setRecentPropertyIds([...new Set((data||[]).map((row:any)=>row.property_id))]);
+    } catch {
+      // The rest of the portfolio remains usable before migration 011 is applied.
+    }
+  };
+  const openProperty = (property: Property) => {
+    setSelected(property); setPropertyPhotos([]);
+    void loadPropertyPhotos(property.id);
+    if (!officeId) return;
+    void (async()=>{
+      try {
+        const supabase=getSupabaseClient();
+        const {data:userResult}=await supabase.auth.getUser();
+        if(!userResult.user) return;
+        const {error}=await supabase.from('property_recent_views').upsert(
+          {office_id:officeId,property_id:property.id,user_id:userResult.user.id,viewed_at:new Date().toISOString()},
+          {onConflict:'office_id,property_id,user_id'}
+        );
+        if(error) return;
+        setRecentPropertyIds(ids=>[property.id,...ids.filter(id=>id!==property.id)].slice(0,50));
+      } catch { /* Recent-view tracking must not block opening a property. */ }
+    })();
+  };
+
+  const loadFavorites = async () => {
+    if (!officeId) return;
+    try {
+      const { data, error } = await getSupabaseClient().from('property_favorites').select('property_id').eq('office_id', officeId);
+      if (error) throw error;
+      setFavoriteIds((data || []).map((row: any) => row.property_id));
+    } catch {
+      Alert.alert('Favoriler yüklenemedi','Supabase 011 migration dosyasını uyguladığından emin ol.');
+    }
+  };
+  const toggleFavorite = async (property: Property) => {
+    if (!officeId) return;
+    const supabase = getSupabaseClient();
+    const { data: userResult, error: userError } = await supabase.auth.getUser();
+    if (userError || !userResult.user) { Alert.alert('Oturum gerekli','Favori kaydetmek için tekrar giriş yap.'); return; }
+    const isFavorite = favoriteIds.includes(property.id);
+    try {
+      if (isFavorite) {
+        const { error } = await supabase.from('property_favorites').delete().eq('office_id',officeId).eq('property_id',property.id).eq('user_id',userResult.user.id);
+        if (error) throw error;
+        setFavoriteIds(ids=>ids.filter(id=>id!==property.id));
+      } else {
+        const { error } = await supabase.from('property_favorites').insert({office_id:officeId,property_id:property.id,user_id:userResult.user.id});
+        if (error) throw error;
+        setFavoriteIds(ids=>[...ids,property.id]);
+      }
+    } catch (error) { Alert.alert('Favori kaydedilemedi',error instanceof Error?error.message:'Supabase 011 migration dosyasını ve yetkileri kontrol et.'); }
+  };
+
+  const importPortfolioCsv = async () => {
+    if (csvImportBusy) return;
+    const source = csvImportText.trim();
+    if (!source) { Alert.alert('CSV verisi gerekli','CSV içeriğini buraya yapıştır.'); return; }
+    const parseLine = (line: string) => {
+      const values:string[]=[]; let value=''; let quoted=false;
+      for(let i=0;i<line.length;i++){const char=line[i];if(char==='"'&&quoted&&line[i+1]==='"'){value+='"';i++;}else if(char==='"')quoted=!quoted;else if(char===';'&&!quoted){values.push(value);value='';}else value+=char;}
+      values.push(value); return values.map(v=>v.trim());
+    };
+    const lines=source.replace(/^\\uFEFF/,'').split(/\\r?\\n/).filter(line=>line.trim().length>0);
+    if(lines.length<2){Alert.alert('CSV biçimi hatalı','Başlık satırı ve en az bir portföy satırı gerekli.');return;}
+    const payloads=lines.slice(1).map(parseLine).map(row=>{
+      const price=Number((row[3]||'').replace(/[^0-9]/g,''));
+      const area=Number((row[5]||'').replace(',','.').replace(/[^0-9.]/g,''));
+      const typeText=(row[1]||'').toLocaleLowerCase('tr-TR');
+      const statusText=(row[8]||'Aktif').toLocaleLowerCase('tr-TR');
+      return {title:(row[0]||'').slice(0,160),property_type:typeText.includes('villa')?'villa':typeText.includes('arsa')?'land':typeText.includes('iş yeri')?'commercial':typeText.includes('müstakil')?'house':'apartment',listing_type:(row[2]||'').toLocaleLowerCase('tr-TR').includes('kir')?'rent':'sale',price,rooms:row[4]||'',area_m2:Number.isFinite(area)&&area>0?area:null,district:row[6]||'',address:row[7]||'',status:statusText.includes('opsiyon')?'optioned':statusText.includes('satıldı')?'sold':statusText.includes('kiralandı')?'rented':statusText.includes('arşiv')?'archived':'active',description:row[10]||'',city:'Türkiye',office_id:officeId};
+    });
+    if(payloads.some(p=>!p.title||p.title.length<3||!p.address||!Number.isSafeInteger(p.price)||p.price<=0)){Alert.alert('Satırları kontrol et','Her satırda başlık, adres ve pozitif tam sayı fiyat bulunmalı.');return;}
+    setCsvImportBusy(true);
+    try{
+      const supabase=getSupabaseClient();const {data:userResult,error:userError}=await supabase.auth.getUser();
+      if(userError||!userResult.user)throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
+      const {error}=await supabase.from('properties').insert(payloads.map(p=>({...p,owner_agent_id:userResult.user.id,created_by:userResult.user.id})));
+      if(error)throw error;
+      await loadProperties(officeId);setCsvImportOpen(false);setCsvImportText('');
+      Alert.alert('Aktarım tamamlandı',`${payloads.length} portföy kaydı eklendi.`);
+    }catch(error){Alert.alert('Aktarım yapılamadı',error instanceof Error?error.message:'CSV verileri kaydedilemedi.');}
+    finally{setCsvImportBusy(false);}
+  };
+
+  const exportPortfolioCsv = async () => {
+    const escapeCsv = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+    const headers = ['Portföy başlığı','Tür','İlan tipi','Fiyat','Oda','Alan','İlçe','Adres','Durum','Danışman','Açıklama'];
+    const rows = roleProperties.map(p => [
+      p.title, p.propertyType ? propertyTypeLabel(p.propertyType) : '',
+      p.kind, p.price, p.rooms, p.area, p.district, p.address, p.status, p.agent, p.description
+    ]);
+    const csv = '\\uFEFF' + [headers, ...rows].map(row => row.map(escapeCsv).join(';')).join('\\r\\n');
+    try { await Share.share({ title: 'GAYIT portföy CSV', message: csv }); }
+    catch (error) { Alert.alert('Dışa aktarılamadı', error instanceof Error ? error.message : 'CSV raporu hazırlanamadı.'); }
+  };
+
+  const sharePortfolioReport = async () => {
+    const rows = roleProperties.map(p => `• ${p.title} | ${p.kind} | ${money(p.price)} | ${p.status} | ${p.address}`);
+    const report = [
+      'GAYIT · PORTFÖY RAPORU',
+      new Date().toLocaleDateString('tr-TR'),
+      '',
+      `Toplam portföy: ${roleProperties.length}`,
+      `Aktif: ${roleProperties.filter(p => p.status === 'Aktif').length}`,
+      `Opsiyonlu: ${roleProperties.filter(p => p.status === 'Opsiyonlu').length}`,
+      `Satıldı: ${roleProperties.filter(p => p.status === 'Satıldı').length}`,
+      `Kiralandı: ${roleProperties.filter(p => p.status === 'Kiralandı').length}`,
+      `Fiyat toplamı: ${money(roleProperties.reduce((sum, p) => sum + p.price, 0))}`,
+      '',
+      'PORTFÖY LİSTESİ',
+      ...rows,
+    ].join('\\n');
+    try { await Share.share({ title: 'GAYIT Portföy Raporu', message: report }); }
+    catch (error) { Alert.alert('Rapor paylaşılamadı', error instanceof Error ? error.message : 'Rapor oluşturulamadı.'); }
+  };
 
   const openMap = async (p: Property) => {
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address)}`;
@@ -170,6 +343,32 @@ export default function App() {
       await loadPropertyPhotos(selected.id);
     } catch (error) { Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : 'Supabase migration ve Storage izinlerini kontrol edin.'); }
     finally { setPhotosBusy(false); }
+  };
+
+  const movePropertyPhoto = async (photo: PropertyPhoto, direction: -1 | 1) => {
+    if (!selected || photosBusy) return;
+    const current = [...propertyPhotos].sort((a, b) => a.sortOrder - b.sortOrder);
+    const index = current.findIndex(item => item.id === photo.id);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= current.length) return;
+    const reordered = [...current];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    setPhotosBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      // Persist sequential sort_order values; index 0 is the cover photo.
+      for (let i = 0; i < reordered.length; i++) {
+        const { error } = await supabase.from('property_photos')
+          .update({ sort_order: i }).eq('id', reordered[i].id).eq('property_id', selected.id);
+        if (error) throw error;
+      }
+      setPropertyPhotos(reordered.map((item, i) => ({ ...item, sortOrder: i })));
+    } catch (error) {
+      await loadPropertyPhotos(selected.id);
+      Alert.alert('Sıralama kaydedilemedi', error instanceof Error ? error.message : 'Fotoğraf sırası güncellenemedi.');
+    } finally {
+      setPhotosBusy(false);
+    }
   };
 
   const removePropertyPhoto = async (photo: PropertyPhoto) => {
@@ -758,6 +957,11 @@ export default function App() {
           <Text style={styles.pageTitle}>{role === 'owner' ? 'Ofis özeti' : 'Portföyüm'}</Text>
           <Text style={styles.pageSub}>{role === 'owner' ? 'Ekibin ve portföyün tek bakışta.' : 'İlanlarını, performansını ve fırsatlarını yönet.'}</Text>
           <View style={styles.hero}><View style={{ flex: 1 }}><Text style={styles.heroKicker}>GAYIT İŞ ASİSTANI</Text><Text style={styles.heroTitle}>{role === 'owner' ? 'Ofisin kontrol altında.' : 'İyi portföy, doğru sunum.'}</Text><Text style={styles.heroBody}>{role === 'owner' ? 'Ekibin performansını izle, kararlarını veriye dayandır.' : 'Portföyünü hızlıca paylaş, müşterine profesyonel sun.'}</Text></View><View style={styles.heroIcon}><Ionicons name={role === 'owner' ? 'business' : 'key'} size={30} color={palette.gold}/></View></View>
+          <Pressable onPress={()=>setTab('customers')} style={{marginTop:16,marginBottom:4,padding:15,borderRadius:16,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line}}>
+            <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:8}}><Text style={styles.sectionTitle}>Bugünün müşteri takipleri</Text><Ionicons name="chevron-forward" size={17} color={palette.muted}/></View>
+            {customers.filter(c=>c.active&&c.nextFollowUpAt&&new Date(c.nextFollowUpAt).getTime()<=new Date(new Date().toDateString()).getTime()+24*60*60*1000).sort((a,b)=>new Date(a.nextFollowUpAt||0).getTime()-new Date(b.nextFollowUpAt||0).getTime()).slice(0,3).map(c=><Pressable key={c.id} onPress={()=>openCustomerDetail(c)} style={{paddingVertical:9,borderTopWidth:1,borderTopColor:palette.line,flexDirection:'row',alignItems:'center',gap:10}}><View style={{width:34,height:34,borderRadius:11,backgroundColor:palette.goldSoft,alignItems:'center',justifyContent:'center'}}><Ionicons name="calendar-outline" size={17} color={palette.navy}/></View><View style={{flex:1}}><Text style={styles.teamName}>{c.fullName}</Text><Text style={styles.teamMeta}>{new Date(c.nextFollowUpAt||'').toLocaleString('tr-TR',{dateStyle:'medium',timeStyle:'short'})}</Text></View><Ionicons name="chevron-forward" size={15} color={palette.muted}/></Pressable>)}
+            {!customers.some(c=>c.active&&c.nextFollowUpAt&&new Date(c.nextFollowUpAt).getTime()<=new Date(new Date().toDateString()).getTime()+24*60*60*1000)&&<Text style={styles.pageSub}>Bugün veya gecikmiş takip yok. Müşteri detayından takip tarihi ekleyebilirsin.</Text>}
+          </Pressable>
           <View style={styles.statGrid}>
             <Stat icon="business-outline" label={role === 'owner' ? 'Toplam portföy' : 'Portföyüm'} value={String(role === 'owner' ? properties.length : properties.filter(p => p.agent === 'Sen').length)} note="Aktif kayıtlar" />
             <Stat icon="eye-outline" label="Görüntülenme" value="—" note="Ölçüm kurulmadı" />
@@ -765,7 +969,7 @@ export default function App() {
             <Stat icon="people-outline" label={role === 'owner' ? 'Danışmanlar' : 'Müşteriler'} value={String(role === 'owner' ? teamMembers.filter(m=>m.role==='agent').length : customers.length)} note="Gerçek kayıtlar" />
           </View>
           <View style={styles.sectionHead}><Text style={styles.sectionTitle}>{role === 'owner' ? 'Son portföy hareketleri' : 'Portföyümden'}</Text><Pressable onPress={()=>setTab('portfolio')}><Text style={styles.link}>Tümünü gör</Text></Pressable></View>
-          {roleProperties.slice(0,3).map(p=><PropertyRow key={p.id} property={p} onPress={()=>{setSelected(p);setPropertyPhotos([]);void loadPropertyPhotos(p.id);}} />)}
+          {roleProperties.slice(0,3).map(p=><PropertyRow key={p.id} property={p} onPress={()=>openProperty(p)} />)}
           <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Portföy ve ekip kayıtları bağlı Supabase veritabanından yüklenir. Görüntülenme analitiği ve otomatik eşleştirme henüz etkin değil.</Text></View>
         </ScrollView>}
 
@@ -774,9 +978,18 @@ export default function App() {
           <View style={styles.search}><Ionicons name="search-outline" size={19} color={palette.muted}/><TextInput value={search} onChangeText={setSearch} placeholder="İlan, adres veya kod ara" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
           <View style={styles.filters}>{(['Tümü','Satılık','Kiralık'] as const).map(f=><Pressable key={f} onPress={()=>setFilter(f)} style={[styles.filter,filter===f&&styles.filterOn]}><Text style={[styles.filterText,filter===f&&styles.filterTextOn]}>{f}</Text></Pressable>)}</View>
           <View style={[styles.filters,{marginTop:10}]}>{([{key:'newest',label:'En yeni'},{key:'priceAsc',label:'Fiyat ↑'},{key:'priceDesc',label:'Fiyat ↓'}] as const).map(opt=><Pressable key={opt.key} onPress={()=>setSortBy(opt.key)} style={[styles.filter,sortBy===opt.key&&styles.filterOn]}><Text style={[styles.filterText,sortBy===opt.key&&styles.filterTextOn]}>{opt.label}</Text></Pressable>)}</View>
+          <Pressable onPress={()=>{setRecentOnly(v=>!v);setFavoritesOnly(false);}} style={[styles.filter,{alignSelf:'flex-start',marginTop:8},recentOnly&&styles.filterOn]}><Text style={[styles.filterText,recentOnly&&styles.filterTextOn]}>{recentOnly?'Son görüntülenenler gösteriliyor':'◷ Son görüntülenenler'}</Text></Pressable>
+          <Pressable onPress={()=>setFavoritesOnly(v=>!v)} style={[styles.filter,{alignSelf:'flex-start',marginTop:8},favoritesOnly&&styles.filterOn]}><Text style={[styles.filterText,favoritesOnly&&styles.filterTextOn]}>{favoritesOnly?'♥ Favoriler gösteriliyor':'♡ Yalnızca favorilerim'}</Text></Pressable>
+          <Text style={[styles.sectionTitle,{marginTop:14,marginBottom:8}]}>Fiyat aralığı</Text>
+          <View style={{flexDirection:'row',gap:10}}>
+            <View style={[styles.search,{flex:1,marginTop:0}]}><TextInput value={minPriceFilter} onChangeText={setMinPriceFilter} keyboardType="numeric" placeholder="En düşük ₺" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
+            <View style={[styles.search,{flex:1,marginTop:0}]}><TextInput value={maxPriceFilter} onChangeText={setMaxPriceFilter} keyboardType="numeric" placeholder="En yüksek ₺" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
+          </View>
+          <Text style={[styles.sectionTitle,{marginTop:14,marginBottom:8}]}>İlan durumu</Text>
+          <View style={styles.filters}>{(['Tümü','Aktif','Opsiyonlu','Satıldı','Kiralandı'] as const).map(status=><Pressable key={status} onPress={()=>setStatusFilter(status)} style={[styles.filter,statusFilter===status&&styles.filterOn]}><Text style={[styles.filterText,statusFilter===status&&styles.filterTextOn]}>{status}</Text></Pressable>)}</View>
           <Pressable onPress={()=>setShowArchived(v=>!v)} style={[styles.filter,{alignSelf:'flex-start',marginTop:10},showArchived&&styles.filterOn]}><Text style={[styles.filterText,showArchived&&styles.filterTextOn]}>{showArchived ? 'Arşivden çıkış · Aktif portföyleri göster' : 'Arşivlenmiş portföyleri göster'}</Text></Pressable>
           <Text style={styles.resultCount}>{propertiesLoading ? 'Portföyler yükleniyor…' : `${visibleProperties.length} portföy`}</Text>
-          {visibleProperties.map(p=><PropertyRow key={p.id} property={p} onPress={()=>setSelected(p)} />)}
+          {visibleProperties.map(p=><View key={p.id} style={{flexDirection:'row',alignItems:'center',gap:4}}><View style={{flex:1}}><PropertyRow property={p} onPress={()=>openProperty(p)} /></View><Pressable onPress={()=>toggleFavorite(p)} accessibilityLabel={favoriteIds.includes(p.id)?'Favorilerden çıkar':'Favorilere ekle'} style={{width:40,height:48,alignItems:'center',justifyContent:'center',backgroundColor:palette.white,borderRadius:12,borderWidth:1,borderColor:palette.line,marginBottom:11}}><Ionicons name={favoriteIds.includes(p.id)?'heart':'heart-outline'} size={20} color={favoriteIds.includes(p.id)?palette.red:palette.muted}/></Pressable></View>)}
           {!visibleProperties.length && <View style={styles.empty}><Ionicons name="file-tray-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Portföy bulunamadı</Text><Text style={styles.pageSub}>Aramanı değiştir veya yeni ilan ekle.</Text></View>}
         </ScrollView>}
 
@@ -802,6 +1015,10 @@ export default function App() {
           <Text style={styles.eyebrow}>GAYIT · ARAÇLAR</Text><Text style={styles.pageTitle}>Daha Fazla</Text><Text style={styles.pageSub}>Daha seyrek kullandığın ofis ve çalışma araçları.</Text>
           {role === 'owner' && <Pressable style={styles.moreCard} onPress={()=>setTab('team')}><Ionicons name="people-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Ekip yönetimi</Text><Text style={styles.teamRole}>Danışmanları ve ofis üyelerini yönet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           <Pressable style={styles.moreCard} onPress={async()=>{setNotificationsOpen(true);await loadNotifications(officeId);}}><Ionicons name="notifications-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Bildirim merkezi {notifications.filter(n=>!n.read_at).length ? '('+notifications.filter(n=>!n.read_at).length+')' : ''}</Text><Text style={styles.teamRole}>Yeni eşleşmeler ve sistem bildirimleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
+          <Pressable style={styles.moreCard} onPress={()=>{setTab('portfolio');setRecentOnly(true);setFavoritesOnly(false);void loadRecentViews();}}><Ionicons name="time-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Son görüntülenen portföyler</Text><Text style={styles.teamRole}>Son açtığın ilanları hızlıca bul.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
+          <Pressable style={styles.moreCard} onPress={()=>setCsvImportOpen(true)}><Ionicons name="cloud-upload-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>CSV ile portföy içe aktar</Text><Text style={styles.teamRole}>GAYIT CSV içeriğini yapıştırarak toplu kayıt oluştur.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
+          <Pressable style={styles.moreCard} onPress={exportPortfolioCsv}><Ionicons name="download-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Portföyü CSV olarak dışa aktar</Text><Text style={styles.teamRole}>Excel uyumlu tabloyu paylaş; yalnızca erişebildiğin portföyler eklenir.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
+          {role==='owner'&&<Pressable style={styles.moreCard} onPress={()=>{setTransactionPropertyId(properties[0]?.id||'');setTransactionModalOpen(true);}}><Ionicons name="cash-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Satış ve komisyon kaydı</Text><Text style={styles.teamRole}>Gerçekleşen işlemi, ofis ve danışman komisyonunu kaydet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           <Pressable style={styles.moreCard} onPress={()=>setTab('stats')}><Ionicons name="bar-chart-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>{role==='owner'?'Ofis istatistikleri':'Performansım'}</Text><Text style={styles.teamRole}>Portföy ve operasyon özetleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={handleSignOut}><Ionicons name="log-out-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Oturumu kapat</Text><Text style={styles.teamRole}>GAYIT hesabından çıkış yap.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
         </ScrollView>}
@@ -814,6 +1031,7 @@ export default function App() {
 
         {tab === 'stats' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>PERFORMANS ANALİZİ</Text><Text style={styles.pageTitle}>{role === 'owner' ? 'Ofis istatistikleri' : 'Performansım'}</Text><Text style={styles.pageSub}>Portföy ve görüntülenme metrikleri.</Text>
+          <Pressable onPress={sharePortfolioReport} style={[styles.saveButton,{marginTop:14,marginBottom:16}]}><Ionicons name="share-outline" size={19} color="#fff"/><Text style={styles.saveButtonText}>Portföy raporunu paylaş</Text></Pressable>
           <View style={styles.bigMetric}><Text style={styles.metricLabel}>Toplam portföy değeri</Text><Text style={styles.metricValue}>{money(roleProperties.reduce((sum,p)=>sum+p.price,0))}</Text><Text style={styles.metricFoot}>Satılık ve kiralık ilanların fiyat toplamı; piyasa değeri değildir.</Text></View>
           <View style={styles.statGrid}><Stat icon="home-outline" label="Satılık" value={String(roleProperties.filter(p=>p.kind==='Satılık').length)} note="İlan adedi"/><Stat icon="key-outline" label="Kiralık" value={String(roleProperties.filter(p=>p.kind==='Kiralık').length)} note="İlan adedi"/><Stat icon="eye-outline" label="Görüntülenme" value="—" note="Ölçüm kurulmadı"/><Stat icon="checkmark-done-outline" label="Tamamlanan" value={String(roleProperties.filter(p=>p.status==='Satıldı'||p.status==='Kiralandı').length)} note="Satış/kiralama"/></View>
           <Text style={styles.sectionTitle}>İlan durumları</Text>
@@ -824,14 +1042,43 @@ export default function App() {
         </ScrollView>}
       </View>
 
-      <View style={styles.bottomNav}>{([{key:'home',label:'Ana Sayfa',icon:'grid-outline'},{key:'portfolio',label:'Portföy',icon:'business-outline'},{key:'customers',label:'Müşteriler',icon:'people-outline'},{key:'matches',label:'Eşleşme',icon:'git-compare-outline'},{key:'more',label:'Daha Fazla',icon:'menu-outline'}] as {key:Tab;label:string;icon:keyof typeof Ionicons.glyphMap}[]).map(item=><Pressable key={item.key} onPress={()=>setTab(item.key)} style={styles.navItem}><View style={[styles.navIcon,tab===item.key&&styles.navIconOn]}><Ionicons name={item.icon} size={20} color={tab===item.key?palette.gold:palette.muted}/></View><Text style={[styles.navLabel,tab===item.key&&styles.navLabelOn]}>{item.label}</Text></Pressable>)}</View>
+      <View style={styles.bottomNav}>{([{key:'home',label:'Ana Sayfa',icon:'grid-outline'},{key:'portfolio',label:'Portföy',icon:'business-outline'},{key:'customers',label:'Müşteriler',icon:'people-outline'},{key:'matches',label:'Eşleşme',icon:'git-compare-outline'},{key:'more',label:'Daha Fazla',icon:'menu-outline'}] as {key:Tab;label:string;icon:keyof typeof Ionicons.glyphMap}[]).map(item=><Pressable key={item.key} onPress={()=>{setTab(item.key);if(item.key==='portfolio'){loadFavorites();loadRecentViews();}}} style={styles.navItem}><View style={[styles.navIcon,tab===item.key&&styles.navIconOn]}><Ionicons name={item.icon} size={20} color={tab===item.key?palette.gold:palette.muted}/></View><Text style={[styles.navLabel,tab===item.key&&styles.navLabelOn]}>{item.label}</Text></Pressable>)}</View>
+
+      <Modal visible={transactionModalOpen} animationType="slide" onRequestClose={()=>{if(!transactionBusy)setTransactionModalOpen(false);}}>
+        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
+          <View style={styles.modalHeader}><Pressable disabled={transactionBusy} onPress={()=>setTransactionModalOpen(false)} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Satış / kiralama kaydı</Text><View style={{width:40}}/></View>
+          <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+            <Text style={styles.pageSub}>Gerçekleşmiş bir işlemi kaydet. Kayıt sonrası portföy durumu satıldı/kiralandı olarak güncellenir.</Text>
+            <Text style={styles.fieldLabel}>Portföy</Text>
+            {properties.filter(p=>p.status!=='Arşivde').map(p=><Pressable key={p.id} onPress={()=>{setTransactionPropertyId(p.id);setTransactionFinalPrice(String(p.price));}} style={[styles.moreCard,{marginTop:7,borderColor:transactionPropertyId===p.id?palette.gold:palette.line,borderWidth:transactionPropertyId===p.id?2:1}]}><Ionicons name={transactionPropertyId===p.id?'radio-button-on':'radio-button-off'} size={19} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>{p.title}</Text><Text style={styles.teamRole}>{p.kind} · {money(p.price)}</Text></View></Pressable>)}
+            <Text style={styles.fieldLabel}>Gerçekleşen bedel (TL)</Text><TextInput value={transactionFinalPrice} onChangeText={setTransactionFinalPrice} keyboardType="numeric" style={styles.input} placeholder="Örn. 4250000" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Ofis komisyonu (TL)</Text><TextInput value={transactionOfficeCommission} onChangeText={setTransactionOfficeCommission} keyboardType="numeric" style={styles.input} placeholder="0" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Danışman komisyonu (TL)</Text><TextInput value={transactionAgentCommission} onChangeText={setTransactionAgentCommission} keyboardType="numeric" style={styles.input} placeholder="0" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>İşlem tarihi (YYYY-AA-GG)</Text><TextInput value={transactionDate} onChangeText={setTransactionDate} autoCapitalize="none" style={styles.input} placeholder="2026-10-17" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Notlar</Text><TextInput value={transactionNotes} onChangeText={setTransactionNotes} multiline style={[styles.input,{minHeight:85,textAlignVertical:'top'}]} placeholder="İşleme ait notlar" placeholderTextColor={palette.muted}/>
+            <Pressable disabled={transactionBusy} onPress={saveTransaction} style={[styles.saveButton,{marginTop:20,opacity:transactionBusy?0.6:1}]}><Text style={styles.saveButtonText}>{transactionBusy?'Kaydediliyor…':'İşlemi kaydet'}</Text></Pressable>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={csvImportOpen} animationType="slide" onRequestClose={()=>{if(!csvImportBusy)setCsvImportOpen(false);}}>
+        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
+          <View style={styles.modalHeader}><Pressable disabled={csvImportBusy} onPress={()=>setCsvImportOpen(false)} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>CSV portföy aktarımı</Text><View style={{width:40}}/></View>
+          <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+            <Text style={styles.pageSub}>GAYIT'ın dışa aktardığı CSV içeriğini başlık satırıyla birlikte yapıştır. Ayraç noktalı virgül (;) olmalı. Aktarım mevcut ilanları silmez.</Text>
+            <TextInput value={csvImportText} onChangeText={setCsvImportText} multiline textAlignVertical="top" autoCapitalize="none" placeholder={'Portföy başlığı;Tür;İlan tipi;Fiyat;Oda;Alan;İlçe;Adres;Durum;Danışman;Açıklama'} placeholderTextColor={palette.muted} style={[styles.input,{minHeight:230,marginTop:18}]}/>
+            <Text style={styles.noticeText}>Her satır yeni portföy oluşturur. Bu sürüm CSV metnini yapıştırır; dosya seçimi ve mevcut kayıtları güncelleme desteklenmez.</Text>
+            <Pressable disabled={csvImportBusy} onPress={importPortfolioCsv} style={[styles.saveButton,{marginTop:20,opacity:csvImportBusy?0.6:1}]}><Text style={styles.saveButtonText}>{csvImportBusy?'Aktarılıyor…':'Portföyleri içe aktar'}</Text></Pressable>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
       <Modal visible={!!selected} animationType="slide" onRequestClose={()=>{setSelected(null);setPropertyPhotos([]);}}>
         {selected && <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>{setSelected(null);setPropertyPhotos([]);}} style={styles.roundButton}><Ionicons name="chevron-down" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>İlan detayı</Text><Text style={styles.code}>{selected.id}</Text></View>
           <ScrollView contentContainerStyle={styles.modalPage}><View style={styles.propertyHero}><View style={styles.houseIcon}><Ionicons name="home" size={52} color={palette.navy2}/></View><View style={styles.statusPill}><Text style={styles.statusText}>{selected.status}</Text></View></View>
           <View style={{marginBottom:18}}>
   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:10}}><Text style={styles.sectionTitle}>İlan fotoğrafları ({propertyPhotos.length})</Text><Pressable onPress={addPropertyPhoto} disabled={photosBusy} style={[styles.pdfButton,{flex:0,paddingHorizontal:14,paddingVertical:9}]}><Ionicons name="add-circle-outline" size={18} color={palette.navy}/><Text style={styles.pdfButtonText}>{photosBusy ? 'İşleniyor…' : 'Fotoğraf ekle'}</Text></Pressable></View>
-  {photosBusy && propertyPhotos.length===0 ? <Text style={styles.noticeText}>Fotoğraflar yükleniyor…</Text> : propertyPhotos.length===0 ? <Text style={styles.noticeText}>Henüz fotoğraf eklenmedi. Galeriden fotoğraf seçerek ilana ekleyebilirsin.</Text> : <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>{propertyPhotos.map(photo=><View key={photo.id} style={{width:'48%',height:145,borderRadius:12,overflow:'hidden',backgroundColor:palette.line}}><Image source={{uri:photo.url}} style={{width:'100%',height:'100%'}} resizeMode="cover"/><Pressable disabled={photosBusy} onPress={()=>removePropertyPhoto(photo)} style={{position:'absolute',right:7,top:7,backgroundColor:'#FFFFFFE8',borderRadius:18,padding:6,opacity:photosBusy?0.5:1}}><Ionicons name={photosBusy?"time-outline":"trash-outline"} size={17} color={palette.red}/></Pressable></View>)}</View>}
+  {photosBusy && propertyPhotos.length===0 ? <Text style={styles.noticeText}>Fotoğraflar yükleniyor…</Text> : propertyPhotos.length===0 ? <Text style={styles.noticeText}>Henüz fotoğraf eklenmedi. Galeriden fotoğraf seçerek ilana ekleyebilirsin.</Text> : <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>{[...propertyPhotos].sort((a,b)=>a.sortOrder-b.sortOrder).map((photo,index)=><View key={photo.id} style={{width:'48%',height:174,borderRadius:12,overflow:'hidden',backgroundColor:palette.line}}><Image source={{uri:photo.url}} style={{width:'100%',height:145}} resizeMode="cover"/>{index===0&&<View style={{position:'absolute',left:6,top:6,backgroundColor:palette.gold,borderRadius:7,paddingHorizontal:7,paddingVertical:4}}><Text style={{fontSize:9,fontWeight:'900',color:palette.navy}}>KAPAK</Text></View>}<View style={{height:29,flexDirection:'row',alignItems:'center',justifyContent:'space-around',backgroundColor:palette.white}}><Pressable disabled={photosBusy||index===0} onPress={()=>movePropertyPhoto(photo,-1)} style={{paddingHorizontal:8,opacity:index===0||photosBusy?0.3:1}}><Ionicons name="chevron-back" size={16} color={palette.navy}/></Pressable><Text style={{fontSize:9,color:palette.muted}}>{index===0?'Kapak fotoğrafı':String(index+1)+'. fotoğraf'}</Text><Pressable disabled={photosBusy||index===propertyPhotos.length-1} onPress={()=>movePropertyPhoto(photo,1)} style={{paddingHorizontal:8,opacity:index===propertyPhotos.length-1||photosBusy?0.3:1}}><Ionicons name="chevron-forward" size={16} color={palette.navy}/></Pressable><Pressable disabled={photosBusy} onPress={()=>removePropertyPhoto(photo)} style={{paddingHorizontal:8,opacity:photosBusy?0.4:1}}><Ionicons name="trash-outline" size={15} color={palette.red}/></Pressable></View></View>)}</View>}
 </View>
 <Text style={styles.eyebrow}>{propertyTypeLabel(selected.propertyType).toLocaleUpperCase('tr-TR')} · {selected.kind.toLocaleUpperCase('tr-TR')}</Text><Text style={styles.detailTitle}>{selected.title}</Text><View style={styles.addressLine}><Ionicons name="location-outline" size={18} color={palette.muted}/><Text style={styles.addressText}>{selected.address}</Text></View><Text style={styles.detailPrice}>{money(selected.price)}{selected.kind==='Kiralık'?<Text style={styles.perMonth}> / ay</Text>:null}</Text>
           <View style={styles.featureRow}><Feature icon="bed-outline" label="Oda" value={selected.rooms}/><Feature icon="resize-outline" label="Alan" value={selected.area}/><Feature icon="eye-outline" label="Görüntülenme" value={String(selected.views)}/></View>

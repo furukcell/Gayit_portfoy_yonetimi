@@ -146,3 +146,24 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - 2026-10-17: Portföy kaydetme doğrulaması güçlendirildi: zorunlu alanlar, başlık/adres uzunluğu, fiyatın pozitif ve güvenli tamsayı olması, metrekare için virgüllü ondalık desteği ve geçersiz biçimlerin reddi. Kaydet butonu işlem boyunca devre dışı kalır. Cihaz ve gerçek Supabase testleri henüz yapılmadı.
 
 - 2026-10-17: Fotoğraf silme akışı hata dayanıklılığı açısından iyileştirildi. Önce Storage dosyası silinir; Storage hatasında metadata galeride tutulur ve yeniden deneme mümkün kalır. Dosya silinip metadata silinemezse kullanıcıya bu kısmi durum ayrı bildirilir. Supabase üzerinde hata enjeksiyonu/gerçek cihaz testi henüz yapılmadı.
+
+
+## Ürün iyileştirme paketi — 2026-10-17
+
+Bu paket test ve canlı ortam doğrulamalarından ayrı geliştirme adımlarıdır.
+
+- [x] Portföy fotoğraflarını mevcut `sort_order` alanıyla sıralama; ilk fotoğrafı kapak fotoğrafı olarak gösterme.
+- [x] Ana sayfada bugün ve gecikmiş müşteri takiplerini gösterme; satıra dokunarak müşteri detayına gitme.
+- [x] İstatistik ekranından portföy durumları ve fiyat toplamını içeren paylaşılabilir rapor oluşturma.
+- [x] Portföy favorileri için kalıcı veri modeli ve uygulama akışı.
+- [x] Son görüntülenen portföyler için kullanıcı/ofis kapsamlı kalıcı geçmiş ve hızlı filtre.
+- [x] Satış/kiralama işlem kaydı ve komisyon takibi için veri modeli ve kayıt ekranı.
+- [x] GAYIT CSV metnini yapıştırarak portföyleri toplu içe aktarma.
+- [ ] Dosya seçerek Excel/CSV içe aktarma ve mevcut kayıtları güncelleme.
+- [x] Portföyü CSV metni olarak dışa aktarma/paylaşma.
+- [x] Portföy listesinde durum ve fiyat aralığı filtreleri.
+- [ ] Ofis sahibi için marka/iletişim düzenleme ekranı ve PDF'e logo/iletişim alanlarını bağlama (migration 011 alanları hazır).
+- [ ] Daha kapsamlı il/ilçe/mahalle ve fiyat/oda filtreleri.
+- [ ] Ofis başına abonelik, paket ve kullanım limitleri.
+
+Not: Favoriler, son görüntülenenler, işlem/komisyon özellikleri ve ofis marka alanları için `supabase/migrations/011_favorites_and_transactions.sql` migration'ı Supabase ortamına uygulanmalıdır. Fotoğraf sıralama özelliği Supabase `property_photos` tablosunda `sort_order` güncelleme izni gerektirir. Müşteri takip listesi mevcut `next_follow_up_at` verisini kullanır. Paylaşım raporu gerçek portföy kayıtlarından oluşturulur; görüntülenme veya gerçekleşmiş komisyon gibi tutulmayan metrikler üretilmez.
