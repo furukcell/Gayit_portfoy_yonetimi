@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0D1B2A"
+      "backgroundColor": "#10243A"
     },
     "ios": {
       "supportsTablet": true,
@@ -19,12 +19,12 @@
       "package": "com.fkdigital.gayitportfoy",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#0D1B2A"
+        "backgroundColor": "#10243A"
       }
     },
-    "plugins": [],
-    "experiments": {
-      "typedRoutes": true
-    }
+    "plugins": [
+      "expo-print",
+      "expo-sharing"
+    ]
   }
 }
