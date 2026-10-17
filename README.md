@@ -8,6 +8,7 @@ GAYIT genel kullanıma açık bir emlak ilan pazaryeri değildir. Ofis sahipleri
 
 - Expo SDK 58, React Native 0.88, React 19.3, TypeScript
 - Expo Print + Expo Sharing: PDF çıktısı ve paylaşımı
+- Expo Image Picker: danışman profil fotoğrafı seçimi
 - Supabase Auth + Postgres + Row Level Security: planlanan kalıcı veri katmanı; henüz uygulama istemcisine bağlanmadı
 - Hesap modeli: süperadmin ofis/ofis sahibi hesabı açar; ofis sahibi danışmanları kullanıcı adı, ilk şifre ve fotoğrafla ekler. E-posta ile kendi kendine kayıt olmayacak.
 - Google Maps URL ve WhatsApp paylaşımı
@@ -18,15 +19,17 @@ SDK 58, 15 Ekim 2026 tarihinde yayımlandı ve React Native 0.88 kullanıyor. Re
 
 ## Durum
 
-Şu an repo bir **mobil prototip** içerir. Ekranlarda örnek portföyler ve örnek istatistikler bulunur. Kalıcı veri, gerçek giriş ve rol yetkilendirmesi tamamlanmış değildir.
+Şu an repo **kademeli olarak entegre edilen MVP** içerir. Kullanıcı adıyla giriş, ilk şifre değiştirme ve danışman ekleme ekranları yazıldı; gerçek Supabase projesi kurulup fonksiyonlar deploy edilene kadar bu akışlar uçtan uca kullanılabilir kabul edilmemelidir. Portföyler ve bazı istatistikler hâlâ örnek veridir.
 
 - `App.tsx`: mevcut mobil prototip
 - `ROADMAP.md`: 10 aşamalı geliştirme planı ve durum
 - `supabase/migrations/001_initial_schema.sql`: ilk veritabanı şeması ve RLS politikaları taslağı
+- `supabase/migrations/002_private_avatars.sql`: ofis kapsamlı özel profil fotoğrafı depolama politikaları
 - `docs/SUPABASE_SETUP.md`: Supabase kurulum notları
 - `docs/USERNAME_AUTH.md`: kullanıcı adıyla giriş mimarisi ve yapılacaklar
 - `supabase/functions/create-office/index.ts`: süperadmin kontrollü ofis oluşturma taslağı
 - `supabase/functions/create-agent/index.ts`: ofis sahibi kontrollü danışman oluşturma taslağı
+- `supabase/migrations/002_private_avatars.sql`: özel avatar deposu ve RLS politikaları
 - `supabase/functions/complete-first-login/index.ts`: ilk girişte şifre değiştirme taslağı
 - `src/lib/supabase.ts` ve `src/lib/usernameAuth.ts`: Supabase istemcisi ve kullanıcı adıyla giriş yardımcıları
 - `.env.example`: yerel ortam değişkenleri şablonu
