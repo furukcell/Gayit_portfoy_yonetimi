@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     return respond({ error: "Bu ofiste eşleştirme yapma yetkiniz yok." }, 403);
   }
 
-  let customerQuery = admin.from("customers").select("id,office_id,assigned_agent_id,is_active").eq("office_id", officeId).eq("is_active", true);
+  let customerQuery = admin.from("customers").select("id,office_id,assigned_agent_id,is_active,full_name").eq("office_id", officeId).eq("is_active", true);
   if (customerId) customerQuery = customerQuery.eq("id", customerId);
   const { data: customers, error: customerError } = await customerQuery;
   if (customerError) return respond({ error: "Customers query failed" }, 500);
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
         const { error: notificationError } = await admin.from("notifications").insert({
           office_id: officeId, recipient_user_id: customer.assigned_agent_id,
           notification_type: "new_match", title: kind === "exact" ? "Yeni tam eşleşme" : "Yeni alternatif eşleşme",
-          body: property.title + " · " + customer.id, match_id: created.id,
+          body: (customer.full_name || "Müşteri") + " · " + property.title, match_id: created.id,
           customer_id: customer.id, property_id: property.id,
         });
         if (notificationError) return respond({ error: "Match created but notification failed", matchId: created.id }, 500);
