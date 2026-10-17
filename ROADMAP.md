@@ -82,6 +82,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Eşleşme türü (exact / alternative), puan ve kriter gerekçeleri için alanlar eklendi; aynı talep/ilan çifti tekrar oluşturulmaz.
 - [x] Bildirim merkezi listesi, okunmadı göstergesi ve okundu işaretleme ekranı eklendi.
 - [ ] Edge Function'ı gerçek Supabase projesinde deploy edip yetki/tekrar-bildirim testlerini çalıştır.\n- [x] Eşleştirme fonksiyonunda danışman sorgularını kendi müşterileri ve ilanlarıyla sınırla.\n- [x] Migration 005 ile danışman aktivite düzenleme kapsamını ve bildirim güncelleme kolonlarını daralt.
+- [x] create-agent fonksiyonunda devre dışı hesap/ofis kontrolü ekle.
 - [x] Müşteri görüşme geçmişi: telefon, WhatsApp, toplantı, yer gösterme ve not kaydı.
 - [x] Müşteri detayında sonraki takip tarihi düzenleme alanı ve randevu oluşturma/listeleme akışı.
 
