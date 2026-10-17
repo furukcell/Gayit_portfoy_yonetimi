@@ -36,7 +36,8 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 **Çıkış kriteri:** Demo rol seçimi yerine gerçek hesap ve gerçek yetkilendirme.
 
 ### 4. Portföy yönetimi (CRUD)
-- [ ] Portföy oluşturma, listeleme, detay, düzenleme ve arşivleme.
+- [x] Portföy oluşturma ve listeleme Supabase veritabanına bağlandı.
+- [ ] Portföy detay, düzenleme, arşivleme ve durum değiştirme.
 - [ ] Satılık/kiralık, fiyat, oda, metrekare, adres, açıklama ve durum alanları.
 - [ ] Arama, filtreleme, sıralama ve form doğrulama.
 - [ ] Ofis sahibi tüm ofis portföylerini, danışman kendi portföylerini görebilir.
