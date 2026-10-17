@@ -1011,7 +1011,7 @@ export default function App() {
 
       <View style={styles.bottomNav}>{([{key:'home',label:'Ana Sayfa',icon:'grid-outline'},{key:'portfolio',label:'Portföy',icon:'business-outline'},{key:'customers',label:'Müşteriler',icon:'people-outline'},{key:'matches',label:'Eşleşme',icon:'git-compare-outline'},{key:'more',label:'Daha Fazla',icon:'menu-outline'}] as {key:Tab;label:string;icon:keyof typeof Ionicons.glyphMap}[]).map(item=><Pressable key={item.key} onPress={()=>{setTab(item.key);if(item.key==='portfolio')loadFavorites();}} style={styles.navItem}><View style={[styles.navIcon,tab===item.key&&styles.navIconOn]}><Ionicons name={item.icon} size={20} color={tab===item.key?palette.gold:palette.muted}/></View><Text style={[styles.navLabel,tab===item.key&&styles.navLabelOn]}>{item.label}</Text></Pressable>)}</View>
 
-      <Modal visible={transactionModalOpen} animationType="slide" onRequestClose={()=>!transactionBusy&&setTransactionModalOpen(false)}>
+      <Modal visible={transactionModalOpen} animationType="slide" onRequestClose={()=>{if(!transactionBusy)setTransactionModalOpen(false);}}>
         <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
           <View style={styles.modalHeader}><Pressable disabled={transactionBusy} onPress={()=>setTransactionModalOpen(false)} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Satış / kiralama kaydı</Text><View style={{width:40}}/></View>
           <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
@@ -1028,7 +1028,7 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
-      <Modal visible={csvImportOpen} animationType="slide" onRequestClose={()=>!csvImportBusy&&setCsvImportOpen(false)}>
+      <Modal visible={csvImportOpen} animationType="slide" onRequestClose={()=>{if(!csvImportBusy)setCsvImportOpen(false);}}>
         <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
           <View style={styles.modalHeader}><Pressable disabled={csvImportBusy} onPress={()=>setCsvImportOpen(false)} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>CSV portföy aktarımı</Text><View style={{width:40}}/></View>
           <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
