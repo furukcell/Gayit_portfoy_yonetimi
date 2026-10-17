@@ -48,6 +48,24 @@ create index customers_office_active_idx on public.customers(office_id, is_activ
 create index customers_follow_up_idx on public.customers(assigned_agent_id, next_follow_up_at)
   where next_follow_up_at is not null;
 
+create or replace function public.validate_customer_assignment()
+returns trigger language plpgsql set search_path = ''
+as $
+begin
+  if not exists (
+    select 1 from public.office_members m
+    where m.office_id = new.office_id
+      and m.user_id = new.assigned_agent_id
+      and m.role in ('owner', 'agent')
+      and m.status = 'active'
+  ) then raise exception 'Assigned user must be an active member of the same office'; end if;
+  return new;
+end;
+$;
+create trigger customers_validate_assignment
+before insert or update on public.customers
+for each row execute function public.validate_customer_assignment();
+
 create table public.customer_requirements (
   id uuid primary key default gen_random_uuid(),
   office_id uuid not null references public.offices(id) on delete cascade,
@@ -257,7 +275,13 @@ with check (
 );
 create policy customers_update_by_role on public.customers for update to authenticated
 using (public.is_office_owner(office_id) or (public.is_office_agent(office_id) and assigned_agent_id = (select auth.uid())))
-with check (public.is_office_owner(office_id) or (public.is_office_agent(office_id) and assigned_agent_id = (select auth.uid())));
+with check (
+  (public.is_office_owner(office_id) and exists (
+    select 1 from public.office_members m where m.office_id = customers.office_id
+      and m.user_id = customers.assigned_agent_id and m.status = 'active'
+  ))
+  or (public.is_office_agent(office_id) and assigned_agent_id = (select auth.uid()))
+);
 create policy customers_delete_by_role on public.customers for delete to authenticated
 using (public.is_office_owner(office_id) or (public.is_office_agent(office_id) and assigned_agent_id = (select auth.uid())));
 
@@ -353,9 +377,24 @@ create policy appointments_select_by_role on public.appointments for select to a
 using (public.is_office_owner(office_id) or (public.is_office_agent(office_id) and assigned_agent_id = (select auth.uid())));
 create policy appointments_insert_by_role on public.appointments for insert to authenticated
 with check (
-  (public.is_office_owner(office_id) or (public.is_office_agent(office_id) and assigned_agent_id = (select auth.uid())))
+  (
+    (public.is_office_owner(office_id) and exists (
+      select 1 from public.office_members m where m.office_id = appointments.office_id
+        and m.user_id = appointments.assigned_agent_id and m.status = 'active'
+    ))
+    or (public.is_office_agent(office_id) and assigned_agent_id = (select auth.uid()))
+  )
   and exists (select 1 from public.customers c where c.id = appointments.customer_id and c.office_id = appointments.office_id)
 );
 create policy appointments_update_by_role on public.appointments for update to authenticated
 using (public.is_office_owner(office_id) or (public.is_office_agent(office_id) and assigned_agent_id = (select auth.uid())))
-with check (public.is_office_owner(office_id) or (public.is_office_agent(office_id) and assigned_agent_id = (select auth.uid())));
+with check (
+  (
+    (public.is_office_owner(office_id) and exists (
+      select 1 from public.office_members m where m.office_id = appointments.office_id
+        and m.user_id = appointments.assigned_agent_id and m.status = 'active'
+    ))
+    or (public.is_office_agent(office_id) and assigned_agent_id = (select auth.uid()))
+  )
+  and exists (select 1 from public.customers c where c.id = appointments.customer_id and c.office_id = appointments.office_id)
+);
