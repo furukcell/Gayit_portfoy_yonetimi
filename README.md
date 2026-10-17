@@ -9,6 +9,7 @@ GAYIT genel kullanıma açık bir emlak ilan pazaryeri değildir. Ofis sahipleri
 - Expo SDK 58, React Native 0.88, React 19.3, TypeScript
 - Expo Print + Expo Sharing: PDF çıktısı ve paylaşımı
 - Supabase Auth + Postgres + Row Level Security: planlanan kalıcı veri katmanı; henüz uygulama istemcisine bağlanmadı
+- Hesap modeli: süperadmin ofis/ofis sahibi hesabı açar; ofis sahibi danışmanları kullanıcı adı, ilk şifre ve fotoğrafla ekler. E-posta ile kendi kendine kayıt olmayacak.
 - Google Maps URL ve WhatsApp paylaşımı
 
 SDK 58, 15 Ekim 2026 tarihinde yayımlandı ve React Native 0.88 kullanıyor. Resmî kaynaklar: [SDK 58 duyurusu](https://expo.dev/changelog/sdk-58) · [SDK referansı](https://docs.expo.dev/versions/v58.0.0/).
