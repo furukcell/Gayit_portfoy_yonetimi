@@ -330,3 +330,26 @@ using (
     )
   )
 );
+
+-- Client users may update their own display name/avatar, but must not grant
+-- themselves a username, reactivate a disabled account, or bypass first-login
+-- password-change enforcement. Trusted server functions use the service role.
+create or replace function public.protect_profile_security_fields()
+returns trigger
+language plpgsql
+as $$
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    if new.username is distinct from old.username
+      or new.account_status is distinct from old.account_status
+      or new.must_change_password is distinct from old.must_change_password then
+      raise exception 'Security-managed profile fields can only be changed by trusted server functions';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger profiles_protect_security_fields
+before update on public.profiles
+for each row execute function public.protect_profile_security_fields();
