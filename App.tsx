@@ -17,7 +17,7 @@ type Customer = { id: string; fullName: string; phone: string; roles: string[]; 
 type PropertyStatus = 'Aktif' | 'Opsiyonlu' | 'Satıldı' | 'Kiralandı' | 'Arşivde';
 type Property = {
   id: string; title: string; address: string; district: string; price: number;
-  rooms: string; area: string; kind: 'Satılık' | 'Kiralık'; status: PropertyStatus;
+  rooms: string; area: string; propertyType?: string; kind: 'Satılık' | 'Kiralık'; status: PropertyStatus;
   agent: string; views: number; createdAt: string; description: string;
 };
 
@@ -160,6 +160,7 @@ export default function App() {
         price: Number(row.price),
         rooms: row.rooms || '',
         area: row.area_m2 ? String(row.area_m2) + ' m²' : '',
+        propertyType: row.property_type || 'apartment',
         kind: row.listing_type === 'rent' ? 'Kiralık' : 'Satılık',
         status: row.status === 'optioned' ? 'Opsiyonlu' : row.status === 'sold' ? 'Satıldı' : row.status === 'rented' ? 'Kiralandı' : row.status === 'archived' ? 'Arşivde' : 'Aktif',
         agent: names.get(row.owner_agent_id) || 'Danışman',
@@ -509,7 +510,7 @@ export default function App() {
     setEditingPropertyId(p.id);
     setTitle(p.title); setAddress(p.address); setPrice(String(p.price)); setArea(p.area.replace(/[^0-9.]/g, ''));
     setKind(p.kind); setRooms(p.rooms || '3+1'); setDescription(p.description || '');
-    setPropertyType('apartment'); setSelected(null); setAddOpen(true);
+    setPropertyType(p.propertyType || 'apartment'); setSelected(null); setAddOpen(true);
   };
 
   const archiveProperty = async () => {
@@ -784,9 +785,9 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
-      <Modal visible={addOpen} animationType="slide" onRequestClose={()=>setAddOpen(false)}>
-        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>setAddOpen(false)} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>{editingPropertyId ? "Portföyü düzenle" : "Yeni portföy"}</Text><View style={{width:40}}/></View>
-          <ScrollView contentContainerStyle={styles.formPage} keyboardShouldPersistTaps="handled"><Text style={styles.pageTitle}>Gayrimenkul ekle</Text><Text style={styles.pageSub}>İlan bilgilerini girerek portföyünü oluştur.</Text>
+      <Modal visible={addOpen} animationType="slide" onRequestClose={()=>{setAddOpen(false);setEditingPropertyId(null);}}>
+        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>{setAddOpen(false);setEditingPropertyId(null);}} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>{editingPropertyId ? "Portföyü düzenle" : "Yeni portföy"}</Text><View style={{width:40}}/></View>
+          <ScrollView contentContainerStyle={styles.formPage} keyboardShouldPersistTaps="handled"><Text style={styles.pageTitle}>{editingPropertyId ? 'Portföy bilgilerini düzenle' : 'Gayrimenkul ekle'}</Text><Text style={styles.pageSub}>{editingPropertyId ? 'Değişiklikleri kaydettiğinde portföy güncellenecek.' : 'İlan bilgilerini girerek portföyünü oluştur.'}</Text>
             <Text style={styles.fieldLabel}>İlan başlığı *</Text><TextInput value={title} onChangeText={setTitle} placeholder="Örn. Deniz manzaralı 3+1 daire" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Açık adres *</Text><TextInput value={address} onChangeText={setAddress} placeholder="Mahalle, ilçe, il" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>İlan türü</Text><View style={styles.kindRow}>{(['Satılık','Kiralık'] as const).map(k=><Pressable key={k} onPress={()=>setKind(k)} style={[styles.kindButton,kind===k&&styles.kindButtonOn]}><Text style={[styles.kindText,kind===k&&styles.kindTextOn]}>{k}</Text></Pressable>)}</View>
@@ -795,7 +796,7 @@ export default function App() {
             <Text style={styles.fieldLabel}>Oda sayısı</Text><View style={styles.kindRow}>{['1+1','2+1','3+1','4+1','5+1'].map(r=><Pressable key={r} onPress={()=>setRooms(r)} style={[styles.roomButton,rooms===r&&styles.kindButtonOn]}><Text style={[styles.kindText,rooms===r&&styles.kindTextOn]}>{r}</Text></Pressable>)}</View>
             <Text style={styles.fieldLabel}>Metrekare *</Text><TextInput value={area} onChangeText={setArea} keyboardType="numeric" placeholder="145" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Açıklama</Text><TextInput value={description} onChangeText={setDescription} placeholder="Gayrimenkul hakkında kısa bilgi" style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholderTextColor={palette.muted}/>
-            <Pressable onPress={saveProperty} style={styles.saveButton}><Text style={styles.saveButtonText}>Portföye kaydet</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
+            <Pressable onPress={saveProperty} style={styles.saveButton}><Text style={styles.saveButtonText}>{editingPropertyId ? 'Değişiklikleri kaydet' : 'Portföye kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
           </ScrollView>
         </SafeAreaView>
       </Modal>
