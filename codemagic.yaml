@@ -1,0 +1,113 @@
+workflows:
+  gayit-android-apk:
+    name: GAYIT Android APK
+    max_build_duration: 60
+    instance_type: linux_x2
+
+    environment:
+      node: 22.13.0
+      java: 17
+      android_signing:
+        # Codemagic > Code signing identities > Android keystores bölümündeki
+        # mevcut GAYIT keystore referansı. Referans adı farklıysa burada düzelt.
+        - gayit
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: ${EXPO_PUBLIC_SUPABASE_URL}
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: ${EXPO_PUBLIC_SUPABASE_ANON_KEY}
+
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+
+    scripts:
+      - name: Check required public app configuration
+        script: |
+          if [ -z "${EXPO_PUBLIC_SUPABASE_URL:-}" ]; then
+            echo "Missing EXPO_PUBLIC_SUPABASE_URL. Add it in Codemagic environment variables."
+            exit 1
+          fi
+          if [ -z "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
+            echo "Missing EXPO_PUBLIC_SUPABASE_ANON_KEY. Add it in Codemagic environment variables."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        script: |
+          npm install --legacy-peer-deps
+
+      - name: TypeScript validation
+        script: |
+          npm run typecheck
+
+      - name: Generate native Android project
+        script: |
+          npx expo prebuild --clean --platform android
+
+      - name: Configure release signing from Codemagic keystore
+        script: |
+          python3 <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path("android/app/build.gradle")
+          if not path.exists():
+              print("Expected android/app/build.gradle after Expo prebuild, but it was not found.")
+              sys.exit(1)
+
+          source = path.read_text()
+          marker = "buildTypes {"
+          signing = """signingConfigs {
+                  release {
+                      if (System.getenv("CM_KEYSTORE_PATH")) {
+                          storeFile file(System.getenv("CM_KEYSTORE_PATH"))
+                          storePassword System.getenv("CM_KEYSTORE_PASSWORD")
+                          keyAlias System.getenv("CM_KEY_ALIAS")
+                          keyPassword System.getenv("CM_KEY_PASSWORD")
+                      }
+                  }
+              }
+
+              """
+          if "signingConfigs {" not in source:
+              if marker not in source:
+                  print("Could not locate buildTypes block in generated Gradle file.")
+                  sys.exit(1)
+              source = source.replace(marker, signing + marker, 1)
+
+          # Use the configured release keystore for release builds, not the debug key.
+          release_start = source.find("release {", source.find("buildTypes {"))
+          if release_start == -1:
+              print("Could not locate release build type.")
+              sys.exit(1)
+          release_end = source.find("\n        }", release_start)
+          block = source[release_start:release_end if release_end != -1 else len(source)]
+          block = block.replace("signingConfig signingConfigs.debug", "signingConfig signingConfigs.release")
+          source = source[:release_start] + block + source[release_end if release_end != -1 else len(source):]
+
+          if "signingConfig signingConfigs.release" not in source:
+              print("Could not apply release signing config; refusing to create an unsigned APK.")
+              sys.exit(1)
+
+          path.write_text(source)
+          PY
+
+      - name: Build signed release APK
+        script: |
+          cd android
+          ./gradlew --no-daemon clean assembleRelease
+
+    artifacts:
+      - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/mapping/release/mapping.txt
+
+    publishing:
+      email:
+        recipients: []
+        notify:
+          success: false
+          failure: true
