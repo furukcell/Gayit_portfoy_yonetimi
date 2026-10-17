@@ -66,6 +66,10 @@ export default function App() {
   const [editCustomerNotes, setEditCustomerNotes] = useState('');
   const [customerRequirements, setCustomerRequirements] = useState<any[]>([]);
   const [customerRequirementsLoading, setCustomerRequirementsLoading] = useState(false);
+  const [customerActivities, setCustomerActivities] = useState<any[]>([]);
+  const [activitySummary, setActivitySummary] = useState('');
+  const [activityType, setActivityType] = useState<'call'|'whatsapp'|'meeting'|'property_viewing'|'note'>('note');
+  const [activityBusy, setActivityBusy] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerRoles, setCustomerRoles] = useState<string[]>(['buyer']);
@@ -251,12 +255,40 @@ export default function App() {
         .eq('customer_id', customer.id).order('created_at', { ascending: false });
       if (error) throw error;
       setCustomerRequirements(data || []);
+      const { data: activities, error: activityError } = await supabase.from('customer_activities')
+        .select('id,activity_type,summary,occurred_at,created_by')
+        .eq('customer_id', customer.id).order('occurred_at', { ascending: false }).limit(50);
+      if (activityError) throw activityError;
+      setCustomerActivities(activities || []);
     } catch (error) {
       setCustomerRequirements([]);
       Alert.alert('Talepler yüklenemedi', error instanceof Error ? error.message : 'Müşteri talepleri yüklenemedi.');
     } finally {
       setCustomerRequirementsLoading(false);
     }
+  };
+
+  const addCustomerActivity = async () => {
+    if (!selectedCustomer || !activitySummary.trim()) {
+      Alert.alert('Not eksik', 'Görüşme veya takip notunu yaz.');
+      return;
+    }
+    setActivityBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data: userResult, error: userError } = await supabase.auth.getUser();
+      if (userError || !userResult.user) throw new Error('Oturum bulunamadı.');
+      const { data, error } = await supabase.from('customer_activities').insert({
+        office_id: officeId, customer_id: selectedCustomer.id, created_by: userResult.user.id,
+        activity_type: activityType, summary: activitySummary.trim(), occurred_at: new Date().toISOString(),
+      }).select('id,activity_type,summary,occurred_at,created_by').single();
+      if (error) throw error;
+      setCustomerActivities(current => [data, ...current]);
+      setActivitySummary('');
+      Alert.alert('Kayıt eklendi', 'Müşteri görüşme geçmişine eklendi.');
+    } catch (error) {
+      Alert.alert('Kayıt eklenemedi', error instanceof Error ? error.message : 'Aktivite kaydedilemedi.');
+    } finally { setActivityBusy(false); }
   };
 
   const addRequirementForSelectedCustomer = async () => {
@@ -606,6 +638,12 @@ export default function App() {
             <Text style={styles.fieldLabel}>Telefon</Text><TextInput value={editCustomerPhone} onChangeText={setEditCustomerPhone} keyboardType="phone-pad" style={styles.input} placeholder="Telefon" placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Notlar</Text><TextInput value={editCustomerNotes} onChangeText={setEditCustomerNotes} style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholder="Müşteri notları" placeholderTextColor={palette.muted}/>
             <Pressable disabled={customerEditBusy} onPress={updateCustomer} style={[styles.saveButton,customerEditBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{customerEditBusy?'Kaydediliyor...':'Müşteri bilgilerini kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
+            <View style={styles.matchSection}><Text style={styles.sectionTitle}>Görüşme ve takip geçmişi</Text><Text style={styles.pageSub}>Telefon, WhatsApp, toplantı ve notları kaydet.</Text></View>
+            <View style={styles.kindRow}>{([{key:'call',label:'Arama'},{key:'whatsapp',label:'WhatsApp'},{key:'meeting',label:'Toplantı'},{key:'property_viewing',label:'Yer gösterme'},{key:'note',label:'Not'}] as const).map(a=><Pressable key={a.key} onPress={()=>setActivityType(a.key)} style={[styles.kindButton,activityType===a.key&&styles.kindButtonOn]}><Text style={[styles.kindText,activityType===a.key&&styles.kindTextOn]}>{a.label}</Text></Pressable>)}</View>
+            <TextInput value={activitySummary} onChangeText={setActivitySummary} style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholder="Görüşme sonucu, müşterinin geri bildirimi veya sonraki adım" placeholderTextColor={palette.muted}/>
+            <Pressable disabled={activityBusy} onPress={addCustomerActivity} style={[styles.saveButton,activityBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{activityBusy?'Kaydediliyor...':'Görüşme kaydet'}</Text><Ionicons name="add-circle-outline" size={21} color="#fff"/></Pressable>
+            {customerActivities.map((a:any)=><View key={a.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{({call:'Telefon görüşmesi',whatsapp:'WhatsApp',meeting:'Toplantı',property_viewing:'Yer gösterme',note:'Not',email:'E-posta',other:'Diğer'} as Record<string,string>)[a.activity_type] || 'Müşteri aktivitesi'}</Text><Text style={styles.teamRole}>{a.summary}</Text><Text style={styles.teamMeta}>{new Date(a.occurred_at).toLocaleString('tr-TR')}</Text></View></View>)}
+            {!customerActivities.length && <Text style={styles.pageSub}>Henüz görüşme kaydı yok.</Text>}
             <View style={styles.matchSection}><Text style={styles.sectionTitle}>Arama talepleri</Text><Text style={styles.pageSub}>Bu müşterinin kayıtlı gayrimenkul kriterleri.</Text></View>
             {customerRequirementsLoading && <Text style={styles.pageSub}>Talepler yükleniyor…</Text>}
             {!customerRequirementsLoading && customerRequirements.map((r:any)=><View key={r.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{r.intent==='rent'?'Kiralık arıyor':'Satılık arıyor'} · {({apartment:'Daire',villa:'Villa',land:'Arsa',commercial:'İş yeri',house:'Ev',other:'Diğer',any:'Tümü'} as Record<string,string>)[r.property_type] || r.property_type}</Text><Text style={styles.teamRole}>{[r.city,r.district,r.neighborhood].filter(Boolean).join(' · ') || 'Konum fark etmez'}</Text><Text style={styles.teamMeta}>{r.max_price ? 'Azami '+money(Number(r.max_price)) : 'Bütçe belirtilmemiş'}{r.rooms?.length ? ' · '+r.rooms.join(', ') : ''}</Text>{!r.is_active && <Text style={styles.customerRoles}>Pasif talep</Text>}</View></View>)}
