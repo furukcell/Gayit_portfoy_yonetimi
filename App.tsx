@@ -92,6 +92,7 @@ export default function App() {
   const [rooms, setRooms] = useState('3+1');
   const [area, setArea] = useState('');
   const [kind, setKind] = useState<'Satılık' | 'Kiralık'>('Satılık');
+  const [propertyType, setPropertyType] = useState('apartment');
   const [description, setDescription] = useState('');
 
   const roleProperties = useMemo(() => properties, [properties]);
@@ -175,7 +176,7 @@ export default function App() {
     setMatchesLoading(true);
     try {
       const supabase = getSupabaseClient();
-      const { data, error } = await supabase.from('matches').select('id,status,match_score,match_reasons,created_at,properties(id,title,price,listing_type,district,rooms),customers(id,full_name,phone)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('matches').select('id,status,match_kind,match_score,match_reasons,created_at,properties(id,title,price,listing_type,district,rooms),customers(id,full_name,phone)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
       if (error) throw new Error('Eşleşmeler yüklenemedi. Migration 003 uygulanmış olmalı.');
       setMatches(data || []);
     } finally { setMatchesLoading(false); }
@@ -248,7 +249,10 @@ export default function App() {
       }).select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,must_have,notes,is_active,created_at').single();
       if (error) throw error;
       setCustomerRequirements(current => [data, ...current]);
+      const { error: matchingError } = await supabase.functions.invoke('evaluate-matches', { body: { officeId, customerId: selectedCustomer.id } });
+      await loadMatches(officeId);
       await loadCustomers(officeId);
+      if (matchingError) Alert.alert('Eşleştirme beklemede', 'Talep kaydedildi ancak otomatik eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
       setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla');
       setRequirementDistrict(''); setRequirementMaxPrice(''); setRequirementRooms('');
       Alert.alert('Talep eklendi', 'Müşteriye yeni arama talebi kaydedildi.');
@@ -292,14 +296,20 @@ export default function App() {
       const { data: customer, error } = await supabase.from('customers').insert({ office_id: officeId, assigned_agent_id: userResult.user.id, created_by: userResult.user.id, full_name: customerName.trim(), phone: customerPhone.trim(), roles: customerRoles, notes: customerNotes.trim() }).select('id').single();
       if (error || !customer) throw new Error(error?.message || 'Müşteri kaydedilemedi. Migration 003 ve RLS ayarlarını kontrol et.');
       const maxPrice = Number(requirementMaxPrice.replace(/[^0-9]/g, ''));
-      const hasRequirement = !!(requirementDistrict.trim() || requirementMaxPrice.trim() || requirementRooms.trim() || requirementType !== 'apartment' || requirementCity.trim() !== 'Muğla');
+      const hasRequirement = !!(requirementIntent !== 'sale' || requirementDistrict.trim() || requirementMaxPrice.trim() || requirementRooms.trim() || requirementType !== 'apartment' || requirementCity.trim() !== 'Muğla');
       if (hasRequirement) {
         const { error: requirementError } = await supabase.from('customer_requirements').insert({ office_id: officeId, customer_id: customer.id, intent: requirementIntent, property_type: requirementType, city: requirementCity.trim(), district: requirementDistrict.trim(), max_price: maxPrice > 0 ? maxPrice : null, rooms: requirementRooms.trim() ? [requirementRooms.trim()] : [], is_active: true });
         if (requirementError) throw new Error('Müşteri kaydedildi ancak arama talebi kaydedilemedi: ' + requirementError.message);
       }
       await loadCustomers(officeId);
+      let matchWarning = '';
+      if (hasRequirement) {
+        const { error: matchingError } = await supabase.functions.invoke('evaluate-matches', { body: { officeId, customerId: customer.id } });
+        if (matchingError) matchWarning = ' Eşleştirme şu an çalışmadı; Edge Function ve migration kurulumu kontrol edilmeli.';
+        else await loadMatches(officeId);
+      }
       setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementMaxPrice(''); setRequirementRooms('');
-      Alert.alert('Müşteri kaydedildi', hasRequirement ? 'Müşteri ve arama talebi kaydedildi. Eşleştirme motoru sonraki adımda bağlanacak.' : 'Müşteri kaydedildi. İstersen daha sonra arama talebi ekleyebilirsin.');
+      Alert.alert('Müşteri kaydedildi', hasRequirement ? 'Müşteri ve arama talebi kaydedildi.' + matchWarning : 'Müşteri kaydedildi. İstersen daha sonra arama talebi ekleyebilirsin.');
     } catch (error) { Alert.alert('Müşteri kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.'); }
     finally { setCustomerBusy(false); }
   };
@@ -394,6 +404,7 @@ export default function App() {
         city: parts.length > 0 ? parts[parts.length - 1] : '',
         price: numericPrice,
         rooms,
+        property_type: propertyType,
         area_m2: numericArea,
         listing_type: kind === 'Kiralık' ? 'rent' : 'sale',
         status: 'active',
@@ -408,6 +419,9 @@ export default function App() {
         createdAt: new Date(inserted.created_at).toLocaleDateString('tr-TR'), description: inserted.description || '',
       };
       await loadProperties(officeId);
+      const { error: matchingError } = await supabase.functions.invoke('evaluate-matches', { body: { officeId, propertyId: inserted.id } });
+      if (!matchingError) await loadMatches(officeId);
+      else Alert.alert('Eşleştirme beklemede', 'Portföy kaydedildi ancak eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
       setAddOpen(false); setSelected(p); setTab('portfolio');
       setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription('');
     } catch (error) {
@@ -487,10 +501,10 @@ export default function App() {
 
         {tab === 'matches' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>GAYIT · AKILLI EŞLEŞME</Text><Text style={styles.pageTitle}>Eşleşmeler</Text><Text style={styles.pageSub}>Tam eşleşmeleri ve esnek alternatifleri ayrı takip et.</Text>
-          <View style={styles.matchSection}><Text style={styles.sectionTitle}>Tam eşleşmeler</Text><Text style={styles.pageSub}>Bütün zorunlu kriterleri karşılayan ilanlar.</Text></View>
-          {matches.filter((m:any)=>m.status==='new'||m.status==='reviewed').map((m:any)=><View key={m.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{m.customers?.full_name || 'Müşteri'}</Text><Text style={styles.teamRole}>{m.properties?.title || 'İlan'} · {m.properties?.district || 'Konum belirtilmemiş'}</Text><Text style={styles.teamMeta}>{m.properties?.listing_type==='rent'?'Kiralık':'Satılık'} · {money(Number(m.properties?.price || 0))}</Text><Text style={styles.customerRoles}>{(m.match_reasons || []).join(' · ') || 'Eşleşme gerekçesi eklenmemiş'}</Text></View><View style={styles.matchScore}><Text style={styles.matchScoreText}>{m.match_score == null ? '—' : `${m.match_score}%`}</Text></View></View>)}
-          <View style={styles.matchSection}><Text style={styles.sectionTitle}>Alternatifler</Text><Text style={styles.pageSub}>Esnek kriterlere göre önerilen ilanlar; hangi kriterin farklı olduğu açıklanmalı.</Text></View>
-          {matches.filter((m:any)=>m.status==='not_interested').map((m:any)=><View key={m.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{m.customers?.full_name || 'Müşteri'}</Text><Text style={styles.teamRole}>{m.properties?.title || 'Alternatif ilan'}</Text><Text style={styles.customerRoles}>{(m.match_reasons || []).join(' · ')}</Text></View></View>)}
+          <View style={styles.matchSection}><Text style={styles.sectionTitle}>Tam eşleşmeler</Text><Text style={styles.pageSub}>Kayıtlı zorunlu kriterleri karşılayan ilanlar.</Text></View>
+          {matches.filter((m:any)=>m.match_kind==='exact').map((m:any)=><View key={m.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{m.customers?.full_name || 'Müşteri'}</Text><Text style={styles.teamRole}>{m.properties?.title || 'İlan'} · {m.properties?.district || 'Konum belirtilmemiş'}</Text><Text style={styles.teamMeta}>{m.properties?.listing_type==='rent'?'Kiralık':'Satılık'} · {money(Number(m.properties?.price || 0))}</Text><Text style={styles.customerRoles}>{(m.match_reasons || []).join(' · ') || 'Eşleşme gerekçesi eklenmemiş'}</Text></View><View style={styles.matchScore}><Text style={styles.matchScoreText}>{m.match_score == null ? '—' : `${m.match_score}%`}</Text></View></View>)}
+          <View style={styles.matchSection}><Text style={styles.sectionTitle}>Alternatifler</Text><Text style={styles.pageSub}>Kriterleri tam karşılamayan fakat makul alternatif olabilecek ilanlar; farklar gerekçelerde açıklanır.</Text></View>
+          {matches.filter((m:any)=>m.match_kind==='alternative').map((m:any)=><View key={m.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{m.customers?.full_name || 'Müşteri'}</Text><Text style={styles.teamRole}>{m.properties?.title || 'Alternatif ilan'}</Text><Text style={styles.customerRoles}>{(m.match_reasons || []).join(' · ')}</Text></View></View>)}
           {!matchesLoading && !matches.length && <View style={styles.empty}><Ionicons name="git-compare-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz eşleşme yok</Text><Text style={styles.pageSub}>Müşteri talepleri ve ilanlar kaydediliyor. Otomatik eşleştirme motoru bir sonraki geliştirme adımında bağlanacak; henüz eşleşme üretilmiyor.</Text></View>}
           {matchesLoading && <Text style={styles.pageSub}>Eşleşmeler yükleniyor…</Text>}
         </ScrollView>}
