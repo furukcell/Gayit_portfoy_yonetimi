@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "GAYIT Portföy Yönetimi",
+    "slug": "gayit-portfoy-yonetimi",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1B2A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fkdigital.gayitportfoy"
+    },
+    "android": {
+      "package": "com.fkdigital.gayitportfoy",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0D1B2A"
+      }
+    },
+    "plugins": [],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
