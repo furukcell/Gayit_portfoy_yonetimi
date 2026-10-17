@@ -38,3 +38,21 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - The schema creates the CRM/matching data model, but does not implement the matching evaluator, notification creation, reminder scheduling or the corresponding mobile screens.
 - Photo upload uses the private bucket/policies in migration 002, but still requires end-to-end validation.
 - Invitation acceptance, account deletion and the full KVKK retention/deletion flow are not implemented yet.
+
+
+## CRM, matching, notifications and appointments
+
+- [ ] Owner sees customers, requirements, matches, activities and appointments only for the active office.
+- [ ] Agent sees only assigned customers and matches; cannot read another agent's customer notes or activity history.
+- [ ] Attempt to create a customer requirement for a customer in another office must fail.
+- [ ] Attempt to create a match whose property, customer or requirement belongs to another office must fail.
+- [ ] Attempt to call evaluate-matches with a non-member officeId must return 403.
+- [ ] Agent can evaluate matches only for an office where their membership is active.
+- [ ] Match evaluation only uses active properties and active requirements and does not create duplicate requirement/property pairs.
+- [ ] Existing match re-evaluation updates score/reasons but does not send another new-match notification.
+- [ ] New match notification is delivered only to the customer's assigned agent.
+- [ ] User can mark only their own notifications as read.
+- [ ] Appointment assigned_agent_id must be an active member of the same office.
+- [ ] Customer activities and appointments cannot reference a customer/property from another office.
+- [ ] Follow-up date is optional; malformed client input is rejected before save.
+
