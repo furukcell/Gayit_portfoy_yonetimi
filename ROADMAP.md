@@ -10,17 +10,18 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 
 ## 10 aşamalı uygulama planı
 
-### 1. Ürün kapsamı ve teknik temel — IN PROGRESS
+### 1. Ürün kapsamı ve teknik temel — COMPLETE
 - [x] Ürün kapsamını ve ofis sahibi/danışman rollerini netleştir.
 - [x] Expo SDK 58 tabanını kaydet.
-- [ ] Repo yapısını, bağımlılıkları ve mevcut prototipi denetle.
-- [ ] Geliştirme, kalite kontrol ve gizli anahtar kurallarını belgele.
+- [x] Repo yapısını, bağımlılıkları ve mevcut prototipi denetle.
+- [x] Geliştirme, kalite kontrol ve gizli anahtar kurallarını belgele.
 **Çıkış kriteri:** Herkesin takip edebileceği yol haritası, sabitlenmiş mimari ve çalıştırma talimatları.
 
-### 2. Veri modeli ve güvenlik
-- [ ] Ofisler, kullanıcı profilleri, ofis üyelikleri, portföyler ve portföy fotoğrafları için şema.
-- [ ] Supabase/Postgres Row Level Security (RLS) politikaları.
-- [ ] Örnek ortam dosyası ve güvenli istemci yapılandırması.
+### 2. Veri modeli ve güvenlik — IN PROGRESS
+- [x] Ofisler, kullanıcı profilleri, ofis üyelikleri, portföyler ve portföy fotoğrafları için ilk şema taslağı.
+- [x] Supabase/Postgres Row Level Security (RLS) politikalarının ilk taslağı.
+- [x] Örnek ortam dosyası ve güvenli anahtar kullanım notları.
+- [ ] Şemayı geçici Supabase projesinde çalıştırıp SQL hatalarını kontrol et.
 - [ ] Ofisler arası veri izolasyonu için yetki testleri.
 **Çıkış kriteri:** Her ofisin verisi sunucu tarafında ayrılmış, izinler test edilebilir.
 
@@ -83,7 +84,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 
 ## İlerleme günlüğü
 
-- 2026-10-17: 10 aşamalı MVP planı oluşturuldu. Başlangıçtaki demo ekranları tamamlanmış ürün olarak sayılmıyor; kalıcı veritabanı, gerçek oturum ve sunucu tarafı rol yetkileri zorunlu bitiş koşullarıdır.
+- 2026-10-17: 10 aşamalı MVP planı oluşturuldu; ilk repo/bağımlılık denetimi ve Supabase veri modeli/RLS taslağı eklendi. SQL henüz gerçek Supabase projesinde çalıştırılmadı ve yetki testleri yapılmadı. Başlangıçtaki demo ekranları tamamlanmış ürün olarak sayılmıyor; kalıcı veritabanı, gerçek oturum ve sunucu tarafı rol yetkileri zorunlu bitiş koşullarıdır.
 
 ## Çalışma kuralları
 1. Bir aşama ancak kodu ve çıkış kriteri kontrol edildiğinde tamamlandı olarak işaretlenir.
