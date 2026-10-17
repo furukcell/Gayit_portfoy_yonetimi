@@ -117,6 +117,9 @@ export default function App() {
   const [transactionDate, setTransactionDate] = useState(new Date().toISOString().slice(0,10));
   const [transactionNotes, setTransactionNotes] = useState('');
   const [transactionBusy, setTransactionBusy] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [csvImportText, setCsvImportText] = useState('');
+  const [csvImportBusy, setCsvImportBusy] = useState(false);
   const [minPriceFilter, setMinPriceFilter] = useState('');
   const [maxPriceFilter, setMaxPriceFilter] = useState('');
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
@@ -197,6 +200,37 @@ export default function App() {
         setFavoriteIds(ids=>[...ids,property.id]);
       }
     } catch (error) { Alert.alert('Favori kaydedilemedi',error instanceof Error?error.message:'Supabase 011 migration dosyasını ve yetkileri kontrol et.'); }
+  };
+
+  const importPortfolioCsv = async () => {
+    if (csvImportBusy) return;
+    const source = csvImportText.trim();
+    if (!source) { Alert.alert('CSV verisi gerekli','CSV içeriğini buraya yapıştır.'); return; }
+    const parseLine = (line: string) => {
+      const values:string[]=[]; let value=''; let quoted=false;
+      for(let i=0;i<line.length;i++){const char=line[i];if(char==='"'&&quoted&&line[i+1]==='"'){value+='"';i++;}else if(char==='"')quoted=!quoted;else if(char===';'&&!quoted){values.push(value);value='';}else value+=char;}
+      values.push(value); return values.map(v=>v.trim());
+    };
+    const lines=source.replace(/^\\uFEFF/,'').split(/\\r?\\n/).filter(line=>line.trim().length>0);
+    if(lines.length<2){Alert.alert('CSV biçimi hatalı','Başlık satırı ve en az bir portföy satırı gerekli.');return;}
+    const payloads=lines.slice(1).map(parseLine).map(row=>{
+      const price=Number((row[3]||'').replace(/[^0-9]/g,''));
+      const area=Number((row[5]||'').replace(',','.').replace(/[^0-9.]/g,''));
+      const typeText=(row[1]||'').toLocaleLowerCase('tr-TR');
+      const statusText=(row[8]||'Aktif').toLocaleLowerCase('tr-TR');
+      return {title:(row[0]||'').slice(0,160),property_type:typeText.includes('villa')?'villa':typeText.includes('arsa')?'land':typeText.includes('iş yeri')?'commercial':typeText.includes('müstakil')?'house':'apartment',listing_type:(row[2]||'').toLocaleLowerCase('tr-TR').includes('kir')?'rent':'sale',price,rooms:row[4]||'',area_m2:Number.isFinite(area)&&area>0?area:null,district:row[6]||'',address:row[7]||'',status:statusText.includes('opsiyon')?'optioned':statusText.includes('satıldı')?'sold':statusText.includes('kiralandı')?'rented':statusText.includes('arşiv')?'archived':'active',description:row[10]||'',city:'Türkiye',office_id:officeId};
+    });
+    if(payloads.some(p=>!p.title||p.title.length<3||!p.address||!Number.isSafeInteger(p.price)||p.price<=0)){Alert.alert('Satırları kontrol et','Her satırda başlık, adres ve pozitif tam sayı fiyat bulunmalı.');return;}
+    setCsvImportBusy(true);
+    try{
+      const supabase=getSupabaseClient();const {data:userResult,error:userError}=await supabase.auth.getUser();
+      if(userError||!userResult.user)throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
+      const {error}=await supabase.from('properties').insert(payloads.map(p=>({...p,owner_agent_id:userResult.user.id,created_by:userResult.user.id})));
+      if(error)throw error;
+      await loadProperties(officeId);setCsvImportOpen(false);setCsvImportText('');
+      Alert.alert('Aktarım tamamlandı',`${payloads.length} portföy kaydı eklendi.`);
+    }catch(error){Alert.alert('Aktarım yapılamadı',error instanceof Error?error.message:'CSV verileri kaydedilemedi.');}
+    finally{setCsvImportBusy(false);}
   };
 
   const exportPortfolioCsv = async () => {
@@ -949,6 +983,7 @@ export default function App() {
           <Text style={styles.eyebrow}>GAYIT · ARAÇLAR</Text><Text style={styles.pageTitle}>Daha Fazla</Text><Text style={styles.pageSub}>Daha seyrek kullandığın ofis ve çalışma araçları.</Text>
           {role === 'owner' && <Pressable style={styles.moreCard} onPress={()=>setTab('team')}><Ionicons name="people-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Ekip yönetimi</Text><Text style={styles.teamRole}>Danışmanları ve ofis üyelerini yönet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           <Pressable style={styles.moreCard} onPress={async()=>{setNotificationsOpen(true);await loadNotifications(officeId);}}><Ionicons name="notifications-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Bildirim merkezi {notifications.filter(n=>!n.read_at).length ? '('+notifications.filter(n=>!n.read_at).length+')' : ''}</Text><Text style={styles.teamRole}>Yeni eşleşmeler ve sistem bildirimleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
+          <Pressable style={styles.moreCard} onPress={()=>setCsvImportOpen(true)}><Ionicons name="cloud-upload-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>CSV ile portföy içe aktar</Text><Text style={styles.teamRole}>GAYIT CSV içeriğini yapıştırarak toplu kayıt oluştur.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={exportPortfolioCsv}><Ionicons name="download-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Portföyü CSV olarak dışa aktar</Text><Text style={styles.teamRole}>Excel uyumlu tabloyu paylaş; yalnızca erişebildiğin portföyler eklenir.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           {role==='owner'&&<Pressable style={styles.moreCard} onPress={()=>{setTransactionPropertyId(properties[0]?.id||'');setTransactionModalOpen(true);}}><Ionicons name="cash-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Satış ve komisyon kaydı</Text><Text style={styles.teamRole}>Gerçekleşen işlemi, ofis ve danışman komisyonunu kaydet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           <Pressable style={styles.moreCard} onPress={()=>setTab('stats')}><Ionicons name="bar-chart-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>{role==='owner'?'Ofis istatistikleri':'Performansım'}</Text><Text style={styles.teamRole}>Portföy ve operasyon özetleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
@@ -989,6 +1024,18 @@ export default function App() {
             <Text style={styles.fieldLabel}>İşlem tarihi (YYYY-AA-GG)</Text><TextInput value={transactionDate} onChangeText={setTransactionDate} autoCapitalize="none" style={styles.input} placeholder="2026-10-17" placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Notlar</Text><TextInput value={transactionNotes} onChangeText={setTransactionNotes} multiline style={[styles.input,{minHeight:85,textAlignVertical:'top'}]} placeholder="İşleme ait notlar" placeholderTextColor={palette.muted}/>
             <Pressable disabled={transactionBusy} onPress={saveTransaction} style={[styles.saveButton,{marginTop:20,opacity:transactionBusy?0.6:1}]}><Text style={styles.saveButtonText}>{transactionBusy?'Kaydediliyor…':'İşlemi kaydet'}</Text></Pressable>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={csvImportOpen} animationType="slide" onRequestClose={()=>!csvImportBusy&&setCsvImportOpen(false)}>
+        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
+          <View style={styles.modalHeader}><Pressable disabled={csvImportBusy} onPress={()=>setCsvImportOpen(false)} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>CSV portföy aktarımı</Text><View style={{width:40}}/></View>
+          <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+            <Text style={styles.pageSub}>GAYIT'ın dışa aktardığı CSV içeriğini başlık satırıyla birlikte yapıştır. Ayraç noktalı virgül (;) olmalı. Aktarım mevcut ilanları silmez.</Text>
+            <TextInput value={csvImportText} onChangeText={setCsvImportText} multiline textAlignVertical="top" autoCapitalize="none" placeholder={'Portföy başlığı;Tür;İlan tipi;Fiyat;Oda;Alan;İlçe;Adres;Durum;Danışman;Açıklama'} placeholderTextColor={palette.muted} style={[styles.input,{minHeight:230,marginTop:18}]}/>
+            <Text style={styles.noticeText}>Her satır yeni portföy oluşturur. Bu sürüm CSV metnini yapıştırır; dosya seçimi ve mevcut kayıtları güncelleme desteklenmez.</Text>
+            <Pressable disabled={csvImportBusy} onPress={importPortfolioCsv} style={[styles.saveButton,{marginTop:20,opacity:csvImportBusy?0.6:1}]}><Text style={styles.saveButtonText}>{csvImportBusy?'Aktarılıyor…':'Portföyleri içe aktar'}</Text></Pressable>
           </ScrollView>
         </SafeAreaView>
       </Modal>
