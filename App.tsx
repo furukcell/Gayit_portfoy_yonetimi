@@ -8,6 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as ImagePicker from 'expo-image-picker';
+import { getSupabaseClient } from './src/lib/supabase';
 
 type Role = 'owner' | 'agent';
 type Tab = 'home' | 'portfolio' | 'team' | 'stats';
@@ -43,6 +45,13 @@ export default function App() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [officeId, setOfficeId] = useState('');
+  const [agentModalOpen, setAgentModalOpen] = useState(false);
+  const [agentName, setAgentName] = useState('');
+  const [agentUsername, setAgentUsername] = useState('');
+  const [agentPassword, setAgentPassword] = useState('');
+  const [agentAvatarUri, setAgentAvatarUri] = useState<string | null>(null);
+  const [agentBusy, setAgentBusy] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [selected, setSelected] = useState<Property | null>(null);
@@ -95,6 +104,7 @@ export default function App() {
     try {
       const result = await signInWithUsername(loginUsername, loginPassword);
       setRole(result.role);
+      setOfficeId(result.officeId);
       setMustChangePassword(result.mustChangePassword);
       setAuthenticated(true);
       setLoginPassword('');
@@ -113,6 +123,37 @@ export default function App() {
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : 'Şifre değiştirilemedi.');
     } finally { setAuthBusy(false); }
+  };
+
+  const chooseAgentAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { Alert.alert('Fotoğraf izni gerekli', 'Danışman fotoğrafı seçmek için galeri izni vermelisin.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1,1], quality: 0.82 });
+    if (!result.canceled && result.assets[0]) setAgentAvatarUri(result.assets[0].uri);
+  };
+
+  const createAgent = async () => {
+    if (!agentName.trim() || !agentUsername.trim() || !agentPassword) { Alert.alert('Eksik bilgi', 'Danışman adı, kullanıcı adı ve ilk şifre zorunlu.'); return; }
+    if (agentPassword.length < 10) { Alert.alert('Şifre çok kısa', 'İlk şifre en az 10 karakter olmalı.'); return; }
+    setAgentBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      let avatarPath: string | null = null;
+      if (agentAvatarUri) {
+        const response = await fetch(agentAvatarUri);
+        const blob = await response.blob();
+        const ext = agentAvatarUri.toLowerCase().includes('.png') ? 'png' : 'jpg';
+        avatarPath = officeId + '/agent-' + Date.now() + '.' + ext;
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
+        if (uploadError) throw new Error('Fotoğraf yüklenemedi. Supabase avatar migration ve izinlerini kontrol edin.');
+      }
+      const { data, error } = await supabase.functions.invoke('create-agent', { body: { officeId, username: agentUsername, password: agentPassword, fullName: agentName, avatarPath } });
+      if (error || !data?.success) throw new Error(data?.error || error?.message || 'Danışman oluşturulamadı.');
+      Alert.alert('Danışman eklendi', agentName.trim() + ' için hesap oluşturuldu. İlk girişte şifresini değiştirmesi gerekecek.');
+      setAgentModalOpen(false); setAgentName(''); setAgentUsername(''); setAgentPassword(''); setAgentAvatarUri(null);
+    } catch (error) {
+      Alert.alert('Hesap oluşturulamadı', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
+    } finally { setAgentBusy(false); }
   };
 
   const handleSignOut = async () => {
