@@ -328,6 +328,10 @@ export default function App() {
       Alert.alert('Eksik bilgi', 'Müşteri adı boş bırakılamaz.');
       return;
     }
+    if (editFollowUpAt.trim() && Number.isNaN(new Date(editFollowUpAt.trim().replace(' ', 'T') + (editFollowUpAt.trim().length === 16 ? ':00' : '')).getTime())) {
+      Alert.alert('Tarih hatalı', 'Takip tarihini YYYY-MM-DD SS:DD biçiminde gir.');
+      return;
+    }
     setCustomerEditBusy(true);
     try {
       const supabase = getSupabaseClient();
