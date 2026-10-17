@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
       if (minArea != null || maxArea != null) {
         if (area != null && (minArea == null || area >= minArea) && (maxArea == null || area <= maxArea)) reasons.push("Metrekare uyuyor");
       }
-      const hardMismatch = exactFailures.some(reason => !["İlçe farklı", "Fiyat bütçeyi %10'dan fazla aşıyor"].includes(reason));
+      const hardMismatch = exactFailures.some(reason => !["İlçe farklı", "Fiyat bütçeyi aşıyor"].includes(reason));
       const alternativeEligible = !hardMismatch && exactFailures.length > 0 &&
         exactFailures.every(reason => reason === "İlçe farklı" || reason === "Fiyat bütçeyi aşıyor") &&
         !(reqMax != null && price > reqMax * 1.1);
