@@ -146,3 +146,20 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - 2026-10-17: Portföy kaydetme doğrulaması güçlendirildi: zorunlu alanlar, başlık/adres uzunluğu, fiyatın pozitif ve güvenli tamsayı olması, metrekare için virgüllü ondalık desteği ve geçersiz biçimlerin reddi. Kaydet butonu işlem boyunca devre dışı kalır. Cihaz ve gerçek Supabase testleri henüz yapılmadı.
 
 - 2026-10-17: Fotoğraf silme akışı hata dayanıklılığı açısından iyileştirildi. Önce Storage dosyası silinir; Storage hatasında metadata galeride tutulur ve yeniden deneme mümkün kalır. Dosya silinip metadata silinemezse kullanıcıya bu kısmi durum ayrı bildirilir. Supabase üzerinde hata enjeksiyonu/gerçek cihaz testi henüz yapılmadı.
+
+
+## Ürün iyileştirme paketi — 2026-10-17
+
+Bu paket test ve canlı ortam doğrulamalarından ayrı geliştirme adımlarıdır.
+
+- [x] Portföy fotoğraflarını mevcut `sort_order` alanıyla sıralama; ilk fotoğrafı kapak fotoğrafı olarak gösterme.
+- [x] Ana sayfada bugün ve gecikmiş müşteri takiplerini gösterme; satıra dokunarak müşteri detayına gitme.
+- [x] İstatistik ekranından portföy durumları ve fiyat toplamını içeren paylaşılabilir rapor oluşturma.
+- [ ] Portföy favorileri ve son görüntülenenler için kalıcı veri modeli.
+- [ ] Satış/kiralama işlem kaydı ve komisyon takibi için veri modeli ve ekranlar.
+- [ ] Excel/CSV portföy içe aktarma ve dışa aktarma.
+- [ ] Ofis logosu/iletişim bilgileriyle PDF şablonunu markalama.
+- [ ] Daha kapsamlı il/ilçe/mahalle ve fiyat/oda filtreleri.
+- [ ] Ofis başına abonelik, paket ve kullanım limitleri.
+
+Not: Fotoğraf sıralama özelliği Supabase `property_photos` tablosunda `sort_order` güncelleme izni gerektirir. Müşteri takip listesi mevcut `next_follow_up_at` verisini kullanır. Paylaşım raporu gerçek portföy kayıtlarından oluşturulur; görüntülenme veya gerçekleşmiş komisyon gibi tutulmayan metrikler üretilmez.
