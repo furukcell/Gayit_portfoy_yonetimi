@@ -182,20 +182,25 @@ export default function App() {
         setPhotosBusy(true);
         try {
           const supabase = getSupabaseClient();
-          // Remove the metadata first so the gallery no longer advertises a file
-          // that failed to delete. Storage cleanup errors are reported separately.
-          const { error: rowError } = await supabase.from('property_photos')
-            .delete().eq('id', photo.id).eq('property_id', propertyId);
-          if (rowError) throw rowError;
-          setPropertyPhotos(current => current.filter(item => item.id !== photo.id));
+          // Delete the object first. If Storage rejects the operation, keep its
+          // metadata row so the user can retry from the gallery.
           const { error: storageError } = await supabase.storage.from('property-photos').remove([photo.storagePath]);
           if (storageError) {
-            Alert.alert('Fotoğraf kaydı kaldırıldı', 'Fotoğraf galeriden kaldırıldı ancak depolamadaki dosya silinemedi. Supabase Storage izinlerini kontrol et; dosyanın temizliği ayrıca yapılmalı.');
+            await loadPropertyPhotos(propertyId);
+            Alert.alert('Fotoğraf silinemedi', 'Dosya depolamadan silinemedi; kayıt galeride bırakıldı, böylece tekrar deneyebilirsin. Supabase Storage izinlerini kontrol et.');
             return;
           }
+          const { error: rowError } = await supabase.from('property_photos')
+            .delete().eq('id', photo.id).eq('property_id', propertyId);
+          if (rowError) {
+            await loadPropertyPhotos(propertyId);
+            Alert.alert('Fotoğraf dosyası silindi', 'Depolama dosyası silindi ancak fotoğraf kaydı kaldı. Galeriyi yenileyip tekrar deneyebilirsin.');
+            return;
+          }
+          setPropertyPhotos(current => current.filter(item => item.id !== photo.id));
           await loadPropertyPhotos(propertyId);
         } catch (error) {
-          Alert.alert('Fotoğraf silinemedi', error instanceof Error ? error.message : 'Fotoğraf kaydı silinemedi. Tekrar deneyin.');
+          Alert.alert('Fotoğraf silinemedi', error instanceof Error ? error.message : 'Silme işlemi tamamlanamadı. Tekrar deneyin.');
         } finally {
           setPhotosBusy(false);
         }
