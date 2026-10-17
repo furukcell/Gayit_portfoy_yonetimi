@@ -68,6 +68,19 @@ Deno.serve(async (req) => {
   }
   if (fullName.length > 100) return respond({ error: "Ad soyad çok uzun." }, 400);
 
+  if (avatarPath) {
+    if (!avatarPath.startsWith(`${officeId}/`) || avatarPath.includes("..")) {
+      return respond({ error: "Profil fotoğrafı bu ofise ait değil." }, 400);
+    }
+    const { data: avatarObject, error: avatarError } = await adminClient
+      .from("objects")
+      .select("name")
+      .eq("bucket_id", "avatars")
+      .eq("name", avatarPath)
+      .maybeSingle();
+    if (avatarError || !avatarObject) return respond({ error: "Profil fotoğrafı bulunamadı." }, 400);
+  }
+
   // Check requester is an active owner of this exact office.
   const { data: membership, error: membershipError } = await adminClient
     .from("office_members")
