@@ -48,6 +48,7 @@ export default function App() {
   const [kind, setKind] = useState<'Satılık' | 'Kiralık'>('Satılık');
   const [description, setDescription] = useState('');
 
+  const roleProperties = useMemo(() => role === 'owner' ? properties : properties.filter(p => p.agent === 'Sen'), [properties, role]);
   const visibleProperties = useMemo(() => properties.filter(p => {
     const roleMatch = role === 'owner' || p.agent === 'Sen';
     const searchMatch = `${p.title} ${p.address} ${p.id}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR'));
@@ -115,12 +116,12 @@ export default function App() {
           <View style={styles.hero}><View style={{ flex: 1 }}><Text style={styles.heroKicker}>GAYIT İŞ ASİSTANI</Text><Text style={styles.heroTitle}>{role === 'owner' ? 'Ofisin kontrol altında.' : 'İyi portföy, doğru sunum.'}</Text><Text style={styles.heroBody}>{role === 'owner' ? 'Ekibin performansını izle, kararlarını veriye dayandır.' : 'Portföyünü hızlıca paylaş, müşterine profesyonel sun.'}</Text></View><View style={styles.heroIcon}><Ionicons name={role === 'owner' ? 'business' : 'key'} size={30} color={palette.gold}/></View></View>
           <View style={styles.statGrid}>
             <Stat icon="business-outline" label={role === 'owner' ? 'Toplam portföy' : 'Portföyüm'} value={String(role === 'owner' ? properties.length : properties.filter(p => p.agent === 'Sen').length)} note="Aktif kayıtlar" />
-            <Stat icon="eye-outline" label="Görüntülenme" value={String(properties.reduce((n,p)=>n+p.views,0))} note="Örnek istatistik" />
-            <Stat icon="checkmark-circle-outline" label="Aktif ilan" value={String(properties.filter(p=>p.status==='Aktif').length)} note="Yayındaki portföy" />
+            <Stat icon="eye-outline" label="Görüntülenme" value={String(roleProperties.reduce((n,p)=>n+p.views,0))} note="Örnek istatistik" />
+            <Stat icon="checkmark-circle-outline" label="Aktif ilan" value={String(roleProperties.filter(p=>p.status==='Aktif').length)} note="Yayındaki portföy" />
             <Stat icon="people-outline" label={role === 'owner' ? 'Danışmanlar' : 'Paylaşım'} value={role === 'owner' ? '4' : '12'} note={role === 'owner' ? 'Örnek ekip' : 'Örnek veri'} />
           </View>
           <View style={styles.sectionHead}><Text style={styles.sectionTitle}>{role === 'owner' ? 'Son portföy hareketleri' : 'Portföyümden'}</Text><Pressable onPress={()=>setTab('portfolio')}><Text style={styles.link}>Tümünü gör</Text></Pressable></View>
-          {properties.slice(0,3).map(p=><PropertyRow key={p.id} property={p} onPress={()=>setSelected(p)} />)}
+          {roleProperties.slice(0,3).map(p=><PropertyRow key={p.id} property={p} onPress={()=>setSelected(p)} />)}
           <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Şu an örnek verilerle çalışıyor. Kullanıcı girişi ve bulut veritabanı sonraki entegrasyon aşamasında bağlanacak.</Text></View>
         </ScrollView>}
 
@@ -146,10 +147,10 @@ export default function App() {
 
         {tab === 'stats' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>PERFORMANS ANALİZİ</Text><Text style={styles.pageTitle}>{role === 'owner' ? 'Ofis istatistikleri' : 'Performansım'}</Text><Text style={styles.pageSub}>Portföy ve görüntülenme metrikleri.</Text>
-          <View style={styles.bigMetric}><Text style={styles.metricLabel}>Toplam portföy değeri</Text><Text style={styles.metricValue}>{money(properties.reduce((sum,p)=>sum+p.price,0))}</Text><Text style={styles.metricFoot}>Satılık ve kiralık ilanların fiyat toplamı; piyasa değeri değildir.</Text></View>
-          <View style={styles.statGrid}><Stat icon="home-outline" label="Satılık" value={String(properties.filter(p=>p.kind==='Satılık').length)} note="İlan adedi"/><Stat icon="key-outline" label="Kiralık" value={String(properties.filter(p=>p.kind==='Kiralık').length)} note="İlan adedi"/><Stat icon="eye-outline" label="Görüntülenme" value={String(properties.reduce((n,p)=>n+p.views,0))} note="Demo verisi"/><Stat icon="checkmark-done-outline" label="Tamamlanan" value={String(properties.filter(p=>p.status==='Satıldı'||p.status==='Kiralandı').length)} note="Satış/kiralama"/></View>
+          <View style={styles.bigMetric}><Text style={styles.metricLabel}>Toplam portföy değeri</Text><Text style={styles.metricValue}>{money(roleProperties.reduce((sum,p)=>sum+p.price,0))}</Text><Text style={styles.metricFoot}>Satılık ve kiralık ilanların fiyat toplamı; piyasa değeri değildir.</Text></View>
+          <View style={styles.statGrid}><Stat icon="home-outline" label="Satılık" value={String(roleProperties.filter(p=>p.kind==='Satılık').length)} note="İlan adedi"/><Stat icon="key-outline" label="Kiralık" value={String(roleProperties.filter(p=>p.kind==='Kiralık').length)} note="İlan adedi"/><Stat icon="eye-outline" label="Görüntülenme" value={String(roleProperties.reduce((n,p)=>n+p.views,0))} note="Demo verisi"/><Stat icon="checkmark-done-outline" label="Tamamlanan" value={String(roleProperties.filter(p=>p.status==='Satıldı'||p.status==='Kiralandı').length)} note="Satış/kiralama"/></View>
           <Text style={styles.sectionTitle}>İlan durumları</Text>
-          {(['Aktif','Opsiyonlu','Satıldı','Kiralandı'] as PropertyStatus[]).map(status=>{const count=properties.filter(p=>p.status===status).length;return <View key={status} style={styles.progressRow}><Text style={styles.progressLabel}>{status}</Text><View style={styles.progressTrack}><View style={[styles.progressFill,{width:`${properties.length ? count/properties.length*100 : 0}%`,backgroundColor:status==='Aktif'?palette.green:status==='Opsiyonlu'?palette.gold:palette.navy2}]}/></View><Text style={styles.progressCount}>{count}</Text></View>})}
+          {(['Aktif','Opsiyonlu','Satıldı','Kiralandı'] as PropertyStatus[]).map(status=>{const count=roleProperties.filter(p=>p.status===status).length;return <View key={status} style={styles.progressRow}><Text style={styles.progressLabel}>{status}</Text><View style={styles.progressTrack}><View style={[styles.progressFill,{width:`${roleProperties.length ? count/roleProperties.length*100 : 0}%`,backgroundColor:status==='Aktif'?palette.green:status==='Opsiyonlu'?palette.gold:palette.navy2}]}/></View><Text style={styles.progressCount}>{count}</Text></View>})}
         </ScrollView>}
       </View>
 
