@@ -58,7 +58,9 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Existing match re-evaluation updates score/reasons but does not send another new-match notification.
 - [ ] New match notification is delivered only to the customer's assigned agent.
 - [ ] User can mark only their own notifications as read.\n- [ ] Authenticated clients cannot edit notification title, body, recipient, or linked record IDs; only `read_at` is writable.\n- [ ] An agent who created an activity cannot edit it after the customer is reassigned to another agent.
-- [ ] Appointment assigned_agent_id must be an active member of the same office.
+- [ ] Appointment assigned_agent_id must be an active member with an active profile in the same active office.
+- [ ] Customer assignment rejects disabled profiles and inactive offices.
+- [ ] Customer created_by cannot be changed after insertion.
 - [ ] Customer activities and appointments cannot reference a customer/property from another office.
 - [ ] Follow-up date is optional; malformed client input is rejected before save.
 
