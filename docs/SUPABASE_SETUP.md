@@ -27,7 +27,7 @@ Deploy these only after validating the schema in a disposable project. The initi
 ## Configure
 
 1. Create a Supabase project.
-2. Open SQL Editor and run `supabase/migrations/001_initial_schema.sql`.
+2. Open SQL Editor and run `supabase/migrations/001_initial_schema.sql`, then `supabase/migrations/002_private_avatars.sql`.
 3. Copy `.env.example` to `.env` and fill in the project URL and publishable/anon key.
 4. Do not use the `service_role` key in the mobile app, EAS variables exposed to the client, or any committed file.
 5. Configure Auth email settings and redirect URLs before testing sign-in.
