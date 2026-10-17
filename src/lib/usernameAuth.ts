@@ -17,6 +17,7 @@ export type UsernameLoginResult = {
   profile: GayitProfile;
   mustChangePassword: boolean;
   role: "owner" | "agent";
+  officeId: string;
 };
 
 /**
@@ -57,7 +58,7 @@ export async function signInWithUsername(
 
   const { data: membership, error: membershipError } = await supabase
     .from("office_members")
-    .select("role,status")
+    .select("role,status,office_id")
     .eq("user_id", data.user.id)
     .eq("status", "active")
     .maybeSingle();
@@ -72,6 +73,7 @@ export async function signInWithUsername(
     profile: profile as GayitProfile,
     mustChangePassword: profile.must_change_password,
     role: membership.role,
+    officeId: membership.office_id,
   };
 }
 
