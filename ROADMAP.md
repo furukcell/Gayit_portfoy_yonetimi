@@ -44,7 +44,8 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Portföy detayından durum değiştirme (Aktif / Opsiyonlu / Satıldı / Kiralandı / Arşivde).
 - [x] Gayrimenkul tipi, fiyat, oda, metrekare, adres ve açıklama alanları forma eklendi; durum ve ofis/portföy kapsamı veritabanında tutuluyor.
 - [x] Başlık/adres/kod arama, Satılık/Kiralık filtreleri ve fiyat artan/azalan sıralama.
-- [ ] Form doğrulamasını alan bazında genişletme ve hata durumlarını test et.
+- [x] Form doğrulaması: zorunlu alanlar, başlık/adres uzunluğu, pozitif güvenli fiyat, 0'dan büyük ve biçimi doğrulanan metrekare; kaydetme sırasında çift gönderimi engelleme.
+- [ ] Form hata senaryolarını cihazda ve gerçek Supabase bağlantısıyla test et.
 - [ ] Ofis sahibi tüm ofis portföylerini, danışman kendi portföylerini görebilir.
 **Çıkış kriteri:** Portföyler uygulama kapatılıp açıldığında kaybolmaz ve rol izinleri uygulanır.
 
@@ -139,3 +140,5 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 ### RLS suspension enforcement
 - Migration 007 updates office membership helper functions so disabled profiles and inactive offices fail RLS authorization checks, blocks direct office creation by disabled profiles, and makes customer activity creator attribution immutable.
 - Validate stale JWT and direct table API cases using separate sessions in a disposable Supabase project before production.
+
+- 2026-10-17: Portföy kaydetme doğrulaması güçlendirildi: zorunlu alanlar, başlık/adres uzunluğu, fiyatın pozitif ve güvenli tamsayı olması, metrekare için virgüllü ondalık desteği ve geçersiz biçimlerin reddi. Kaydet butonu işlem boyunca devre dışı kalır. Cihaz ve gerçek Supabase testleri henüz yapılmadı.
