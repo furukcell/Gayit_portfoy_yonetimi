@@ -40,10 +40,11 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 ### 4. Portföy yönetimi (CRUD)
 - [x] Portföy oluşturma ve listeleme Supabase veritabanına bağlandı.
 - [x] Ürün kararı: tek portföy listesi, üstte Tümü / Satılık / Kiralık hızlı filtresi.
-- [ ] Portföy detay, düzenleme ve arşivleme.
-- [x] Portföy detayından durum değiştirme (Aktif / Opsiyonlu / Satıldı / Kiralandı).
+- [x] Portföy detay, düzenleme ve arşivleme akışı eklendi.
+- [x] Portföy detayından durum değiştirme (Aktif / Opsiyonlu / Satıldı / Kiralandı / Arşivde).
 - [x] Gayrimenkul tipi, fiyat, oda, metrekare, adres ve açıklama alanları forma eklendi; durum ve ofis/portföy kapsamı veritabanında tutuluyor.
-- [ ] Arama, filtreleme, sıralama ve form doğrulama.
+- [x] Başlık/adres/kod arama, Satılık/Kiralık filtreleri ve fiyat artan/azalan sıralama.
+- [ ] Form doğrulamasını alan bazında genişletme ve hata durumlarını test et.
 - [ ] Ofis sahibi tüm ofis portföylerini, danışman kendi portföylerini görebilir.
 **Çıkış kriteri:** Portföyler uygulama kapatılıp açıldığında kaybolmaz ve rol izinleri uygulanır.
 
@@ -112,7 +113,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - 2026-10-17: Ürün kararı netleştirildi: aynı mobil uygulamada role göre farklı ekran/veri kapsamı; alt gezinme (Ana Sayfa, Portföy, Müşteriler, Eşleşmeler, Daha Fazla); tam eşleşmeler ve alternatifler ayrı bölümler. Migration 003 ile müşteri CRM/eşleştirme veri modeli ve tasarım dokümanı eklendi. Migration uygulanmadı; UI ve eşleştirme motoru henüz yazılmadı.
 - 2026-10-17: Mobil uygulamaya müşteri listesi, müşteri/arama talebi oluşturma formu, başlangıç eşleşme ekranı ve beş sekmeli alt navigasyon eklendi. Ana sayfadaki örnek ekip/görüntülenme değerleri kaldırıldı; görüntülenme verisi yoksa sahte sayı yerine ölçüm kurulmadı durumu gösteriliyor.
 - 2026-10-17: Müşteri kartından detay ekranı açılması, temel müşteri bilgilerinin düzenlenmesi, kayıtlı arama taleplerinin görüntülenmesi ve aynı müşteriye birden fazla talep ekleme akışı eklendi.
-- 2026-10-17: Portföy detayında ilan durumunu kalıcı olarak güncelleme akışı eklendi.
+- 2026-10-17: Portföy düzenleme ve arşivleme akışları; arşivlileri ana listeden gizleme; fiyat sıralaması eklendi.
 - 2026-10-17: Portföy formuna gayrimenkul tipi eklendi. evaluate-matches Edge Function taslağı; işlem türü, il/ilçe, tip, bütçe toleransı, oda ve metrekare kriterlerine göre tam/alternatif eşleşme hesaplayacak şekilde eklendi. Müşteri/talep ve portföy kayıtlarından fonksiyona çağrı bağlandı. Bildirim merkezi, müşteri görüşme geçmişi, takip tarihi ve randevu akışı da eklendi. Migration 003 ve Edge Function gerçek Supabase ortamında henüz uygulanmadı/deploy edilmedi; CI ve gerçek RLS testleri bekleniyor.
 
 ## Çalışma kuralları
