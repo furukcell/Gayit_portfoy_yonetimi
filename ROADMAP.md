@@ -15,6 +15,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Expo SDK 58 tabanını kaydet.
 - [x] Repo yapısını, bağımlılıkları ve mevcut prototipi denetle.
 - [x] Geliştirme, kalite kontrol ve gizli anahtar kurallarını belgele.
+- [x] GitHub Actions ile TypeScript ve Expo bağımlılık kontrolü için CI iş akışı ekle.
 **Çıkış kriteri:** Herkesin takip edebileceği yol haritası, sabitlenmiş mimari ve çalıştırma talimatları.
 
 ### 2. Veri modeli ve güvenlik — IN PROGRESS
@@ -22,7 +23,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Supabase/Postgres Row Level Security (RLS) politikalarının ilk taslağı.
 - [x] Örnek ortam dosyası ve güvenli anahtar kullanım notları.
 - [ ] Şemayı geçici Supabase projesinde çalıştırıp SQL hatalarını kontrol et.
-- [ ] Ofisler arası veri izolasyonu için yetki testleri.
+- [ ] Ofisler arası veri izolasyonu için yetki testlerini çalıştır (kontrol listesi: `docs/RLS_VALIDATION_CHECKLIST.md`).
 **Çıkış kriteri:** Her ofisin verisi sunucu tarafında ayrılmış, izinler test edilebilir.
 
 ### 3. Kimlik doğrulama ve ofis kurulumu
@@ -84,7 +85,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 
 ## İlerleme günlüğü
 
-- 2026-10-17: 10 aşamalı MVP planı oluşturuldu; ilk repo/bağımlılık denetimi ve Supabase veri modeli/RLS taslağı eklendi. SQL henüz gerçek Supabase projesinde çalıştırılmadı ve yetki testleri yapılmadı. Başlangıçtaki demo ekranları tamamlanmış ürün olarak sayılmıyor; kalıcı veritabanı, gerçek oturum ve sunucu tarafı rol yetkileri zorunlu bitiş koşullarıdır.
+- 2026-10-17: 10 aşamalı MVP planı oluşturuldu; ilk repo/bağımlılık denetimi, GitHub Actions kalite kontrolü ve Supabase veri modeli/RLS taslağı eklendi. SQL ve RLS testleri henüz çalıştırılmadı. SQL henüz gerçek Supabase projesinde çalıştırılmadı ve yetki testleri yapılmadı. Başlangıçtaki demo ekranları tamamlanmış ürün olarak sayılmıyor; kalıcı veritabanı, gerçek oturum ve sunucu tarafı rol yetkileri zorunlu bitiş koşullarıdır.
 
 ## Çalışma kuralları
 1. Bir aşama ancak kodu ve çıkış kriteri kontrol edildiğinde tamamlandı olarak işaretlenir.
