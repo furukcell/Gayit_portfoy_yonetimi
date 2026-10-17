@@ -198,6 +198,33 @@ npm run typecheck
 npx expo start
 ```
 
+### Android APK üretme
+
+Repoda iki derleme seçeneği yapılandırılmıştır:
+
+**Codemagic (imzalı test APK'sı)**
+
+- `codemagic.yaml` içindeki `gayit` Android keystore referansı Codemagic hesabındaki mevcut GAYIT keystore kaydıyla aynı olmalıdır.
+- Codemagic ortam değişkenlerine `EXPO_PUBLIC_SUPABASE_URL` ve `EXPO_PUBLIC_SUPABASE_ANON_KEY` ekleyin. Mobil uygulamada `service_role` anahtarı kullanmayın.
+- Workflow, Expo'nun native Android projesini yeniden oluşturur, TypeScript kontrolü yapar ve release APK'sını üretir.
+- Build sonucu `android/app/build/outputs/apk/release/*.apk` artifact olarak sunulur.
+- Workflow imzalama değişkenlerini Codemagic'in Android keystore bağlantısından (`CM_KEYSTORE_PATH`, `CM_KEYSTORE_PASSWORD`, `CM_KEY_ALIAS`, `CM_KEY_PASSWORD`) kullanır. Keystore bağlantısı kurulmamışsa imzalı APK üretimi başarısız olur.
+
+**EAS Build**
+
+Önce EAS hesabına giriş yapın ve proje bağlantısını kurun; EAS ortam değişkenlerine de aynı iki Supabase istemci değişkenini tanımlayın. Ardından:
+
+```bash
+npx eas-cli login
+npx eas-cli init
+npx eas-cli build --platform android --profile preview
+```
+
+`preview` profili cihaza kurulabilen APK, `production` profili ise mağaza yüklemesi için AAB üretmek üzere tanımlanmıştır. EAS projesi/kimlik bilgileri ve ortam değişkenleri hesapta yapılandırılmadan build'in başarılı olacağı garanti edilmez.
+
+**Not:** Build'in başarılı olması Supabase migration'larının uygulandığını veya gerçek kullanıcı akışlarının test edildiğini kanıtlamaz. Yayından önce [RLS güvenlik kontrol listesini](./docs/RLS_VALIDATION_CHECKLIST.md) uygulayın.
+
+
 Supabase olmadan veya gerekli migration'lar uygulanmadan tüm ekranların gerçek verilerle çalışacağı varsayılmamalıdır. Veritabanı kurulumuna başlamadan önce [Supabase kurulum notlarını](./docs/SUPABASE_SETUP.md) ve [kullanıcı adıyla giriş dokümanını](./docs/USERNAME_AUTH.md) okuyun.
 
 ## Proje dosyaları
