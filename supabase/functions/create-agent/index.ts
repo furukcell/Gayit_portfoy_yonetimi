@@ -81,6 +81,30 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Re-check account and office status server-side; an unexpired JWT must not
+  // let a disabled owner or an inactive office continue creating accounts.
+  const { data: profile, error: profileError } = await adminClient
+    .from("profiles")
+    .select("account_status")
+    .eq("id", requester.id)
+    .maybeSingle();
+
+  if (profileError) return respond({ error: "Account status check failed" }, 500);
+  if (!profile || profile.account_status !== "active") {
+    return respond({ error: "Hesabınız etkin değil." }, 403);
+  }
+
+  const { data: office, error: officeError } = await adminClient
+    .from("offices")
+    .select("is_active")
+    .eq("id", officeId)
+    .maybeSingle();
+
+  if (officeError) return respond({ error: "Office status check failed" }, 500);
+  if (!office || office.is_active !== true) {
+    return respond({ error: "Ofis bulunamadı veya etkin değil." }, 403);
+  }
+
   // Check requester is an active owner of this exact office.
   const { data: membership, error: membershipError } = await adminClient
     .from("office_members")
