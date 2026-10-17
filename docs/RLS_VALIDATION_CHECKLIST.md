@@ -18,7 +18,7 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Photo metadata must reference a property in the same office.
 - [ ] Anonymous requests cannot read protected tables.
 
-## CRM / matching access checks (after migration 003)
+## CRM / matching access checks (after migrations 003 and 005)
 
 - [ ] Office A owner can read/create/update Office A customers and assign them to active Office A agents.
 - [ ] Office A agent can read/create/update only customers assigned to that agent.
@@ -34,13 +34,13 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 
 ## Known limitations before production
 
-- Migrations 001–004 are drafts until applied to a disposable Supabase project and verified.
+- Migrations 001–005 are drafts until applied to a disposable Supabase project and verified.
 - The matching evaluator exists as a Supabase Edge Function draft, but must be deployed and tested against real data before production use.
 - Private property-photo upload uses migration 004 and must pass the role-isolation and upload/delete checks below before production use.
 - Invitation acceptance, account deletion and the full KVKK retention/deletion flow are not implemented yet.
 
 
-## CRM, matching, notifications and appointments
+## CRM, matching, notifications and appointments (migrations 003 and 005)
 
 - [ ] Owner sees customers, requirements, matches, activities and appointments only for the active office.
 - [ ] Agent sees only assigned customers and matches; cannot read another agent's customer notes or activity history.
@@ -51,7 +51,7 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Match evaluation only uses active properties and active requirements and does not create duplicate requirement/property pairs.
 - [ ] Existing match re-evaluation updates score/reasons but does not send another new-match notification.
 - [ ] New match notification is delivered only to the customer's assigned agent.
-- [ ] User can mark only their own notifications as read.
+- [ ] User can mark only their own notifications as read.\n- [ ] Authenticated clients cannot edit notification title, body, recipient, or linked record IDs; only `read_at` is writable.\n- [ ] An agent who created an activity cannot edit it after the customer is reassigned to another agent.
 - [ ] Appointment assigned_agent_id must be an active member of the same office.
 - [ ] Customer activities and appointments cannot reference a customer/property from another office.
 - [ ] Follow-up date is optional; malformed client input is rejected before save.
