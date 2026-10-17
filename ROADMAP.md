@@ -24,7 +24,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] CRM tabloları için rol bazlı RLS politikaları ve aynı ofise ait olma doğrulamaları için ilk taslak.
 - [x] Mobil ekran akışı ve CRM veri modelini `docs/PRODUCT_FLOWS_AND_DATA_MODEL.md` içinde belgele.
 - [x] Örnek ortam dosyası ve güvenli anahtar kullanım notları.
-- [x] Migration 001–008 taslaklarını hazırlama; 005 ile CRM aktivite/bildirim yazma izinlerini, 007 ile askıya alma kontrollerini, 008 ile üyelik kimliği değişikliklerini sıkılaştır.\n- [ ] Migration 001–005'i geçici Supabase projesinde sırayla çalıştırıp SQL hatalarını kontrol et.
+- [x] Migration 001–009 taslaklarını hazırlama; 005 ile CRM aktivite/bildirim yazma izinlerini, 007 ile askıya alma kontrollerini, 008 ile üyelik kimliği değişikliklerini sıkılaştır.\n- [ ] Migration 001–005'i geçici Supabase projesinde sırayla çalıştırıp SQL hatalarını kontrol et.
 - [ ] Ofisler arası veri izolasyonu ve CRM rol izinleri için yetki testlerini çalıştır (kontrol listesi: `docs/RLS_VALIDATION_CHECKLIST.md`).
 **Çıkış kriteri:** Her ofisin verisi sunucu tarafında ayrılmış, izinler test edilebilir.
 
@@ -86,6 +86,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] create-office fonksiyonunda süperadmin rolüne ek olarak güncel hesap durumu kontrolü ekle.
 - [x] Avatar Storage politikalarında kullanıcı kontrollü klasör yolunun UUID cast hatası riskini kaldır; üyelik/ofis sahipliğini metin karşılaştırması ve aktif üyelikle doğrula.
 - [x] Migration 008 ile mevcut üyeliğin ofis, rol ve bağlı kullanıcı kimliğinin doğrudan API üzerinden değiştirilmesini engelle.
+- [x] Migration 009 ile askıya alınmış hesapların ve pasif ofislerin profil fotoğrafı Storage erişimini de engelle.
 - [x] Müşteri görüşme geçmişi: telefon, WhatsApp, toplantı, yer gösterme ve not kaydı.
 - [x] Müşteri detayında sonraki takip tarihi düzenleme alanı ve randevu oluşturma/listeleme akışı.
 
