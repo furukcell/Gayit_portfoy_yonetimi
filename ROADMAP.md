@@ -24,7 +24,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] CRM tabloları için rol bazlı RLS politikaları ve aynı ofise ait olma doğrulamaları için ilk taslak.
 - [x] Mobil ekran akışı ve CRM veri modelini `docs/PRODUCT_FLOWS_AND_DATA_MODEL.md` içinde belgele.
 - [x] Örnek ortam dosyası ve güvenli anahtar kullanım notları.
-- [ ] Migration 001–003'ü geçici Supabase projesinde sırayla çalıştırıp SQL hatalarını kontrol et.
+- [x] Migration 001–005 taslaklarını ve rol politikalarını hazırlama; 005 ile CRM aktivite/bildirim yazma izinlerini sıkılaştır.\n- [ ] Migration 001–005'i geçici Supabase projesinde sırayla çalıştırıp SQL hatalarını kontrol et.
 - [ ] Ofisler arası veri izolasyonu ve CRM rol izinleri için yetki testlerini çalıştır (kontrol listesi: `docs/RLS_VALIDATION_CHECKLIST.md`).
 **Çıkış kriteri:** Her ofisin verisi sunucu tarafında ayrılmış, izinler test edilebilir.
 
@@ -51,10 +51,10 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 ### 5. Fotoğraflar ve profesyonel portföy PDF'i
 - [x] Danışman profil fotoğrafı seçimi ve özel Storage bucket'a yükleme için mobil form.
 - [x] Ofis kapsamlı profil fotoğrafları için ilk Storage RLS migration taslağı.
-- [ ] Portföy galerisi için fotoğraf seçme ve güvenli yükleme.
-- [ ] Fotoğraf sıralama, kapak fotoğrafı ve yükleme durumları.
-- [ ] GAYIT markalı, okunaklı, çok sayfalı PDF portföy sunumu.
-- [ ] PDF'i cihazda önizleme/kaydetme/paylaşma ve hataları ele alma.
+- [x] Portföy galerisi için fotoğraf seçme, özel Storage bucket'a yükleme ve imzalı URL ile görüntüleme (migration 004 taslağı).
+- [x] Fotoğraf silme ve yükleme/işlem durumu göstergeleri.\n- [ ] Fotoğraf sıralama ve kapak fotoğrafı.
+- [x] GAYIT markalı portföy PDF sunumu ve galeri fotoğraflarını ekleme.
+- [x] PDF'i cihazda oluşturup paylaşma akışı.\n- [ ] Gerçek iOS/Android cihazlarda PDF ve fotoğraf akışını doğrula.
 **Çıkış kriteri:** Gerçek portföy fotoğraflarıyla müşteriye gönderilebilir PDF.
 
 ### 6. WhatsApp ve harita/navigasyon
@@ -81,7 +81,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Yeni ilanda aktif müşteri talepleriyle eşleştirme çağrısı eklendi.
 - [x] Eşleşme türü (exact / alternative), puan ve kriter gerekçeleri için alanlar eklendi; aynı talep/ilan çifti tekrar oluşturulmaz.
 - [x] Bildirim merkezi listesi, okunmadı göstergesi ve okundu işaretleme ekranı eklendi.
-- [ ] Edge Function'ı gerçek Supabase projesinde deploy edip yetki/tekrar-bildirim testlerini çalıştır.
+- [ ] Edge Function'ı gerçek Supabase projesinde deploy edip yetki/tekrar-bildirim testlerini çalıştır.\n- [x] Eşleştirme fonksiyonunda danışman sorgularını kendi müşterileri ve ilanlarıyla sınırla.\n- [x] Migration 005 ile danışman aktivite düzenleme kapsamını ve bildirim güncelleme kolonlarını daralt.
 - [x] Müşteri görüşme geçmişi: telefon, WhatsApp, toplantı, yer gösterme ve not kaydı.
 - [x] Müşteri detayında sonraki takip tarihi düzenleme alanı ve randevu oluşturma/listeleme akışı.
 
