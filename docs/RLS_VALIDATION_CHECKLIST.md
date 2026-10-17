@@ -25,6 +25,7 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Customer activity creator cannot be changed, including by the office owner.
 - [ ] Malformed avatar storage paths return a denied/empty result without a UUID-cast error.
 - [ ] Agents can read office avatars but cannot upload, overwrite or delete avatar objects.
+- [ ] Disabled profiles and inactive offices cannot read or mutate private avatar objects using an unexpired JWT.
 
 ## CRM / matching access checks (after migrations 003 and 005)
 
@@ -42,7 +43,7 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 
 ## Known limitations before production
 
-- Migrations 001–008 are drafts until applied to a disposable Supabase project and verified.
+- Migrations 001–009 are drafts until applied to a disposable Supabase project and verified.
 - The matching evaluator exists as a Supabase Edge Function draft, but must be deployed and tested against real data before production use.
 - Private property-photo upload uses migration 004 and must pass the role-isolation and upload/delete checks below before production use.
 - Invitation acceptance, account deletion and the full KVKK retention/deletion flow are not implemented yet.
