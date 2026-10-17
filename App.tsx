@@ -79,6 +79,9 @@ export default function App() {
   const [customerBusy, setCustomerBusy] = useState(false);
   const [matches, setMatches] = useState<any[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [propertiesLoading, setPropertiesLoading] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
   const [properties, setProperties] = useState<Property[]>(initialProperties);
@@ -180,6 +183,31 @@ export default function App() {
       if (error) throw new Error('Eşleşmeler yüklenemedi. Migration 003 uygulanmış olmalı.');
       setMatches(data || []);
     } finally { setMatchesLoading(false); }
+  };
+
+  const loadNotifications = async (targetOfficeId: string) => {
+    setNotificationsLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('notifications')
+        .select('id,notification_type,title,body,match_id,customer_id,property_id,read_at,created_at')
+        .eq('office_id', targetOfficeId).order('created_at', { ascending: false }).limit(100);
+      if (error) throw new Error('Bildirimler yüklenemedi. Migration 003 uygulanmış olmalı.');
+      setNotifications(data || []);
+    } catch (error) {
+      Alert.alert('Bildirimler yüklenemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
+    } finally { setNotificationsLoading(false); }
+  };
+
+  const markNotificationRead = async (notificationId: string) => {
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notificationId);
+      if (error) throw error;
+      setNotifications(current => current.map(n => n.id === notificationId ? {...n, read_at: new Date().toISOString()} : n));
+    } catch (error) {
+      Alert.alert('Bildirim güncellenemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
+    }
   };
 
   const loadTeamMembers = async (targetOfficeId: string) => {
@@ -323,6 +351,7 @@ export default function App() {
       await loadProperties(result.officeId);
       await loadCustomers(result.officeId);
       await loadMatches(result.officeId);
+      await loadNotifications(result.officeId);
       if (result.role === 'owner') await loadTeamMembers(result.officeId);
       setMustChangePassword(result.mustChangePassword);
       setAuthenticated(true);
@@ -512,6 +541,7 @@ export default function App() {
         {tab === 'more' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>GAYIT · ARAÇLAR</Text><Text style={styles.pageTitle}>Daha Fazla</Text><Text style={styles.pageSub}>Daha seyrek kullandığın ofis ve çalışma araçları.</Text>
           {role === 'owner' && <Pressable style={styles.moreCard} onPress={()=>setTab('team')}><Ionicons name="people-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Ekip yönetimi</Text><Text style={styles.teamRole}>Danışmanları ve ofis üyelerini yönet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
+          <Pressable style={styles.moreCard} onPress={async()=>{setNotificationsOpen(true);await loadNotifications(officeId);}}><Ionicons name="notifications-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Bildirim merkezi {notifications.filter(n=>!n.read_at).length ? '('+notifications.filter(n=>!n.read_at).length+')' : ''}</Text><Text style={styles.teamRole}>Yeni eşleşmeler ve sistem bildirimleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={()=>setTab('stats')}><Ionicons name="bar-chart-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>{role==='owner'?'Ofis istatistikleri':'Performansım'}</Text><Text style={styles.teamRole}>Portföy ve operasyon özetleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={handleSignOut}><Ionicons name="log-out-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Oturumu kapat</Text><Text style={styles.teamRole}>GAYIT hesabından çıkış yap.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
         </ScrollView>}
@@ -588,6 +618,18 @@ export default function App() {
             <Text style={styles.fieldLabel}>Azami bütçe (TL)</Text><TextInput value={requirementMaxPrice} onChangeText={setRequirementMaxPrice} keyboardType="numeric" style={styles.input} placeholder="5000000" placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Oda sayısı</Text><TextInput value={requirementRooms} onChangeText={setRequirementRooms} style={styles.input} placeholder="3+1 (isteğe bağlı)" placeholderTextColor={palette.muted}/>
             <Pressable disabled={customerEditBusy} onPress={addRequirementForSelectedCustomer} style={[styles.saveButton,customerEditBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{customerEditBusy?'Kaydediliyor...':'Bu müşteriye talep ekle'}</Text><Ionicons name="add-circle-outline" size={21} color="#fff"/></Pressable>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={notificationsOpen} animationType="slide" onRequestClose={()=>setNotificationsOpen(false)}>
+        <SafeAreaView style={styles.modalSafe}>
+          <View style={styles.modalHeader}><Pressable onPress={()=>setNotificationsOpen(false)} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Bildirim merkezi</Text><View style={{width:40}}/></View>
+          <ScrollView contentContainerStyle={styles.formPage}>
+            <Text style={styles.pageTitle}>Bildirimler</Text><Text style={styles.pageSub}>Eşleşme ve operasyon bildirimlerini buradan takip et.</Text>
+            {notificationsLoading && <Text style={styles.pageSub}>Bildirimler yükleniyor…</Text>}
+            {!notificationsLoading && notifications.map(n=><Pressable key={n.id} onPress={()=>!n.read_at&&markNotificationRead(n.id)} style={[styles.matchCard,!n.read_at&&{borderColor:palette.gold, borderWidth:1}]}><View style={{flex:1}}><Text style={styles.teamName}>{n.title}</Text><Text style={styles.teamRole}>{n.body || 'Bildirim ayrıntısı yok.'}</Text><Text style={styles.teamMeta}>{new Date(n.created_at).toLocaleString('tr-TR')}{n.read_at?' · Okundu':' · Okunmadı'}</Text></View>{!n.read_at&&<Ionicons name="ellipse" size={10} color={palette.gold}/>}</Pressable>)}
+            {!notificationsLoading && !notifications.length && <View style={styles.empty}><Ionicons name="notifications-outline" size={30} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz bildirim yok</Text><Text style={styles.pageSub}>Yeni eşleşmeler oluştuğunda bildirimler burada görünür.</Text></View>}
           </ScrollView>
         </SafeAreaView>
       </Modal>
