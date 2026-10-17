@@ -123,6 +123,26 @@ export default function App() {
     return searchMatch && (showArchived ? p.status === 'Arşivde' : p.status !== 'Arşivde') && (filter === 'Tümü' || p.kind === filter);
   }).sort((a,b) => sortBy === 'priceAsc' ? a.price-b.price : sortBy === 'priceDesc' ? b.price-a.price : 0), [properties, role, search, filter, sortBy, showArchived]);
 
+  const sharePortfolioReport = async () => {
+    const rows = roleProperties.map(p => `• ${p.title} | ${p.kind} | ${money(p.price)} | ${p.status} | ${p.address}`);
+    const report = [
+      'GAYIT · PORTFÖY RAPORU',
+      new Date().toLocaleDateString('tr-TR'),
+      '',
+      `Toplam portföy: ${roleProperties.length}`,
+      `Aktif: ${roleProperties.filter(p => p.status === 'Aktif').length}`,
+      `Opsiyonlu: ${roleProperties.filter(p => p.status === 'Opsiyonlu').length}`,
+      `Satıldı: ${roleProperties.filter(p => p.status === 'Satıldı').length}`,
+      `Kiralandı: ${roleProperties.filter(p => p.status === 'Kiralandı').length}`,
+      `Fiyat toplamı: ${money(roleProperties.reduce((sum, p) => sum + p.price, 0))}`,
+      '',
+      'PORTFÖY LİSTESİ',
+      ...rows,
+    ].join('\\n');
+    try { await Share.share({ title: 'GAYIT Portföy Raporu', message: report }); }
+    catch (error) { Alert.alert('Rapor paylaşılamadı', error instanceof Error ? error.message : 'Rapor oluşturulamadı.'); }
+  };
+
   const openMap = async (p: Property) => {
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address)}`;
     try { await Linking.openURL(url); } catch { Alert.alert('Harita açılamadı', 'Adresin geçerli olduğundan emin olun.'); }
@@ -845,6 +865,7 @@ export default function App() {
 
         {tab === 'stats' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>PERFORMANS ANALİZİ</Text><Text style={styles.pageTitle}>{role === 'owner' ? 'Ofis istatistikleri' : 'Performansım'}</Text><Text style={styles.pageSub}>Portföy ve görüntülenme metrikleri.</Text>
+          <Pressable onPress={sharePortfolioReport} style={[styles.saveButton,{marginTop:14,marginBottom:16}]}><Ionicons name="share-outline" size={19} color="#fff"/><Text style={styles.saveButtonText}>Portföy raporunu paylaş</Text></Pressable>
           <View style={styles.bigMetric}><Text style={styles.metricLabel}>Toplam portföy değeri</Text><Text style={styles.metricValue}>{money(roleProperties.reduce((sum,p)=>sum+p.price,0))}</Text><Text style={styles.metricFoot}>Satılık ve kiralık ilanların fiyat toplamı; piyasa değeri değildir.</Text></View>
           <View style={styles.statGrid}><Stat icon="home-outline" label="Satılık" value={String(roleProperties.filter(p=>p.kind==='Satılık').length)} note="İlan adedi"/><Stat icon="key-outline" label="Kiralık" value={String(roleProperties.filter(p=>p.kind==='Kiralık').length)} note="İlan adedi"/><Stat icon="eye-outline" label="Görüntülenme" value="—" note="Ölçüm kurulmadı"/><Stat icon="checkmark-done-outline" label="Tamamlanan" value={String(roleProperties.filter(p=>p.status==='Satıldı'||p.status==='Kiralandı').length)} note="Satış/kiralama"/></View>
           <Text style={styles.sectionTitle}>İlan durumları</Text>
