@@ -80,7 +80,8 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - [x] Eşleşme türü (exact / alternative), puan ve kriter gerekçeleri için alanlar eklendi; aynı talep/ilan çifti tekrar oluşturulmaz.
 - [x] Bildirim merkezi listesi, okunmadı göstergesi ve okundu işaretleme ekranı eklendi.
 - [ ] Edge Function'ı gerçek Supabase projesinde deploy edip yetki/tekrar-bildirim testlerini çalıştır.
-- [ ] Müşteri görüşme geçmişi, takip tarihi ve randevu ekranları.
+- [x] Müşteri görüşme geçmişi: telefon, WhatsApp, toplantı, yer gösterme ve not kaydı.
+- [ ] Takip tarihi ve randevu oluşturma/listeleme ekranları.
 
 ### 9. İstatistikler ve iş takibi
 - [ ] Aktif, opsiyonlu, satılmış ve kiralanmış portföy sayıları.
@@ -110,7 +111,7 @@ MVP ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır: kull
 - 2026-10-17: Ürün kararı netleştirildi: aynı mobil uygulamada role göre farklı ekran/veri kapsamı; alt gezinme (Ana Sayfa, Portföy, Müşteriler, Eşleşmeler, Daha Fazla); tam eşleşmeler ve alternatifler ayrı bölümler. Migration 003 ile müşteri CRM/eşleştirme veri modeli ve tasarım dokümanı eklendi. Migration uygulanmadı; UI ve eşleştirme motoru henüz yazılmadı.
 - 2026-10-17: Mobil uygulamaya müşteri listesi, müşteri/arama talebi oluşturma formu, başlangıç eşleşme ekranı ve beş sekmeli alt navigasyon eklendi. Ana sayfadaki örnek ekip/görüntülenme değerleri kaldırıldı; görüntülenme verisi yoksa sahte sayı yerine ölçüm kurulmadı durumu gösteriliyor.
 - 2026-10-17: Müşteri kartından detay ekranı açılması, temel müşteri bilgilerinin düzenlenmesi, kayıtlı arama taleplerinin görüntülenmesi ve aynı müşteriye birden fazla talep ekleme akışı eklendi.
-- 2026-10-17: Portföy formuna gayrimenkul tipi eklendi. evaluate-matches Edge Function taslağı; işlem türü, il/ilçe, tip, bütçe toleransı, oda ve metrekare kriterlerine göre tam/alternatif eşleşme hesaplayacak şekilde eklendi. Müşteri/talep ve portföy kayıtlarından fonksiyona çağrı bağlandı. Bildirim merkezi de eklendi. Migration 003 ve Edge Function gerçek Supabase ortamında henüz uygulanmadı/deploy edilmedi; CI ve gerçek RLS testleri bekleniyor.
+- 2026-10-17: Portföy formuna gayrimenkul tipi eklendi. evaluate-matches Edge Function taslağı; işlem türü, il/ilçe, tip, bütçe toleransı, oda ve metrekare kriterlerine göre tam/alternatif eşleşme hesaplayacak şekilde eklendi. Müşteri/talep ve portföy kayıtlarından fonksiyona çağrı bağlandı. Bildirim merkezi ve müşteri görüşme geçmişi de eklendi. Migration 003 ve Edge Function gerçek Supabase ortamında henüz uygulanmadı/deploy edilmedi; CI ve gerçek RLS testleri bekleniyor.
 
 ## Çalışma kuralları
 1. Bir aşama ancak kodu ve çıkış kriteri kontrol edildiğinde tamamlandı olarak işaretlenir.
