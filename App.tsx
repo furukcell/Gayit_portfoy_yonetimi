@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { changeInitialPassword, signInWithUsername } from './src/lib/usernameAuth';
 import {
   Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar,
-  StyleSheet, Text, TextInput, View
+  StyleSheet, Text, TextInput, View, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,7 +52,7 @@ export default function App() {
   const [agentPassword, setAgentPassword] = useState('');
   const [agentAvatarUri, setAgentAvatarUri] = useState<string | null>(null);
   const [agentBusy, setAgentBusy] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<{name:string; username:string; role:string; avatarPath:string|null; id:string}[]>([]);
+  const [teamMembers, setTeamMembers] = useState<{name:string; username:string; role:string; avatarPath:string|null; avatarUrl:string|null; id:string}[]>([]);
   const [tab, setTab] = useState<Tab>('home');
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [selected, setSelected] = useState<Property | null>(null);
@@ -108,12 +108,21 @@ export default function App() {
       .eq('office_id', targetOfficeId)
       .eq('status', 'active');
     if (error) throw new Error('Ekip bilgileri yüklenemedi.');
-    const mapped = (data || []).map((row: any) => ({
-      id: row.profiles?.id || row.user_id || '',
-      name: row.profiles?.full_name || 'İsimsiz danışman',
-      username: row.profiles?.username || '',
-      role: row.role,
-      avatarPath: row.profiles?.avatar_path || null,
+    const mapped = await Promise.all((data || []).map(async (row: any) => {
+      const avatarPath = row.profiles?.avatar_path || null;
+      let avatarUrl: string | null = null;
+      if (avatarPath) {
+        const { data: signed } = await supabase.storage.from('avatars').createSignedUrl(avatarPath, 3600);
+        avatarUrl = signed?.signedUrl || null;
+      }
+      return {
+        id: row.profiles?.id || row.user_id || '',
+        name: row.profiles?.full_name || 'İsimsiz danışman',
+        username: row.profiles?.username || '',
+        role: row.role,
+        avatarPath,
+        avatarUrl,
+      };
     }));
     setTeamMembers(mapped);
   };
@@ -263,7 +272,7 @@ export default function App() {
 
         {tab === 'team' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>EKİP YÖNETİMİ</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Danışmanlar</Text><Text style={styles.pageSub}>Ofis ekibinin portföy ve performans özeti.</Text></View><Pressable onPress={()=>setAgentModalOpen(true)} style={styles.addButton}><Ionicons name="person-add-outline" size={22} color="#fff"/></Pressable></View>
-          {teamMembers.map((person)=><View key={person.id || person.username} style={styles.teamCard}><View style={styles.avatar}><Text style={styles.avatarText}>{person.name.split(/\s+/).map((part:string)=>part[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')}</Text></View><View style={{flex:1}}><Text style={styles.teamName}>{person.name}</Text><Text style={styles.teamRole}>{person.role === 'owner' ? 'Ofis sahibi' : 'Gayrimenkul danışmanı'}</Text><Text style={styles.teamMeta}>@{person.username || 'kullanıcı adı yok'}</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></View>)}
+          {teamMembers.map((person)=><View key={person.id || person.username} style={styles.teamCard}><View style={styles.avatar}>{person.avatarUrl ? <Image source={{uri:person.avatarUrl}} style={styles.avatarImage}/> : <Text style={styles.avatarText}>{person.name.split(/\s+/).map((part:string)=>part[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')}</Text>}</View><View style={{flex:1}}><Text style={styles.teamName}>{person.name}</Text><Text style={styles.teamRole}>{person.role === 'owner' ? 'Ofis sahibi' : 'Gayrimenkul danışmanı'}</Text><Text style={styles.teamMeta}>@{person.username || 'kullanıcı adı yok'}</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></View>)}
           {!teamMembers.length && <View style={styles.empty}><Ionicons name="people-outline" size={30} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz ekip üyesi yok</Text><Text style={styles.pageSub}>Sağ üstteki butondan ilk danışmanını ekleyebilirsin.</Text></View>}
           <View style={styles.notice}><Ionicons name="shield-checkmark-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Ekip üyeleri oturum açmış ofisin veritabanından yüklenir. Hesap oluşturma fonksiyonunun deploy edilmiş ve Supabase bağlantısının ayarlanmış olması gerekir.</Text></View>        </ScrollView>}
 
