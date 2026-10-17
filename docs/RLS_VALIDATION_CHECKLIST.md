@@ -87,7 +87,7 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Office A users cannot access Office B photo objects, even if they know the object path.
 - [ ] Upload rejects unsupported MIME types and files larger than 10 MB.
 - [ ] PDF presentation includes signed photo URLs only for the selected listing.
-- [ ] Removing a photo removes its metadata and storage object; failed storage deletion is surfaced for cleanup.
+- [ ] Removing a photo removes its storage object and metadata; if Storage deletion fails, metadata remains visible so the user can retry; if metadata deletion fails after Storage succeeds, the partial state is clearly surfaced.
 
 ## Edge Function record scope
 
