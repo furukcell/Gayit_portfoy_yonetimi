@@ -109,6 +109,14 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState<'Tümü' | PropertyStatus>('Tümü');
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [transactionPropertyId, setTransactionPropertyId] = useState('');
+  const [transactionFinalPrice, setTransactionFinalPrice] = useState('');
+  const [transactionOfficeCommission, setTransactionOfficeCommission] = useState('');
+  const [transactionAgentCommission, setTransactionAgentCommission] = useState('');
+  const [transactionDate, setTransactionDate] = useState(new Date().toISOString().slice(0,10));
+  const [transactionNotes, setTransactionNotes] = useState('');
+  const [transactionBusy, setTransactionBusy] = useState(false);
   const [minPriceFilter, setMinPriceFilter] = useState('');
   const [maxPriceFilter, setMaxPriceFilter] = useState('');
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
@@ -132,6 +140,35 @@ export default function App() {
     const maxMatch = maxPrice === null || p.price <= maxPrice;
     return searchMatch && (showArchived ? p.status === 'Arşivde' : p.status !== 'Arşivde') && (filter === 'Tümü' || p.kind === filter) && statusMatch && minMatch && maxMatch && (!favoritesOnly || favoriteIds.includes(p.id));
   }).sort((a,b) => sortBy === 'priceAsc' ? a.price-b.price : sortBy === 'priceDesc' ? b.price-a.price : sortBy === 'newest' ? 0 : 0), [properties, role, search, filter, sortBy, showArchived, statusFilter, minPriceFilter, maxPriceFilter, favoritesOnly, favoriteIds]);
+
+  const saveTransaction = async () => {
+    if (transactionBusy) return;
+    const finalPrice = Number(transactionFinalPrice.replace(/[^0-9]/g,''));
+    const officeCommission = Number(transactionOfficeCommission.replace(/[^0-9]/g,'') || 0);
+    const agentCommission = Number(transactionAgentCommission.replace(/[^0-9]/g,'') || 0);
+    if (!transactionPropertyId || !Number.isSafeInteger(finalPrice) || finalPrice <= 0) { Alert.alert('Eksik bilgi','Portföy seç ve gerçekleşen satış/kiralama bedelini gir.'); return; }
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(transactionDate) || officeCommission < 0 || agentCommission < 0 || officeCommission + agentCommission > finalPrice) { Alert.alert('Bilgileri kontrol et','Tarih YYYY-AA-GG olmalı; komisyonlar negatif olamaz ve toplamı işlem bedelini aşamaz.'); return; }
+    setTransactionBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data:userResult,error:userError } = await supabase.auth.getUser();
+      if(userError||!userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
+      const property = properties.find(p=>p.id===transactionPropertyId);
+      if(!property) throw new Error('Seçilen portföy bulunamadı.');
+      const { error } = await supabase.from('property_transactions').insert({
+        office_id:officeId, property_id:property.id, agent_id:userResult.user.id,
+        transaction_type:property.kind==='Kiralık'?'rent':'sale', final_price:finalPrice,
+        office_commission:officeCommission, agent_commission:agentCommission,
+        closed_on:transactionDate, notes:transactionNotes.trim(), created_by:userResult.user.id,
+      });
+      if(error) throw error;
+      await getSupabaseClient().from('properties').update({status:property.kind==='Kiralık'?'rented':'sold'}).eq('id',property.id).eq('office_id',officeId);
+      await loadProperties(officeId);
+      setTransactionModalOpen(false); setTransactionPropertyId(''); setTransactionFinalPrice(''); setTransactionOfficeCommission(''); setTransactionAgentCommission(''); setTransactionNotes('');
+      Alert.alert('İşlem kaydedildi','Satış/kiralama ve komisyon kaydı oluşturuldu.');
+    } catch(error) { Alert.alert('İşlem kaydedilemedi',error instanceof Error?error.message:'Supabase 011 migration dosyasını ve ofis yetkilerini kontrol et.'); }
+    finally { setTransactionBusy(false); }
+  };
 
   const loadFavorites = async () => {
     if (!officeId) return;
@@ -913,6 +950,7 @@ export default function App() {
           {role === 'owner' && <Pressable style={styles.moreCard} onPress={()=>setTab('team')}><Ionicons name="people-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Ekip yönetimi</Text><Text style={styles.teamRole}>Danışmanları ve ofis üyelerini yönet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           <Pressable style={styles.moreCard} onPress={async()=>{setNotificationsOpen(true);await loadNotifications(officeId);}}><Ionicons name="notifications-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Bildirim merkezi {notifications.filter(n=>!n.read_at).length ? '('+notifications.filter(n=>!n.read_at).length+')' : ''}</Text><Text style={styles.teamRole}>Yeni eşleşmeler ve sistem bildirimleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={exportPortfolioCsv}><Ionicons name="download-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Portföyü CSV olarak dışa aktar</Text><Text style={styles.teamRole}>Excel uyumlu tabloyu paylaş; yalnızca erişebildiğin portföyler eklenir.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
+          {role==='owner'&&<Pressable style={styles.moreCard} onPress={()=>{setTransactionPropertyId(properties[0]?.id||'');setTransactionModalOpen(true);}}><Ionicons name="cash-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Satış ve komisyon kaydı</Text><Text style={styles.teamRole}>Gerçekleşen işlemi, ofis ve danışman komisyonunu kaydet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           <Pressable style={styles.moreCard} onPress={()=>setTab('stats')}><Ionicons name="bar-chart-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>{role==='owner'?'Ofis istatistikleri':'Performansım'}</Text><Text style={styles.teamRole}>Portföy ve operasyon özetleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={handleSignOut}><Ionicons name="log-out-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Oturumu kapat</Text><Text style={styles.teamRole}>GAYIT hesabından çıkış yap.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
         </ScrollView>}
@@ -937,6 +975,23 @@ export default function App() {
       </View>
 
       <View style={styles.bottomNav}>{([{key:'home',label:'Ana Sayfa',icon:'grid-outline'},{key:'portfolio',label:'Portföy',icon:'business-outline'},{key:'customers',label:'Müşteriler',icon:'people-outline'},{key:'matches',label:'Eşleşme',icon:'git-compare-outline'},{key:'more',label:'Daha Fazla',icon:'menu-outline'}] as {key:Tab;label:string;icon:keyof typeof Ionicons.glyphMap}[]).map(item=><Pressable key={item.key} onPress={()=>{setTab(item.key);if(item.key==='portfolio')loadFavorites();}} style={styles.navItem}><View style={[styles.navIcon,tab===item.key&&styles.navIconOn]}><Ionicons name={item.icon} size={20} color={tab===item.key?palette.gold:palette.muted}/></View><Text style={[styles.navLabel,tab===item.key&&styles.navLabelOn]}>{item.label}</Text></Pressable>)}</View>
+
+      <Modal visible={transactionModalOpen} animationType="slide" onRequestClose={()=>!transactionBusy&&setTransactionModalOpen(false)}>
+        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
+          <View style={styles.modalHeader}><Pressable disabled={transactionBusy} onPress={()=>setTransactionModalOpen(false)} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Satış / kiralama kaydı</Text><View style={{width:40}}/></View>
+          <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+            <Text style={styles.pageSub}>Gerçekleşmiş bir işlemi kaydet. Kayıt sonrası portföy durumu satıldı/kiralandı olarak güncellenir.</Text>
+            <Text style={styles.fieldLabel}>Portföy</Text>
+            {properties.filter(p=>p.status!=='Arşivde').map(p=><Pressable key={p.id} onPress={()=>{setTransactionPropertyId(p.id);setTransactionFinalPrice(String(p.price));}} style={[styles.moreCard,{marginTop:7,borderColor:transactionPropertyId===p.id?palette.gold:palette.line,borderWidth:transactionPropertyId===p.id?2:1}]}><Ionicons name={transactionPropertyId===p.id?'radio-button-on':'radio-button-off'} size={19} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>{p.title}</Text><Text style={styles.teamRole}>{p.kind} · {money(p.price)}</Text></View></Pressable>)}
+            <Text style={styles.fieldLabel}>Gerçekleşen bedel (TL)</Text><TextInput value={transactionFinalPrice} onChangeText={setTransactionFinalPrice} keyboardType="numeric" style={styles.input} placeholder="Örn. 4250000" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Ofis komisyonu (TL)</Text><TextInput value={transactionOfficeCommission} onChangeText={setTransactionOfficeCommission} keyboardType="numeric" style={styles.input} placeholder="0" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Danışman komisyonu (TL)</Text><TextInput value={transactionAgentCommission} onChangeText={setTransactionAgentCommission} keyboardType="numeric" style={styles.input} placeholder="0" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>İşlem tarihi (YYYY-AA-GG)</Text><TextInput value={transactionDate} onChangeText={setTransactionDate} autoCapitalize="none" style={styles.input} placeholder="2026-10-17" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Notlar</Text><TextInput value={transactionNotes} onChangeText={setTransactionNotes} multiline style={[styles.input,{minHeight:85,textAlignVertical:'top'}]} placeholder="İşleme ait notlar" placeholderTextColor={palette.muted}/>
+            <Pressable disabled={transactionBusy} onPress={saveTransaction} style={[styles.saveButton,{marginTop:20,opacity:transactionBusy?0.6:1}]}><Text style={styles.saveButtonText}>{transactionBusy?'Kaydediliyor…':'İşlemi kaydet'}</Text></Pressable>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
       <Modal visible={!!selected} animationType="slide" onRequestClose={()=>{setSelected(null);setPropertyPhotos([]);}}>
         {selected && <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>{setSelected(null);setPropertyPhotos([]);}} style={styles.roundButton}><Ionicons name="chevron-down" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>İlan detayı</Text><Text style={styles.code}>{selected.id}</Text></View>
