@@ -95,11 +95,15 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] Agent-supplied IDs for another agent's customer or listing return not found and create no matches/notifications.
 - [ ] Owner can evaluate matches across the active office only.
 
-## Additional defense-in-depth checks (migration 011 proposed)
+## Additional defense-in-depth checks (migration review pending)
 
 - [ ] A direct update to a customer requirement fails if its customer belongs to a different office than the requirement's office.
 - [ ] A direct delete of a requirement is allowed only when its customer belongs to the same office and is assigned to the requesting agent.
 - [ ] An agent cannot read or create customer activity rows whose customer office differs from the activity office.
 - [ ] After customer reassignment, the previous agent cannot read or modify the customer's activity history.
 - [ ] Confirm these constraints through direct authenticated PostgREST requests, not only the mobile UI.
+- [ ] An agent cannot read photo metadata when the referenced property belongs to a different office, even if the agent knows both UUIDs.
+- [ ] An agent cannot delete photo metadata for a property outside their office through a direct table API request.
+- [ ] Storage SELECT and DELETE policies reject cross-office property references, even when the object path is known.
+- [ ] Tampering with `office_id`, `property_id`, or `storage_path` in photo metadata cannot grant access to an object in another office.
 
