@@ -9,6 +9,7 @@ Create at least two offices (Office A and Office B), an owner and two agents in 
 - [ ] An Office A owner can read and update Office A details.
 - [ ] An Office A owner cannot read or update Office B details.
 - [ ] An Office A owner can list Office A members, but cannot promote an agent to owner through the membership client API.
+- [ ] An owner can disable and reactivate an agent membership; a disabled agent loses office RLS access and cannot sign in through the username flow.
 - [ ] An owner cannot change an existing membership's office_id, role, invite email, or linked user_id through the client API.
 - [ ] An owner cannot insert a membership already bound to an existing profile; client-created invites require user_id null and invited_email set.
 - [ ] Only trusted server functions can bind an existing profile to an invite.
