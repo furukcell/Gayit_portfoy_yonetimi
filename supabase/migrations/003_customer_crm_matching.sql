@@ -103,6 +103,7 @@ create table public.matches (
   requirement_id uuid not null references public.customer_requirements(id) on delete cascade,
   assigned_agent_id uuid not null references public.profiles(id) on delete restrict,
   status public.match_status not null default 'new',
+  match_kind text not null default 'exact' check (match_kind in ('exact','alternative')),
   match_score integer check (match_score is null or match_score between 0 and 100),
   match_reasons text[] not null default '{}',
   first_notified_at timestamptz,
