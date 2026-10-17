@@ -14,7 +14,7 @@ import { getSupabaseClient } from './src/lib/supabase';
 type Role = 'owner' | 'agent';
 type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
 type Customer = { id: string; fullName: string; phone: string; roles: string[]; assignedAgent: string; notes: string; active: boolean; requirementCount: number; nextFollowUpAt: string | null; assignedAgentId: string };
-type PropertyStatus = 'Aktif' | 'Opsiyonlu' | 'Satıldı' | 'Kiralandı';
+type PropertyStatus = 'Aktif' | 'Opsiyonlu' | 'Satıldı' | 'Kiralandı' | 'Arşivde';
 type Property = {
   id: string; title: string; address: string; district: string; price: number;
   rooms: string; area: string; kind: 'Satılık' | 'Kiralık'; status: PropertyStatus;
@@ -161,7 +161,7 @@ export default function App() {
         rooms: row.rooms || '',
         area: row.area_m2 ? String(row.area_m2) + ' m²' : '',
         kind: row.listing_type === 'rent' ? 'Kiralık' : 'Satılık',
-        status: row.status === 'optioned' ? 'Opsiyonlu' : row.status === 'sold' ? 'Satıldı' : row.status === 'rented' ? 'Kiralandı' : 'Aktif',
+        status: row.status === 'optioned' ? 'Opsiyonlu' : row.status === 'sold' ? 'Satıldı' : row.status === 'rented' ? 'Kiralandı' : row.status === 'archived' ? 'Arşivde' : 'Aktif',
         agent: names.get(row.owner_agent_id) || 'Danışman',
         views: 0,
         createdAt: new Date(row.created_at).toLocaleDateString('tr-TR'),
@@ -491,7 +491,7 @@ export default function App() {
 
   const updatePropertyStatus = async (nextStatus: PropertyStatus) => {
     if (!selected) return;
-    const statusMap: Record<PropertyStatus, string> = { 'Aktif': 'active', 'Opsiyonlu': 'optioned', 'Satıldı': 'sold', 'Kiralandı': 'rented' };
+    const statusMap: Record<PropertyStatus, string> = { 'Aktif': 'active', 'Opsiyonlu': 'optioned', 'Satıldı': 'sold', 'Kiralandı': 'rented', 'Arşivde': 'archived' };
     try {
       const supabase = getSupabaseClient();
       const { error } = await supabase.from('properties').update({ status: statusMap[nextStatus] }).eq('id', selected.id).eq('office_id', officeId);
