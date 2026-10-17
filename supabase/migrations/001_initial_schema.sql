@@ -4,6 +4,8 @@
 
 create extension if not exists pgcrypto;
 
+create type public.app_account_status as enum ('active', 'disabled');
+
 create type public.office_role as enum ('owner', 'agent');
 create type public.office_member_status as enum ('invited', 'active', 'disabled');
 create type public.property_listing_type as enum ('sale', 'rent');
@@ -12,6 +14,10 @@ create type public.property_status as enum ('active', 'optioned', 'sold', 'rente
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null default '',
+  username text unique,
+  avatar_path text,
+  account_status public.app_account_status not null default 'active',
+  must_change_password boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -20,6 +26,7 @@ create table public.offices (
   id uuid primary key default gen_random_uuid(),
   name text not null check (length(trim(name)) between 2 and 120),
   owner_id uuid not null references public.profiles(id) on delete restrict,
+  is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
