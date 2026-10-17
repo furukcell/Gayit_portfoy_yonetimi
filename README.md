@@ -79,6 +79,28 @@ Kendisine atanmış portföyleri ve müşterileri yönetir; müşteri görüşme
 - Bildirimleri okundu olarak işaretleme.
 - Yeni eşleşmelerle ilişkili bildirimleri göstermek için veri ve sunucu işlevi taslağı.
 
+## Yeni portföy iş akışları (2026-10-17)
+
+Bu geliştirme paketi PR #1 ile `main` dalına birleştirildi. Kod akışları repoda mevcut olsa da aşağıdaki veritabanı özellikleri için migration 011'in Supabase ortamına ayrıca uygulanması ve gerçek kullanıcılarla doğrulanması gerekir.
+
+### Portföy listesi ve galeri
+- Portföy fotoğraflarının sırasını değiştirme; ilk fotoğraf kapak olarak işaretlenir.
+- Portföy durumuna göre filtreleme ve minimum/maksimum fiyat aralığı.
+- Portföyü favorilere ekleme ve yalnızca favorileri listeleme.
+- Son görüntülenen portföyleri listeleme ve hızlı erişim.
+
+### Takip, rapor ve aktarım
+- Ana sayfada bugünün ve gecikmiş müşteri takipleri.
+- Portföy durum adetleri ve fiyat toplamlarından metin raporu üretip paylaşma.
+- Portföy listesini CSV metni olarak dışa aktarma/paylaşma.
+- CSV metnini uygulamaya yapıştırarak birden fazla yeni portföyü toplu içe aktarma. Bu sürüm dosya seçmez ve var olan kayıtları güncellemez.
+
+### Satış/kiralama ve komisyon
+- Gerçekleşen satış veya kiralama kaydı.
+- İşlem bedeli, işlem tarihi, notlar, ofis komisyonu ve danışman komisyonu alanları.
+- Kayıt sonrasında portföy durumunu satıldı/kiralandı olarak güncelleme akışı.
+- Favoriler, son görüntülenenler, işlem kayıtları ve ofis logo/iletişim sütunları için SQL: `supabase/migrations/011_favorites_and_transactions.sql`.
+
 ## Özelliklerin mevcut durumu
 
 Aşağıdaki durumlar, repodaki kod ve dokümantasyona göre verilmiştir; canlı ortamda uçtan uca çalıştığı anlamına gelmez.
@@ -95,6 +117,10 @@ Aşağıdaki durumlar, repodaki kod ve dokümantasyona göre verilmiştir; canl�
 | Müşteri CRM ve takip | Ekranlar ve veri erişim akışları mevcut | CRM migration'larını uygulama ve rol testleri |
 | Eşleştirme ve bildirim | Edge Function ve istemci akışları mevcut | Fonksiyonu deploy etme; sonuç, yetki ve yinelenen bildirim testleri |
 | İstatistikler | Portföy verilerinden hesaplama kodu mevcut | Gerçek ofis verileriyle sonuçları karşılaştırma |
+| Favoriler / son görüntülenenler | Uygulama akışı ve migration 011 mevcut | Migration'ı uygulama; RLS ve ofis sınırı testleri |
+| CSV içe/dışa aktarma | Metin yapıştırma ve paylaşım akışı mevcut | Gerçek verilerle test; dosya seçimi ve mevcut kayıtları güncelleme henüz yok |
+| Satış/kiralama ve komisyon | Kayıt ekranı ve migration 011 mevcut | Veritabanı ve komisyon yetkilerini doğrulama |
+| Ofis markalı PDF | Migration 011'de logo/iletişim alanları hazır | Ayar ekranı ve PDF bağlantısı henüz tamamlanmadı |
 | Güvenlik / ofis izolasyonu | RLS migration taslakları ve test listesi mevcut | Ayrı ofis ve kullanıcılarla doğrudan API testlerini çalıştırma |
 | Mağazaya yayın | Tamamlanmadı | Build, gizlilik metni, ikon/görseller, kabul testleri ve mağaza kontrol listesi |
 
@@ -194,6 +220,8 @@ Supabase olmadan veya gerekli migration'lar uygulanmadan tüm ekranların gerçe
 - Supabase `service_role` anahtarını mobil uygulamaya, web panelinin istemci koduna veya herkese açık bir dosyaya **asla** koymayın. Yalnızca güvenilir sunucu ortamında gizli değişken olarak saklayın.
 - Arayüzde bir butonu gizlemek güvenlik sağlamaz; yetki veritabanı politikalarında ve sunucu fonksiyonlarında kontrol edilmelidir.
 - Gerçek kullanıcı verisi kullanmadan önce farklı ofislerle RLS ve Storage erişim testleri yapılmalıdır.
+- Migration 011 repoda bulunur ancak canlı Supabase'e otomatik uygulanmaz. Önce test ortamında uygulayın ve RLS politikalarını doğrulayın.
+- CSV aktarımı yeni portföy oluşturur; mevcut portföyleri güncellemez. İçe aktarmadan önce başlık, adres ve fiyat alanlarını kontrol edin.
 - Bu README ürün kapsamını ve geliştirme durumunu anlatır; tek başına güvenlik veya mağaza yayını onayı değildir.
 
 ---
