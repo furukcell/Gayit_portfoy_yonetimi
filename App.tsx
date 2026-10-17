@@ -96,6 +96,7 @@ export default function App() {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [propertiesLoading, setPropertiesLoading] = useState(false);
+  const [propertyBusy, setPropertyBusy] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [selected, setSelected] = useState<Property | null>(null);
@@ -629,19 +630,41 @@ export default function App() {
   };
 
   const saveProperty = async () => {
-    const numericPrice = Number(price.replace(/[^0-9]/g, ''));
-    const numericArea = Number(area.replace(/[^0-9.]/g, ''));
-    if (!title.trim() || !address.trim() || !numericPrice || !numericArea) {
-      Alert.alert('Eksik bilgi', 'İlan başlığı, adres, fiyat ve metrekare alanlarını doldur.');
+    if (propertyBusy) return;
+    const cleanTitle = title.trim();
+    const cleanAddress = address.trim();
+    const priceDigits = price.replace(/[^0-9]/g, '');
+    const numericPrice = Number(priceDigits);
+    const normalizedArea = area.trim().replace(',', '.');
+    const numericArea = Number(normalizedArea);
+    if (!cleanTitle || !cleanAddress || !price.trim() || !area.trim()) {
+      Alert.alert('Eksik bilgi', 'İlan başlığı, açık adres, fiyat ve metrekare zorunludur.');
       return;
     }
+    if (cleanTitle.length < 4 || cleanTitle.length > 120) {
+      Alert.alert('Başlığı kontrol et', 'İlan başlığı 4–120 karakter arasında olmalı.');
+      return;
+    }
+    if (cleanAddress.length < 8 || cleanAddress.length > 250) {
+      Alert.alert('Adresi kontrol et', 'Açık adres 8–250 karakter arasında olmalı.');
+      return;
+    }
+    if (!/^\d+$/.test(priceDigits) || !Number.isSafeInteger(numericPrice) || numericPrice <= 0) {
+      Alert.alert('Fiyatı kontrol et', 'Fiyat sıfırdan büyük, geçerli bir TL tutarı olmalı. Örnek: 4250000');
+      return;
+    }
+    if (!/^\d+(?:[.,]\d{1,2})?$/.test(area.trim()) || !Number.isFinite(numericArea) || numericArea <= 0 || numericArea > 1000000) {
+      Alert.alert('Metrekareyi kontrol et', 'Metrekare sıfırdan büyük olmalı. Ondalık değer için virgül kullanabilirsin (ör. 145,5).');
+      return;
+    }
+    setPropertyBusy(true);
     try {
       const supabase = getSupabaseClient();
       const { data: userResult, error: userError } = await supabase.auth.getUser();
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
       const parts = address.split(',').map((part) => part.trim());
       const payload = {
-        title: title.trim(), address: address.trim(),
+        title: cleanTitle, address: cleanAddress,
         district: parts.length > 1 ? parts[parts.length - 2] : '',
         city: parts.length > 0 ? parts[parts.length - 1] : '',
         price: numericPrice, rooms, property_type: propertyType, area_m2: numericArea,
@@ -659,7 +682,6 @@ export default function App() {
         savedId=inserted.id;
       }
       await loadProperties(officeId);
-      const savedProperty=properties.find(p=>p.id===savedId);
       if(savedId && !editingPropertyId) {
         const {error:matchingError}=await supabase.functions.invoke('evaluate-matches',{body:{officeId,propertyId:savedId}});
         if(!matchingError) await loadMatches(officeId);
@@ -670,6 +692,8 @@ export default function App() {
       Alert.alert(editingPropertyId?'Portföy güncellendi':'Portföy eklendi',editingPropertyId?'Değişiklikler kaydedildi.':'Yeni portföy kaydedildi.');
     } catch (error) {
       Alert.alert('Portföy kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
+    } finally {
+      setPropertyBusy(false);
     }
   };
 
@@ -903,7 +927,7 @@ export default function App() {
             <Text style={styles.fieldLabel}>Oda sayısı</Text><View style={styles.kindRow}>{['1+1','2+1','3+1','4+1','5+1'].map(r=><Pressable key={r} onPress={()=>setRooms(r)} style={[styles.roomButton,rooms===r&&styles.kindButtonOn]}><Text style={[styles.kindText,rooms===r&&styles.kindTextOn]}>{r}</Text></Pressable>)}</View>
             <Text style={styles.fieldLabel}>Metrekare *</Text><TextInput value={area} onChangeText={setArea} keyboardType="numeric" placeholder="145" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Açıklama</Text><TextInput value={description} onChangeText={setDescription} placeholder="Gayrimenkul hakkında kısa bilgi" style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholderTextColor={palette.muted}/>
-            <Pressable onPress={saveProperty} style={styles.saveButton}><Text style={styles.saveButtonText}>{editingPropertyId ? 'Değişiklikleri kaydet' : 'Portföye kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
+            <Pressable disabled={propertyBusy} onPress={saveProperty} style={[styles.saveButton,propertyBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{propertyBusy?'Kaydediliyor...':editingPropertyId ? 'Değişiklikleri kaydet' : 'Portföye kaydet'}</Text><Ionicons name={propertyBusy?"time-outline":"checkmark-circle-outline"} size={21} color="#fff"/></Pressable>
           </ScrollView>
         </SafeAreaView>
       </Modal>
