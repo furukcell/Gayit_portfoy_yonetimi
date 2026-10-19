@@ -4,7 +4,7 @@ import { getFirebaseAuth, getFirebaseDb } from './firebase';
 
 const INTERNAL_LOGIN_DOMAIN = 'accounts.gayit.invalid';
 export type GayitProfile = { id:string; username:string; full_name:string; avatar_path:string|null; account_status:'active'|'disabled'; must_change_password:boolean };
-export type UsernameLoginResult = { user:User; profile:GayitProfile; mustChangePassword:boolean; role:'owner'|'agent'; officeId:string };
+export type UsernameLoginResult = { user:User; profile:GayitProfile | null; mustChangePassword:boolean; role:'owner'|'agent'|'superadmin'; officeId:string };
 
 export async function signInWithUsername(usernameInput:string,password:string):Promise<UsernameLoginResult> {
   const username=usernameInput.trim().toLowerCase();
@@ -15,6 +15,10 @@ export async function signInWithUsername(usernameInput:string,password:string):P
   try { user=(await signInWithEmailAndPassword(auth,`${username}@${INTERNAL_LOGIN_DOMAIN}`,password)).user; }
   catch { throw new Error('Kullanıcı adı veya şifre hatalı. Firebase Authentication hesabının kullanıcı adı biçiminde oluşturulduğunu kontrol et.'); }
   try {
+    const superadminSnap = await getDoc(doc(db,'superadmins',user.uid));
+    if (superadminSnap.exists() && superadminSnap.data().enabled === true) {
+      return { user, profile: null, mustChangePassword: false, role: 'superadmin', officeId: '' };
+    }
     const [profileSnap, membershipSnap]=await Promise.all([
       getDoc(doc(db,'profiles',user.uid)), getDoc(doc(db,'office_members',user.uid))
     ]);
