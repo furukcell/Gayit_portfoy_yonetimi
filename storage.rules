@@ -10,9 +10,10 @@ service firebase.storage {
     }
     match /{officeId}/{allPaths=**} {
       allow read: if memberOf(officeId);
-      allow write: if memberOf(officeId)
+      allow create, update: if memberOf(officeId)
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
+      allow delete: if memberOf(officeId);
     }
   }
 }
