@@ -41,6 +41,9 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # Prevent the action from installing the removed legacy "tools" package.
+          packages: ''
 
       - name: Install required Android SDK packages
         run: |
