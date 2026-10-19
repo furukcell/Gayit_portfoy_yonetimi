@@ -25,7 +25,7 @@ service cloud.firestore {
     }
 
     match /profiles/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin());
+      allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin() || (resource.data.office_id is string && activeMembership(resource.data.office_id)));
       allow create: if signedIn() && request.auth.uid == uid
         && !request.resource.data.keys().hasAny(['role', 'isSuperadmin', 'office_id']);
       allow update: if signedIn() && request.auth.uid == uid
@@ -67,7 +67,7 @@ service cloud.firestore {
       );
       allow delete: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (
         isSuperadmin() ||
-        (resource.data.office_id is string && isOwner(resource.data.office_id))
+        (resource.data.office_id is string && activeMembership(resource.data.office_id) && (isOwner(resource.data.office_id) || collection == 'property_favorites' || collection == 'property_recent_views'))
       );
     }
   }
