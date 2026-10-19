@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { collection, doc, getDocs, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDocs, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirebaseApp, getFirebaseAuth, getFirebaseDb } from './lib/firebase';
 import { signOut } from 'firebase/auth';
@@ -66,14 +66,12 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
     setSaving(true);setMessage('');
     try {
       const fn=httpsCallable(getFunctions(getFirebaseApp(),'europe-west1'),'createOffice');
-      const res:any=await fn({officeName:officeName.trim(),ownerFullName:ownerName.trim(),ownerUsername:ownerUsername.trim().toLowerCase(),ownerPassword});
-      if(!res.data?.success) throw new Error('Ofis oluşturulamadı.');
-      const officeId=res.data.office.id;
-      await updateDoc(doc(getFirebaseDb(),'offices',officeId),{
-        plan_name:plan,fee_amount:Number(fee)||0,billing_cycle:cycle,
-        subscription_status:'active',subscription_start:new Date().toISOString(),
-        next_due_date:dueDate.trim()||new Date(Date.now()+(cycle==='yearly'?365:30)*86400000).toISOString().slice(0,10)
+      const res:any=await fn({
+        officeName:officeName.trim(),ownerFullName:ownerName.trim(),
+        ownerUsername:ownerUsername.trim().toLowerCase(),ownerPassword,
+        planName:plan,feeAmount:Number(fee)||0,billingCycle:cycle,nextDueDate:dueDate.trim()
       });
+      if(!res.data?.success) throw new Error('Ofis oluşturulamadı.');
       setOfficeName('');setOwnerName('');setOwnerUsername('');setOwnerPassword('');
       setMessage('Ofis oluşturuldu. Yönetici kullanıcı adı: '+res.data.owner.username);
       setSection('offices');await refresh();
