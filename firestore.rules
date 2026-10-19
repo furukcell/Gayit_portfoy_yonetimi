@@ -30,7 +30,7 @@ service cloud.firestore {
         && !request.resource.data.keys().hasAny(['role', 'isSuperadmin', 'office_id']);
       allow update: if signedIn() && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['full_name', 'avatar_path', 'updated_at']);
+          .hasOnly(['full_name', 'avatar_path', 'updated_at', 'must_change_password']);
       allow delete: if false;
     }
 
