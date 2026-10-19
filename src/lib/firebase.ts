@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { getAuth, initializeAuth } from 'firebase/auth';
 
 const required = (name: string, value: string | undefined) => {
   if (!value?.trim()) throw new Error(`Firebase yapılandırması eksik: ${name}. Firebase Console > Project settings > Your apps bölümünden uygulama ayarlarını ekleyin.`);
@@ -21,10 +21,21 @@ export function getFirebaseApp() {
   return getApps().length ? getApp() : initializeApp(config);
 }
 
+const asyncStoragePersistence = {
+  type: 'LOCAL',
+  _isAvailable: async () => true,
+  _set: (key: string, value: string) => AsyncStorage.setItem(key, value),
+  _get: (key: string) => AsyncStorage.getItem(key),
+  _remove: (key: string) => AsyncStorage.removeItem(key),
+  _addListener: (_key: string, _listener: (value: string | null) => void) => {},
+  _removeListener: (_key: string, _listener: (value: string | null) => void) => {},
+  _shouldAllowMigration: true,
+};
+
 export function getFirebaseAuth() {
   const app = getFirebaseApp();
   try {
-    return initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+    return initializeAuth(app, { persistence: [asyncStoragePersistence as any] });
   } catch {
     // initializeAuth throws if another module already initialized Auth (e.g. hot reload).
     return getAuth(app);
