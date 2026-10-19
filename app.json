@@ -16,6 +16,17 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#10243A"
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "imageWidth": 340,
+          "resizeMode": "contain",
+          "backgroundColor": "#06172B"
+        }
+      ]
+    ]
   }
 }
