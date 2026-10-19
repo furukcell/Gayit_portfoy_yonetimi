@@ -23,9 +23,9 @@ button{border:0;background:#10243a;color:#fff;padding:13px 16px;border-radius:11
 <h1>Ofisleri merkezden yönet.</h1>
 <p>Bu panel yalnızca GAYIT süperadmini içindir. Buradan emlak ofisi ve ofis sahibinin ilk hesabı oluşturulur. Danışman hesapları mobil uygulamadaki ofis sahibi panelinden açılır.</p>
 <div class="layout">
-<section class="card" id="connectionCard"><h2>Güvenli bağlantı</h2><p>Supabase proje bilgilerini bu oturum için gir. Bilgiler bu sayfada saklanmaz.</p>
-<label for="projectUrl">Supabase Project URL</label><input id="projectUrl" type="url" placeholder="https://....supabase.co" autocomplete="url">
-<label for="anonKey">Publishable / anon key</label><input id="anonKey" type="password" placeholder="sb_publishable_... veya anon key" autocomplete="off">
+<section class="card" id="connectionCard"><h2>Güvenli bağlantı</h2><p>Firebase Web App config JSON gir. Bilgiler bu sayfada saklanmaz.</p>
+<label for="projectUrl">Firebase config JSON</label><input id="projectUrl" type="text" placeholder="Firebase config JSON" autocomplete="url">
+
 <label for="adminUsername">Süperadmin kullanıcı adı</label><input id="adminUsername" autocomplete="username" placeholder="superadmin">
 <label for="adminPassword">Şifre</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Süperadmin şifresi">
 <button id="loginBtn">Güvenli giriş yap</button><div id="loginStatus" class="status"></div>
@@ -38,30 +38,32 @@ button{border:0;background:#10243a;color:#fff;padding:13px 16px;border-radius:11
 <label for="ownerPassword">İlk şifre (en az 10 karakter)</label><input id="ownerPassword" type="password" autocomplete="new-password" placeholder="İlk giriş şifresi">
 <button id="createBtn" disabled>Ofisi ve sahibi oluştur</button><div id="createStatus" class="status"></div>
 </section>
-<section class="card wide"><h2>İşleyiş ve güvenlik</h2><div class="record"><strong>1 · Süperadmin</strong>Hesaplar yalnızca yetkili sunucu fonksiyonu üzerinden oluşturulur. Süperadmin rolü bu panelden atanamaz.</div><div class="record"><strong>2 · Ofis sahibi</strong>Ofis sahibi kullanıcı adı ve ilk şifresiyle mobil uygulamaya giriş yapar; ilk girişte şifresini değiştirmelidir.</div><div class="record"><strong>3 · Danışman</strong>Ofis sahibi mobil uygulamadaki Ekip bölümünden danışman hesabı, kullanıcı adı, ilk şifre ve profil fotoğrafı oluşturur.</div><div class="foot">Kurulum gereksinimi: Supabase SQL migration'ları uygulanmış ve <code>create-office</code> Edge Function deploy edilmiş olmalı. Bu statik paneli herkese açık şekilde paylaşma; üretimde ayrıca erişim kontrolü ve HTTPS barındırma yapılandır.</div></section>
+<section class="card wide"><h2>İşleyiş ve güvenlik</h2><div class="record"><strong>1 · Süperadmin</strong>Hesaplar yalnızca yetkili sunucu fonksiyonu üzerinden oluşturulur. Süperadmin rolü bu panelden atanamaz.</div><div class="record"><strong>2 · Ofis sahibi</strong>Ofis sahibi kullanıcı adı ve ilk şifresiyle mobil uygulamaya giriş yapar; ilk girişte şifresini değiştirmelidir.</div><div class="record"><strong>3 · Danışman</strong>Ofis sahibi mobil uygulamadaki Ekip bölümünden danışman hesabı, kullanıcı adı, ilk şifre ve profil fotoğrafı oluşturur.</div><div class="foot">Kurulum: Firebase Authentication E-posta/Şifre açık olmalı. İlk süperadmin hesabını Authentication'da oluştur, ardından UID ile Firestore'da <code>superadmins/{UID}</code> belgesi oluştur. Firebase Functions dağıtılmalı. Bu statik paneli herkese açık şekilde paylaşma; üretimde ayrıca erişim kontrolü ve HTTPS barındırma yapılandır.</div></section>
 </div></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
+import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-functions.js';
 (() => {
-  let client = null;
-  const $ = (id) => document.getElementById(id);
-  const status = (id, message, ok=false) => { const el=$(id); el.textContent=message; el.className='status '+(ok?'ok':'err'); };
-  const validUsername = (s) => /^[a-z0-9._-]{3,32}$/.test(s.trim().toLowerCase());
-  $('loginBtn').addEventListener('click', async () => {
-    const url=$('projectUrl').value.trim(), key=$('anonKey').value.trim();
-    const username=$('adminUsername').value.trim().toLowerCase(), password=$('adminPassword').value;
-    if(!url||!key||!validUsername(username)||!password){status('loginStatus','Proje URL, anahtar, geçerli kullanıcı adı ve şifre gerekli.');return;}
-    $('loginBtn').disabled=true;
-    try {
-      client=window.supabase.createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-      const {data,error}=await client.auth.signInWithPassword({email:username+'@accounts.gayit.invalid',password});
-      if(error||!data.user) throw new Error('Kullanıcı adı veya şifre hatalı.');
-      if(data.user.app_metadata?.role!=='superadmin'){await client.auth.signOut();throw new Error('Bu hesapta süperadmin yetkisi yok.');}
+  let app=null, auth=null, db=null, functions=null;
+  const $=(id)=>document.getElementById(id);
+  const status=(id,message,ok=false)=>{const el=$(id);el.textContent=message;el.className='status '+(ok?'ok':'err');};
+  const validUsername=(s)=>/^[a-z0-9._-]{3,32}$/.test(s.trim().toLowerCase());
+  $('loginBtn').addEventListener('click',async()=>{
+    try{
+      const config=JSON.parse($('projectUrl').value.trim());
+      if(!config.apiKey||!config.projectId||!config.appId) throw new Error('Firebase config JSON eksik.');
+      app=initializeApp(config,'gayit-superadmin-panel');auth=getAuth(app);db=getFirestore(app);functions=getFunctions(app,'europe-west1');
+      const username=$('adminUsername').value.trim().toLowerCase(),password=$('adminPassword').value;
+      if(!validUsername(username)||!password) throw new Error('Geçerli kullanıcı adı ve şifre gir.');
+      const credential=await signInWithEmailAndPassword(auth,username+'@accounts.gayit.invalid',password);
+      const adminDoc=await getDoc(doc(db,'superadmins',credential.user.uid));
+      if(!adminDoc.exists()){await signOut(auth);throw new Error('Bu hesap superadmins koleksiyonunda yetkili değil. UID: '+credential.user.uid);}
       $('createBtn').disabled=false;$('sessionPill').textContent='Süperadmin oturumu açık';
       $('logoutArea').classList.remove('hidden');$('loginBtn').classList.add('hidden');
-      status('loginStatus','Güvenli oturum açıldı. Ofis oluşturabilirsin.',true);
-    } catch(e){client=null;status('loginStatus',e.message||'Giriş başarısız.');}
-    finally{$('loginBtn').disabled=false;}
+      status('loginStatus','Firebase oturumu açıldı. Ofis oluşturabilirsin.',true);
+    }catch(e){auth=null;db=null;functions=null;status('loginStatus',e.message||'Giriş başarısız.');}
   });
   $('createBtn').addEventListener('click',async()=>{
     const officeName=$('officeName').value.trim(),ownerFullName=$('ownerFullName').value.trim();
@@ -69,13 +71,14 @@ button{border:0;background:#10243a;color:#fff;padding:13px 16px;border-radius:11
     if(!officeName||!ownerFullName||!validUsername(ownerUsername)||ownerPassword.length<10){status('createStatus','Tüm alanları doldur. Kullanıcı adı 3-32 karakter, şifre en az 10 karakter olmalı.');return;}
     $('createBtn').disabled=true;
     try{
-      const {data,error}=await client.functions.invoke('create-office',{body:{officeName,ownerFullName,ownerUsername,ownerPassword}});
-      if(error||!data?.success) throw new Error(data?.error||error?.message||'Ofis oluşturulamadı.');
+      const result=await httpsCallable(functions,'createOffice')({officeName,ownerFullName,ownerUsername,ownerPassword});
+      const data=result.data;
+      if(!data||!data.success) throw new Error('Ofis oluşturulamadı.');
       status('createStatus','Ofis oluşturuldu: '+data.office.name+' · Ofis sahibi kullanıcı adı: '+data.owner.username+'. İlk şifreyi güvenli şekilde teslim et.',true);
       $('officeName').value='';$('ownerFullName').value='';$('ownerUsername').value='';$('ownerPassword').value='';
     }catch(e){status('createStatus',e.message||'İşlem başarısız.');}
     finally{$('createBtn').disabled=false;}
   });
-  $('logoutBtn').addEventListener('click',async()=>{if(client)await client.auth.signOut();client=null;$('createBtn').disabled=true;$('sessionPill').textContent='Oturum kapalı';$('logoutArea').classList.add('hidden');$('loginBtn').classList.remove('hidden');status('loginStatus','Oturum kapatıldı.',true);});
+  $('logoutBtn').addEventListener('click',async()=>{if(auth)await signOut(auth);app=null;auth=null;db=null;functions=null;$('createBtn').disabled=true;$('sessionPill').textContent='Oturum kapalı';$('logoutArea').classList.add('hidden');$('loginBtn').classList.remove('hidden');status('loginStatus','Oturum kapatıldı.',true);});
 })();
 </script></body></html>

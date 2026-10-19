@@ -21,16 +21,14 @@ workflows:
           source: false
 
     scripts:
-      - name: Check required public app configuration
+      - name: Check required Firebase app configuration
         script: |
-          if [ -z "${EXPO_PUBLIC_SUPABASE_URL:-}" ]; then
-            echo "Missing EXPO_PUBLIC_SUPABASE_URL. Add it in Codemagic environment variables."
-            exit 1
-          fi
-          if [ -z "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
-            echo "Missing EXPO_PUBLIC_SUPABASE_ANON_KEY. Add it in Codemagic environment variables."
-            exit 1
-          fi
+          for name in EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID; do
+            if [ -z "$(printenv "$name")" ]; then
+              echo "Missing $name. Add it in Codemagic environment variables."
+              exit 1
+            fi
+          done
 
       - name: Install dependencies
         script: |

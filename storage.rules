@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function memberOf(officeId) {
+      return signedIn()
+        && firestore.exists(/databases/(default)/documents/office_members/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/office_members/$(request.auth.uid)).data.office_id == officeId
+        && firestore.get(/databases/(default)/documents/office_members/$(request.auth.uid)).data.status == 'active';
+    }
+    match /{officeId}/{allPaths=**} {
+      allow read: if memberOf(officeId);
+      allow create, update: if memberOf(officeId)
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if memberOf(officeId);
+    }
+  }
+}
