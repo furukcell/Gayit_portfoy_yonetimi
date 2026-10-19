@@ -167,6 +167,13 @@ export default function App() {
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileAvatarUri, setProfileAvatarUri] = useState<string | null>(null);
   const [profileBusy, setProfileBusy] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profilePhone, setProfilePhone] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profileAvatarPath, setProfileAvatarPath] = useState<string | null>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [profileAvatarUri, setProfileAvatarUri] = useState<string | null>(null);
+  const [profileBusy, setProfileBusy] = useState(false);
   const [excelFileName, setExcelFileName] = useState('');
   const [excelPreviewCount, setExcelPreviewCount] = useState(0);
   const [minPriceFilter, setMinPriceFilter] = useState('');
@@ -1096,6 +1103,26 @@ export default function App() {
     } finally { setAuthBusy(false); }
   };
 
+  const openProfile = async () => {
+    const uid = getFirebaseAuth().currentUser?.uid; if (!uid) { Alert.alert('Oturum bulunamadı', 'Lütfen yeniden giriş yap.'); return; }
+    setProfileBusy(true);
+    try { const client = getFirebaseClient(); const { data, error } = await client.from('profiles').select('phone,email,avatar_path').eq('id', uid).maybeSingle(); if (error) throw new Error('Profil bilgileri alınamadı.');
+      setProfilePhone(data?.phone || ''); setProfileEmail(data?.email || ''); setProfileAvatarPath(data?.avatar_path || null); setProfileAvatarUri(null);
+      if (data?.avatar_path) { const { data: signed } = await client.storage.from('avatars').createSignedUrl(data.avatar_path, 3600); setProfileAvatarUrl(signed?.signedUrl || null); } else setProfileAvatarUrl(null); setProfileModalOpen(true);
+    } catch (error) { Alert.alert('Profil açılamadı', error instanceof Error ? error.message : 'Lütfen tekrar dene.'); } finally { setProfileBusy(false); }
+  };
+  const chooseProfileAvatar = async () => { const permission = await ImagePicker.requestMediaLibraryPermissionsAsync(); if (!permission.granted) { Alert.alert('Fotoğraf izni gerekli', 'Profil fotoğrafı seçmek için galeri izni vermelisin.'); return; } const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1,1], quality: 0.82 }); if (!result.canceled && result.assets[0]) setProfileAvatarUri(result.assets[0].uri); };
+  const saveProfile = async () => {
+    const uid = getFirebaseAuth().currentUser?.uid; if (!uid) { Alert.alert('Oturum bulunamadı', 'Lütfen yeniden giriş yap.'); return; }
+    if (profileEmail.trim() && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(profileEmail.trim())) { Alert.alert('E-posta hatalı', 'Geçerli bir e-posta adresi gir.'); return; }
+    setProfileBusy(true); try { const client = getFirebaseClient(); let avatarPath = profileAvatarPath;
+      if (profileAvatarUri) { const response = await fetch(profileAvatarUri); const blob = await response.blob(); const ext = profileAvatarUri.toLowerCase().split('?')[0].endsWith('.png') ? 'png' : 'jpg'; avatarPath = uid + '/profile-' + Date.now() + '.' + ext; const { error: uploadError } = await client.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false }); if (uploadError) throw new Error('Fotoğraf yüklenemedi. Firebase Storage kurallarını kontrol et.'); }
+      const { error } = await client.from('profiles').update({ phone: profilePhone.trim(), email: profileEmail.trim(), avatar_path: avatarPath || null, updated_at: new Date().toISOString() }).eq('id', uid); if (error) throw new Error('Profil kaydedilemedi. Firestore profil güncelleme kurallarını kontrol et.');
+      setProfileAvatarPath(avatarPath || null); setProfileAvatarUri(null); if (avatarPath) { const { data: signed } = await client.storage.from('avatars').createSignedUrl(avatarPath, 3600); setProfileAvatarUrl(signed?.signedUrl || null); }
+      Alert.alert('Profil kaydedildi', 'Profil bilgilerin güncellendi ve PDF sunumlarında kullanılacak.'); setProfileModalOpen(false);
+    } catch (error) { Alert.alert('Profil kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar dene.'); } finally { setProfileBusy(false); }
+  };
+
   const chooseAgentAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) { Alert.alert('Fotoğraf izni gerekli', 'Danışman fotoğrafı seçmek için galeri izni vermelisin.'); return; }
@@ -1505,6 +1532,7 @@ export default function App() {
           <Pressable style={styles.moreCard} onPress={async()=>{setNotificationsOpen(true);await loadNotifications(officeId);}}><Ionicons name="notifications-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Bildirim merkezi {notifications.filter(n=>!n.read_at).length ? '('+notifications.filter(n=>!n.read_at).length+')' : ''}</Text><Text style={styles.teamRole}>Yeni eşleşmeler ve sistem bildirimleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={()=>{setTab('portfolio');setRecentOnly(true);setFavoritesOnly(false);void loadRecentViews();}}><Ionicons name="time-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Son görüntülenen portföyler</Text><Text style={styles.teamRole}>Son açtığın ilanları hızlıca bul.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={()=>setCsvImportOpen(true)}><Ionicons name="cloud-upload-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Excel / CSV ile portföy içe aktar</Text><Text style={styles.teamRole}>GAYIT CSV içeriğini yapıştırarak toplu kayıt oluştur.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
+          <Pressable style={styles.moreCard} onPress={openProfile}><Ionicons name="person-circle-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Profilim</Text><Text style={styles.teamRole}>Profil fotoğrafı, cep telefonu ve e-posta adresini düzenle.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={exportPortfolioCsv}><Ionicons name="download-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Portföyü CSV olarak dışa aktar</Text><Text style={styles.teamRole}>Excel uyumlu tabloyu paylaş; yalnızca erişebildiğin portföyler eklenir.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           {role==='owner'&&<Pressable style={styles.moreCard} onPress={()=>{setTransactionPropertyId(properties[0]?.id||'');setTransactionModalOpen(true);}}><Ionicons name="cash-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Satış ve komisyon kaydı</Text><Text style={styles.teamRole}>Gerçekleşen işlemi, ofis ve danışman komisyonunu kaydet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           <Pressable style={styles.moreCard} onPress={()=>setTab('stats')}><Ionicons name="bar-chart-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>{role==='owner'?'Ofis istatistikleri':'Performansım'}</Text><Text style={styles.teamRole}>Portföy ve operasyon özetleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
@@ -1658,6 +1686,18 @@ export default function App() {
             {notificationsLoading && <Text style={styles.pageSub}>Bildirimler yükleniyor…</Text>}
             {!notificationsLoading && notifications.map(n=><Pressable key={n.id} onPress={()=>!n.read_at&&markNotificationRead(n.id)} style={[styles.matchCard,!n.read_at&&{borderColor:palette.gold, borderWidth:1}]}><View style={{flex:1}}><Text style={styles.teamName}>{n.title}</Text><Text style={styles.teamRole}>{n.body || 'Bildirim ayrıntısı yok.'}</Text><Text style={styles.teamMeta}>{new Date(n.created_at).toLocaleString('tr-TR')}{n.read_at?' · Okundu':' · Okunmadı'}</Text></View>{!n.read_at&&<Ionicons name="ellipse" size={10} color={palette.gold}/>}</Pressable>)}
             {!notificationsLoading && !notifications.length && <View style={styles.empty}><Ionicons name="notifications-outline" size={30} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz bildirim yok</Text><Text style={styles.pageSub}>Yeni eşleşmeler oluştuğunda bildirimler burada görünür.</Text></View>}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={profileModalOpen} animationType="slide" onRequestClose={()=>{if(!profileBusy)setProfileModalOpen(false);}}>
+        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
+          <View style={styles.modalHeader}><Pressable disabled={profileBusy} onPress={()=>setProfileModalOpen(false)} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Profilim</Text><View style={{width:40}}/></View>
+          <ScrollView contentContainerStyle={styles.formPage} keyboardShouldPersistTaps="handled"><Text style={styles.pageTitle}>İletişim bilgilerin</Text><Text style={styles.pageSub}>Bu bilgiler gayrimenkul PDF sunumlarında danışman iletişimi olarak gösterilir.</Text>
+            <Pressable onPress={chooseProfileAvatar} style={styles.avatarPicker}>{(profileAvatarUri || profileAvatarUrl) ? <Image source={{uri:profileAvatarUri || profileAvatarUrl || undefined}} style={{width:86,height:86,borderRadius:43}}/> : <Ionicons name="camera-outline" size={30} color={palette.navy}/>}<Text style={styles.avatarPickerText}>{profileAvatarUri ? 'Yeni fotoğraf seçildi · değiştirmek için dokun' : 'Profil fotoğrafı seç / değiştir'}</Text></Pressable>
+            <Text style={styles.fieldLabel}>Cep telefonu</Text><TextInput value={profilePhone} onChangeText={setProfilePhone} keyboardType="phone-pad" style={styles.input} placeholder="05xx xxx xx xx" placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>E-posta adresi</Text><TextInput value={profileEmail} onChangeText={setProfileEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="ornek@eposta.com" placeholderTextColor={palette.muted}/>
+            <Pressable disabled={profileBusy} onPress={saveProfile} style={[styles.saveButton,profileBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{profileBusy?'Kaydediliyor…':'Profili kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable><Text style={styles.noticeText}>PDF oluşturulurken kayıtlı profil fotoğrafın, telefonun ve e-posta adresin otomatik alınır. Boş alanlar PDF'de gösterilmez.</Text>
           </ScrollView>
         </SafeAreaView>
       </Modal>
