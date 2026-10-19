@@ -32,6 +32,9 @@ export async function signInWithUsername(usernameInput:string,password:string):P
 }
 export async function restoreUsernameSession(): Promise<UsernameLoginResult | null> {
   const auth = getFirebaseAuth();
+  // Firebase restores persisted credentials asynchronously on cold app start.
+  // Wait for Auth initialization before reading currentUser.
+  await auth.authStateReady();
   const user = auth.currentUser;
   if (!user) return null;
   const db = getFirebaseDb();
