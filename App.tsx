@@ -16,7 +16,7 @@ import { getFirebaseClient } from './src/lib/firebaseClient';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getFirestore } from 'firebase/firestore';
 import { getFirebaseApp, getFirebaseAuth } from './src/lib/firebase';
 import { signOut } from 'firebase/auth';
 import SuperadminPanel from './src/SuperadminPanel';
@@ -916,7 +916,7 @@ export default function App() {
           agentPassword
         );
         agentUid = credential.user.uid;
-        const db = (await import('firebase/firestore')).getFirestore(mainApp);
+        const db = getFirestore(mainApp);
         const now = new Date().toISOString();
         await setDoc(doc(db, 'profiles', agentUid), {
           username: agentUsername.trim().toLowerCase(),
