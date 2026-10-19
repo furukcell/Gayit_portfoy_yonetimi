@@ -10,13 +10,17 @@ import { signOut } from 'firebase/auth';
 const C = { navy:'#10243A', navy2:'#1A3652', gold:'#C99A4A', goldSoft:'#F6EBDD', bg:'#F4F6F9', white:'#FFFFFF', ink:'#17283B', muted:'#778597', line:'#E3E8EF', green:'#16805D', greenSoft:'#E5F5ED', red:'#B54747', redSoft:'#FCEBEC', amber:'#9A6714', amberSoft:'#FFF3D9' };
 type Office = { id:string; name:string; status?:string; created_at?:string; subscription_status?:string; billing_cycle?:string; plan_name?:string; fee_amount?:number; subscription_start?:string; next_due_date?:string; owner_name?:string; [key:string]:any };
 type Payment = { id:string; office_id:string; office_name?:string; amount:number; paid_at?:string; period?:string; note?:string; method?:string };
+type AdminUser = { id:string; username?:string; full_name?:string; office_id?:string; role?:string; status?:string; account_status?:string };
 const fmt = (n:number) => '₺'+new Intl.NumberFormat('tr-TR',{maximumFractionDigits:0}).format(n||0);
 const dateLabel = (v?:string) => v ? new Date(v).toLocaleDateString('tr-TR') : 'Belirlenmedi';
 
 export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOffice:(office:Office)=>void; onLogout:()=>void }) {
-  const [section,setSection] = useState<'overview'|'offices'|'payments'|'create'>('overview');
+  const [section,setSection] = useState<'overview'|'offices'|'users'|'payments'|'create'>('overview');
   const [offices,setOffices] = useState<Office[]>([]);
   const [payments,setPayments] = useState<Payment[]>([]);
+  const [users,setUsers] = useState<AdminUser[]>([]);
+  const [propertyCount,setPropertyCount] = useState(0);
+  const [customerCount,setCustomerCount] = useState(0);
   const [memberCount,setMemberCount] = useState(0);
   const [agentCount,setAgentCount] = useState(0);
   const [loading,setLoading] = useState(true);
@@ -39,15 +43,24 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
     setLoading(true);
     try {
       const db=getFirebaseDb();
-      const [officeSnap,paymentSnap,membersSnap] = await Promise.all([
+      const [officeSnap,paymentSnap,membersSnap,profilesSnap,propertiesSnap,customersSnap] = await Promise.all([
         getDocs(query(collection(db,'offices'),orderBy('created_at','desc'))),
         getDocs(query(collection(db,'superadmin_payments'),orderBy('paid_at','desc'))),
-        getDocs(collection(db,'office_members'))
+        getDocs(collection(db,'office_members')),
+        getDocs(collection(db,'profiles')),
+        getDocs(collection(db,'properties')),
+        getDocs(collection(db,'customers'))
       ]);
-      setOffices(officeSnap.docs.map(d=>({id:d.id,...d.data()} as Office)));
+      const officeRows=officeSnap.docs.map(d=>({id:d.id,...d.data()} as Office));
+      const memberRows=membersSnap.docs.map(d=>({id:d.id,...d.data()}));
+      const profileRows=profilesSnap.docs.map(d=>({id:d.id,...d.data()}));
+      setOffices(officeRows);
       setPayments(paymentSnap.docs.map(d=>({id:d.id,...d.data()} as Payment)));
+      setUsers(profileRows.map(p=>{const m=memberRows.find(x=>x.id===p.id);return {id:p.id,username:p.username,full_name:p.full_name,office_id:p.office_id||m?.office_id,role:m?.role||'user',status:m?.status||p.account_status||'active'} as AdminUser;}));
       setMemberCount(membersSnap.size);
       setAgentCount(membersSnap.docs.filter(d=>d.data().role==='agent').length);
+      setPropertyCount(propertiesSnap.size);
+      setCustomerCount(customersSnap.size);
     } catch(e:any) {
       setMessage('Veriler yüklenemedi: '+(e?.message||'Firestore kurallarını kontrol et.'));
     } finally { setLoading(false); }
@@ -120,7 +133,7 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
   };
 
   const Header=()=> <View style={s.header}><View style={s.brandIcon}><Ionicons name="shield-checkmark" size={25} color={C.gold}/></View><View style={{flex:1}}><Text style={s.brand}>GAYIT<Text style={{color:C.gold}}>.</Text></Text><Text style={s.sub}>SÜPERADMİN KONTROL MERKEZİ</Text></View><Pressable onPress={onLogout} style={s.logout}><Ionicons name="log-out-outline" size={17} color={C.navy}/><Text style={s.logoutText}>Çıkış</Text></Pressable></View>;
-  const Nav=()=> <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.nav}>{([{key:'overview',label:'Genel Bakış',icon:'grid-outline'},{key:'offices',label:'Ofisler',icon:'business-outline'},{key:'payments',label:'Tahsilatlar',icon:'card-outline'},{key:'create',label:'Ofis Oluştur',icon:'add-circle-outline'}] as const).map(item=><Pressable key={item.key} onPress={()=>{setSection(item.key);setSelected(null);setMessage('');}} style={[s.navItem,section===item.key&&s.navOn]}><Ionicons name={item.icon as any} size={17} color={section===item.key?'#fff':C.muted}/><Text style={[s.navText,section===item.key&&{color:'#fff'}]}>{item.label}</Text></Pressable>)}</ScrollView>;
+  const Nav=()=> <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.nav}>{([{key:'overview',label:'Genel Bakış',icon:'grid-outline'},{key:'offices',label:'Ofisler',icon:'business-outline'},{key:'users',label:'Kullanıcılar',icon:'people-outline'},{key:'payments',label:'Tahsilatlar',icon:'card-outline'},{key:'create',label:'Ofis Oluştur',icon:'add-circle-outline'}] as const).map(item=><Pressable key={item.key} onPress={()=>{setSection(item.key);setSelected(null);setMessage('');}} style={[s.navItem,section===item.key&&s.navOn]}><Ionicons name={item.icon as any} size={17} color={section===item.key?'#fff':C.muted}/><Text style={[s.navText,section===item.key&&{color:'#fff'}]}>{item.label}</Text></Pressable>)}</ScrollView>;
   const Metric=({label,value,icon,note}:{label:string;value:string;icon:any;note?:string})=><View style={s.metric}><View style={s.metricIcon}><Ionicons name={icon} size={18} color={C.navy2}/></View><Text style={s.metricValue}>{value}</Text><Text style={s.metricLabel}>{label}</Text>{!!note&&<Text style={s.metricNote}>{note}</Text>}</View>;
 
   return <SafeAreaView style={s.safe} edges={['top','left','right','bottom']}><StatusBar barStyle="light-content"/><Header/><Nav/>
@@ -128,7 +141,7 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
       {loading&&<View style={s.loading}><ActivityIndicator color={C.navy}/><Text style={s.muted}>Veriler yükleniyor…</Text></View>}
       {section==='overview'&&<>
         <Text style={s.eyebrow}>SİSTEM DURUMU</Text><Text style={s.title}>Kontrol sende.</Text><Text style={s.desc}>Bütün ofisler, abonelikler ve tahsilatlar tek merkezde.</Text>
-        <View style={s.grid}><Metric label="Toplam ofis" value={String(offices.length)} icon="business-outline"/><Metric label="Aktif ofis" value={String(active)} icon="checkmark-circle-outline"/><Metric label="Vadesi geçen" value={String(overdue)} icon="alert-circle-outline" note="Ödeme takibi"/><Metric label="14 günde yenilenecek" value={String(dueSoon)} icon="calendar-outline"/><Metric label="Toplam kullanıcı" value={String(memberCount)} icon="people-outline"/><Metric label="Danışman sayısı" value={String(agentCount)} icon="person-outline"/></View>
+        <View style={s.grid}><Metric label="Toplam ofis" value={String(offices.length)} icon="business-outline"/><Metric label="Aktif ofis" value={String(active)} icon="checkmark-circle-outline"/><Metric label="Vadesi geçen" value={String(overdue)} icon="alert-circle-outline" note="Ödeme takibi"/><Metric label="14 günde yenilenecek" value={String(dueSoon)} icon="calendar-outline"/><Metric label="Toplam kullanıcı" value={String(memberCount)} icon="people-outline"/><Metric label="Danışman sayısı" value={String(agentCount)} icon="person-outline"/><Metric label="Toplam portföy" value={String(propertyCount)} icon="home-outline"/><Metric label="Toplam müşteri" value={String(customerCount)} icon="people-circle-outline"/></View>
         <View style={s.revenue}><Text style={s.revenueLabel}>Tahmini aylık abonelik geliri</Text><Text style={s.revenueValue}>{fmt(monthlyExpected)}</Text><View style={s.revenueDivider}/><Text style={s.revenueLabel}>Bu ay kaydedilen tahsilat</Text><Text style={s.revenueValue}>{fmt(receivedThisMonth)}</Text></View>
         <Text style={s.sectionTitle}>Yaklaşan işlemler</Text>
         {offices.filter(o=>o.next_due_date).sort((a,b)=>String(a.next_due_date).localeCompare(String(b.next_due_date))).slice(0,5).map(o=><Pressable key={o.id} onPress={()=>{setSelected(o);setSection('offices');}} style={s.rowCard}><View style={s.officeIcon}><Ionicons name="business-outline" size={20} color={C.navy}/></View><View style={{flex:1}}><Text style={s.officeName}>{o.name}</Text><Text style={s.muted}>Vade: {dateLabel(o.next_due_date)} · {fmt(Number(o.fee_amount||0))}/{o.billing_cycle==='yearly'?'yıl':'ay'}</Text></View><Ionicons name="chevron-forward" size={18} color={C.muted}/></Pressable>)}
@@ -155,6 +168,12 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
           {filtered.map(o=><Pressable key={o.id} onPress={()=>{setSelected(o);setPaymentAmount('');setPaymentNote('');setMessage('');}} style={s.rowCard}><View style={s.officeIcon}><Ionicons name="business-outline" size={20} color={C.navy}/></View><View style={{flex:1}}><Text style={s.officeName}>{o.name}</Text><Text style={s.muted}>{(o.status||'active')==='active'?'Aktif':'Pasif'} · {o.plan_name||'Paket tanımlanmamış'} · {fmt(Number(o.fee_amount||0))}/{o.billing_cycle==='yearly'?'yıl':'ay'}</Text><Text style={s.muted}>Vade: {dateLabel(o.next_due_date)} · Abonelik: {o.subscription_status||'tanımsız'}</Text></View><Ionicons name="chevron-forward" size={18} color={C.muted}/></Pressable>)}
           {!loading&&!filtered.length&&<Text style={s.empty}>Henüz ofis yok veya arama sonucu bulunamadı.</Text>}
         </>}
+      </>}
+      {section==='users'&&<>
+        <Text style={s.eyebrow}>HESAP MERKEZİ</Text><Text style={s.title}>Kullanıcılar</Text><Text style={s.desc}>Ofis sahipleri ve danışman hesaplarını, bağlı oldukları ofisle birlikte görüntüle.</Text>
+        <View style={s.searchBox}><Ionicons name="search-outline" size={18} color={C.muted}/><TextInput value={search} onChangeText={setSearch} placeholder="Kullanıcı, kullanıcı adı veya ofis ara" style={s.searchInput}/></View>
+        {users.filter(u=>{const office=offices.find(o=>o.id===u.office_id);const q=search.toLocaleLowerCase('tr-TR');return [u.full_name,u.username,office?.name,u.role].some(v=>String(v||'').toLocaleLowerCase('tr-TR').includes(q));}).map(u=>{const office=offices.find(o=>o.id===u.office_id);return <View key={u.id} style={s.rowCard}><View style={s.officeIcon}><Ionicons name={u.role==='owner'?'business-outline':'person-outline'} size={20} color={C.navy}/></View><View style={{flex:1}}><Text style={s.officeName}>{u.full_name||u.username||'İsimsiz kullanıcı'}</Text><Text style={s.muted}>@{u.username||'kullanıcı adı yok'} · {office?.name||'Ofise bağlı değil'}</Text><Text style={s.muted}>Rol: {u.role==='owner'?'Ofis sahibi':u.role==='agent'?'Danışman':'Kullanıcı'} · Durum: {u.status||'belirsiz'}</Text></View></View>;})}
+        {!users.length&&<Text style={s.empty}>Kullanıcı bulunamadı.</Text>}
       </>}
       {section==='payments'&&<>
         <Text style={s.eyebrow}>FİNANS</Text><Text style={s.title}>Tahsilatlar</Text><Text style={s.desc}>Süperadmin üzerinden kaydedilmiş ödeme hareketleri.</Text>
