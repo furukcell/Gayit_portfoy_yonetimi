@@ -154,7 +154,20 @@ export default function App() {
   const [description, setDescription] = useState('');
   const [ownerContactName, setOwnerContactName] = useState('');
   const [ownerContactPhone, setOwnerContactPhone] = useState('');
+  const [selectedOwnerContact, setSelectedOwnerContact] = useState<{ name: string; phone: string } | null>(null);
   const [pendingPhotoUris, setPendingPhotoUris] = useState<{ uri: string; mimeType?: string | null; fileName?: string | null }[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSelectedOwnerContact(null);
+    if (!selected?.id) return;
+    void (async () => {
+      const client = getFirebaseClient();
+      const { data } = await client.from('properties').select('owner_contact_name,owner_contact_phone').eq('id', selected.id).maybeSingle();
+      if (!cancelled && data) setSelectedOwnerContact({ name: data.owner_contact_name || '', phone: data.owner_contact_phone || '' });
+    })();
+    return () => { cancelled = true; };
+  }, [selected?.id]);
 
   const roleProperties = useMemo(() => properties, [properties]);
   const visibleProperties = useMemo(() => properties.filter(p => {
@@ -1246,6 +1259,7 @@ export default function App() {
           <Text style={styles.sectionTitle}>Açıklama</Text><Text style={styles.description}>{selected.description || 'Açıklama eklenmemiş.'}</Text>
           <Text style={styles.sectionTitle}>Konum ve paylaşım</Text><Pressable style={styles.mapButton} onPress={()=>openMap(selected)}><Ionicons name="navigate-circle-outline" size={23} color="#fff"/><View style={{flex:1}}><Text style={styles.mapButtonTitle}>Google Maps'te yol tarifi</Text><Text style={styles.mapButtonSub}>Adresi haritada aç ve navigasyonu başlat</Text></View><Ionicons name="open-outline" size={18} color="#fff"/></Pressable>
           <View style={styles.shareRow}><Pressable style={styles.whatsappButton} onPress={()=>shareWhatsApp(selected)}><Ionicons name="logo-whatsapp" size={21} color="#fff"/><Text style={styles.actionButtonText}>WhatsApp</Text></Pressable><Pressable style={styles.pdfButton} onPress={()=>createPdf(selected)}><Ionicons name="document-text-outline" size={21} color={palette.navy}/><Text style={styles.pdfButtonText}>PDF sunumu</Text></Pressable></View>
+          {!!selectedOwnerContact?.phone && <Pressable style={[styles.mapButton,{marginTop:12,backgroundColor:'#16805D'}]} onPress={()=>Linking.openURL('tel:'+selectedOwnerContact.phone.replace(/[^+0-9]/g,''))}><Ionicons name="call-outline" size={22} color="#fff"/><View style={{flex:1}}><Text style={styles.mapButtonTitle}>{selectedOwnerContact.name || 'Ev sahibi'}</Text><Text style={styles.mapButtonSub}>{selectedOwnerContact.phone} · Aramak için dokun</Text></View><Ionicons name="chevron-forward" size={18} color="#fff"/></Pressable>}
           <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>PDF sunumu; ilan fotoğrafları, fiyat, temel özellikler ve danışman bilgisini içerir. Fotoğraflar ilan kaydından alınır.</Text></View>
         </ScrollView></SafeAreaView>}
       </Modal>
