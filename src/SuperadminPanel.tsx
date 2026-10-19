@@ -4,9 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, doc, getDocs, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, getAuth } from 'firebase/auth';
 import { getFirebaseApp, getFirebaseAuth, getFirebaseDb } from './lib/firebase';
-import { signOut } from 'firebase/auth';
 
 const C = { navy:'#10243A', navy2:'#1A3652', gold:'#C99A4A', goldSoft:'#F6EBDD', bg:'#F4F6F9', white:'#FFFFFF', ink:'#17283B', muted:'#778597', line:'#E3E8EF', green:'#16805D', greenSoft:'#E5F5ED', red:'#B54747', redSoft:'#FCEBEC', amber:'#9A6714', amberSoft:'#FFF3D9' };
 type Office = { id:string; name:string; status?:string; created_at?:string; subscription_status?:string; billing_cycle?:string; plan_name?:string; fee_amount?:number; subscription_start?:string; next_due_date?:string; owner_name?:string; [key:string]:any };
