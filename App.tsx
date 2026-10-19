@@ -486,7 +486,6 @@ export default function App() {
   };
   const createPdf = async (p: Property) => {
     try {
-      // Fetch this property's gallery directly so PDF creation does not depend on which card is selected.
       const firebaseClient = getFirebaseClient();
       const { data: photoRows, error: photoError } = await firebaseClient.from('property_photos')
         .select('storage_path,sort_order').eq('property_id', p.id).order('sort_order', { ascending: true }).limit(12);
@@ -498,41 +497,47 @@ export default function App() {
         return data.signedUrl as string;
       }));
       const photoHtml = photosForPdf.map((url, index) =>
-        '<div class="photo-wrap"><img class="property-photo" src="' + url + '" /><span>Fotoğraf ' + (index + 1) + '</span></div>'
+        '<div class="photo-wrap"><img class="property-photo" src="' + url + '" alt="İlan fotoğrafı ' + (index + 1) + '" /></div>'
       ).join('');
       const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <style>
-      @page{size:A4;margin:16mm 15mm 18mm}
-      *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#17283b;margin:0;font-size:11pt;line-height:1.55}
-      .page-frame{border:1.5px solid #10243a;padding:10px;min-height:265mm;position:relative}.topline{height:6px;background:#c99a4a;margin-bottom:22px}
-      .brand{background:#10243a;color:#fff;padding:26px 28px;border-radius:14px;page-break-inside:avoid}
-      .brand small{color:#e8c98f;letter-spacing:2px;font-size:9pt;font-weight:bold}
-      .brand h1{font-size:25pt;line-height:1.18;margin:13px 0 10px}
-      .address{color:#e1e8ef;font-size:10pt}
-      .eyebrow{font-size:9pt;text-transform:uppercase;letter-spacing:1.5px;color:#9a6714;font-weight:bold;margin:24px 0 8px}
-      .price-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:22px 0 16px;page-break-inside:avoid}
-      .price{font-size:26pt;font-weight:bold;color:#10243a;line-height:1.15}
-      .rent{font-size:10pt;color:#778597}
-      .status{background:#e5f5ed;color:#16805d;border-radius:20px;padding:7px 12px;font-size:9pt;font-weight:bold;white-space:nowrap}
-      .specs{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 22px}
-      .spec{border:1px solid #e3e8ef;background:#f4f6f9;padding:8px 11px;border-radius:8px;font-size:9.5pt}
-      .gallery{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 22px}
-      .photo-wrap{margin:0;page-break-inside:avoid}.property-photo{width:100%;height:170px;object-fit:cover;border-radius:9px;background:#f4f6f9}
-      .photo-wrap span{display:block;color:#778597;font-size:8pt;margin-top:3px}
-      .section{border-top:1px solid #e3e8ef;padding-top:14px;margin-top:20px;page-break-inside:avoid}
-      h2{font-size:13pt;margin:0 0 8px;color:#10243a}.description{white-space:pre-wrap}
-      .contact{background:#f4f6f9;border:1px solid #e3e8ef;border-left:4px solid #c99a4a;border-radius:10px;padding:16px 18px;margin-top:24px;page-break-inside:avoid}
-      .contact strong{font-size:12pt;color:#10243a}.muted{color:#778597;font-size:9pt}
-      .footer{border-top:1px solid #e3e8ef;margin-top:24px;padding-top:10px;color:#778597;font-size:8pt;display:flex;justify-content:space-between}
-      </style></head><body><div class="page-frame"><div class="topline"></div>
-      <div class="brand"><small>GAYIT · GAYRİMENKUL SUNUMU</small><h1>${htmlEscape(p.title)}</h1><div class="address">${htmlEscape(p.address)}</div></div>
-      ${photoHtml ? '<div class="eyebrow">Gayrimenkul fotoğrafları</div><div class="gallery">' + photoHtml + '</div>' : ''}
-      <div class="price-row"><div><div class="eyebrow" style="margin:0 0 5px">İstenen fiyat</div><div class="price">${money(p.price)}</div><div class="rent">${p.kind === 'Kiralık' ? 'Aylık kira bedeli' : 'Satış fiyatı'}</div></div><div class="status">${htmlEscape(p.status)}</div></div>
-      <div class="specs"><span class="spec">${htmlEscape(p.kind)}</span><span class="spec">${htmlEscape(propertyTypeLabel(p.propertyType))}</span><span class="spec">${htmlEscape(p.rooms || 'Belirtilmemiş oda')}</span><span class="spec">${htmlEscape(p.area || 'Belirtilmemiş alan')}</span>${p.district ? '<span class="spec">' + htmlEscape(p.district) + '</span>' : ''}</div>
-      <div class="section"><h2>Gayrimenkul hakkında</h2><div class="description">${htmlEscape(p.description || 'Detaylı bilgi ve gösterim için danışmanımızla iletişime geçebilirsiniz.')}</div></div>
-      <div class="section"><h2>Konum</h2><div>${htmlEscape(p.address)}</div><div class="muted" style="margin-top:5px">Harita bağlantısı için danışmanınızdan bilgi alabilirsiniz.</div></div>
-      <div class="contact"><strong>Gayrimenkul hakkında detaylı bilgi</strong><div style="margin-top:5px">Danışman: ${htmlEscape(p.agent || 'GAYIT danışman ekibi')}</div><div class="muted" style="margin-top:5px">Gösterim ve güncel bilgiler için lütfen danışmanınızla iletişime geçin.</div></div>
-      <div class="footer"><span>Portföy kodu: ${htmlEscape(p.id)}</span><span>GAYIT · Portföy Yönetimi</span></div></div></body></html>`;
+      @page{size:A4;margin:12mm}
+      *{box-sizing:border-box}
+      body{font-family:Arial,Helvetica,sans-serif;color:#243447;margin:0;font-size:10pt;line-height:1.45;background:#fff}
+      .page-frame{border:1px solid #d8dee7;padding:7mm;position:relative}
+      .topline{height:4px;background:#c99a4a;margin-bottom:9mm}
+      .brand{background:#10283f;color:#fff;padding:9mm 8mm;border-radius:3mm;page-break-inside:avoid;break-inside:avoid}
+      .brand small{display:block;color:#e8c98f;letter-spacing:2px;font-size:8pt;font-weight:bold}
+      .brand h1{font-size:23pt;line-height:1.12;margin:5mm 0 3mm;font-weight:700}
+      .address{color:#dce5ed;font-size:9pt}
+      .summary{display:flex;justify-content:space-between;align-items:flex-end;gap:8mm;margin:8mm 0 5mm;page-break-inside:avoid;break-inside:avoid}
+      .eyebrow{font-size:8pt;text-transform:uppercase;letter-spacing:1.4px;color:#98702d;font-weight:bold;margin:0 0 2mm}
+      .price{font-size:25pt;font-weight:bold;color:#10283f;line-height:1.1}
+      .rent{font-size:9pt;color:#7a8794;margin-top:1mm}
+      .status{background:#e6f4ed;color:#187451;border-radius:20px;padding:2mm 4mm;font-size:8pt;font-weight:bold;white-space:nowrap}
+      .specs{display:flex;flex-wrap:wrap;gap:2mm;margin:4mm 0 6mm}
+      .spec{border:1px solid #dfe5ec;background:#f7f8fa;padding:2mm 3mm;border-radius:2mm;font-size:8.5pt}
+      .gallery{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin:4mm 0 5mm;page-break-inside:avoid;break-inside:avoid}
+      .photo-wrap{margin:0;page-break-inside:avoid;break-inside:avoid}
+      .property-photo{display:block;width:100%;height:34mm;object-fit:cover;border-radius:2mm;background:#f4f6f9}
+      .section{border-top:1px solid #e1e6ec;padding-top:4mm;margin-top:5mm;page-break-inside:avoid;break-inside:avoid}
+      h2{font-size:11pt;margin:0 0 2mm;color:#10283f}
+      .description{white-space:pre-wrap;overflow-wrap:anywhere}
+      .contact{background:#f7f8fc;border:1px solid #e1e5ef;border-left:3px solid #c99a4a;border-radius:2mm;padding:4mm 5mm;margin-top:6mm;page-break-inside:avoid;break-inside:avoid}
+      .contact strong{font-size:10pt;color:#10283f}
+      .muted{color:#7a8794;font-size:8pt}
+      .footer{border-top:1px solid #e1e6ec;margin-top:7mm;padding-top:3mm;color:#7a8794;font-size:7.5pt;display:flex;justify-content:space-between;gap:6mm;overflow-wrap:anywhere}
+      .gallery-title{font-size:8pt;text-transform:uppercase;letter-spacing:1.4px;color:#98702d;font-weight:bold;margin-top:5mm}
+      @media print{.page-frame{border:1px solid #d8dee7}.section,.contact,.brand,.summary,.gallery,.photo-wrap{break-inside:avoid}}
+      </style></head><body><main class="page-frame"><div class="topline"></div>
+      <header class="brand"><small>GAYIT  /  GAYRİMENKUL PORTFÖYÜ</small><h1>${htmlEscape(p.title)}</h1><div class="address">${htmlEscape(p.address)}</div></header>
+      <section class="summary"><div><div class="eyebrow">İstenen fiyat</div><div class="price">${money(p.price)}</div><div class="rent">${p.kind === 'Kiralık' ? 'Aylık kira bedeli' : 'Satış fiyatı'}</div></div><div class="status">${htmlEscape(p.status)}</div></section>
+      <div class="specs"><span class="spec">${htmlEscape(p.kind)}</span><span class="spec">${htmlEscape(propertyTypeLabel(p.propertyType))}</span><span class="spec">${htmlEscape(p.rooms || 'Oda bilgisi yok')}</span><span class="spec">${htmlEscape(p.area || 'Alan bilgisi yok')}</span>${p.district ? '<span class="spec">' + htmlEscape(p.district) + '</span>' : ''}</div>
+      ${photoHtml ? '<div class="gallery-title">Gayrimenkul fotoğrafları</div><div class="gallery">' + photoHtml + '</div>' : ''}
+      <section class="section"><h2>Gayrimenkul hakkında</h2><div class="description">${htmlEscape(p.description || 'Detaylı bilgi ve gösterim için danışmanımızla iletişime geçebilirsiniz.')}</div></section>
+      <section class="section"><h2>Konum</h2><div>${htmlEscape(p.address)}</div><div class="muted" style="margin-top:2mm">Harita ve gösterim bilgileri için danışmanınızla iletişime geçebilirsiniz.</div></section>
+      <section class="contact"><strong>Detaylı bilgi ve randevu</strong><div style="margin-top:2mm">Danışman: ${htmlEscape(p.agent || 'GAYIT danışman ekibi')}</div><div class="muted" style="margin-top:2mm">GAYIT gayrimenkul portföy sunumu</div></section>
+      <footer class="footer"><span>Portföy kodu: ${htmlEscape(p.id)}</span><span>GAYIT · Portföy Yönetimi</span></footer></main></body></html>`;
       const file = await Print.printToFileAsync({ html });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', dialogTitle: 'Gayrimenkul sunumunu paylaş' });
       else Alert.alert('PDF hazır', 'PDF dosyası oluşturuldu: ' + file.uri);
