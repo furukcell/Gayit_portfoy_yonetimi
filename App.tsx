@@ -98,6 +98,12 @@ export default function App() {
   const [activityType, setActivityType] = useState<'call'|'whatsapp'|'meeting'|'property_viewing'|'note'>('note');
   const [activityBusy, setActivityBusy] = useState(false);
   const [customerAppointments, setCustomerAppointments] = useState<any[]>([]);
+  const [customerOffers, setCustomerOffers] = useState<any[]>([]);
+  const [offerPropertyId, setOfferPropertyId] = useState('');
+  const [offerAmount, setOfferAmount] = useState('');
+  const [offerStatus, setOfferStatus] = useState<'pending'|'countered'|'accepted'|'rejected'>('pending');
+  const [offerNotes, setOfferNotes] = useState('');
+  const [offerBusy, setOfferBusy] = useState(false);
   const [appointmentTitle, setAppointmentTitle] = useState('Müşteri görüşmesi');
   const [appointmentStartsAt, setAppointmentStartsAt] = useState('');
   const [appointmentNotes, setAppointmentNotes] = useState('');
@@ -711,8 +717,64 @@ export default function App() {
     );
   };
 
+  const loadCustomerOffers = async (targetOfficeId: string, customerId: string) => {
+    try {
+      const { data, error } = await getFirebaseClient().from('property_offers').select('*').eq('office_id', targetOfficeId).eq('customer_id', customerId).order('created_at', { ascending: false });
+      if (error) throw error;
+      setCustomerOffers(data || []);
+    } catch (error) {
+      setCustomerOffers([]);
+      Alert.alert('Teklifler yüklenemedi', error instanceof Error ? error.message : 'Teklif kayıtları alınamadı; property_offers tablosunu kontrol edin.');
+    }
+  };
+
+  const addCustomerActivityForOffer = async (summary: string) => {
+    if (!selectedCustomer) return;
+    const { error } = await getFirebaseClient().from('customer_activities').insert({
+      office_id: officeId, customer_id: selectedCustomer.id, created_by: getFirebaseAuth().currentUser?.uid || null,
+      activity_type: 'note', summary, occurred_at: new Date().toISOString()
+    });
+    if (error) throw error;
+  };
+
+  const addCustomerOffer = async () => {
+    const amount = Number(offerAmount.replace(/[^0-9.,]/g, '').replace(',', '.'));
+    if (!selectedCustomer || !offerPropertyId || !offerAmount.trim() || !Number.isFinite(amount) || amount <= 0) {
+      Alert.alert('Eksik bilgi', 'Portföy seç ve geçerli teklif tutarı gir.');
+      return;
+    }
+    setOfferBusy(true);
+    try {
+      const now = new Date().toISOString();
+      const { data, error } = await getFirebaseClient().from('property_offers').insert({
+        office_id: officeId, customer_id: selectedCustomer.id, property_id: offerPropertyId,
+        amount, status: offerStatus, notes: offerNotes.trim() || null,
+        created_by: getFirebaseAuth().currentUser?.uid || null, created_at: now, updated_at: now
+      }).select('*').single();
+      if (error) throw error;
+      setCustomerOffers(current => [data, ...current]);
+      await addCustomerActivityForOffer('Teklif kaydedildi: ' + (properties.find(p => p.id === offerPropertyId)?.title || 'Portföy') + ' · ' + money(amount) + ' · ' + offerStatus);
+      setOfferAmount(''); setOfferNotes(''); setOfferStatus('pending');
+      Alert.alert('Teklif kaydedildi', 'Teklif müşteri geçmişine eklendi.');
+    } catch (error) {
+      Alert.alert('Teklif kaydedilemedi', error instanceof Error ? error.message : 'Teklif kaydı oluşturulamadı. Veri tabanı şemasını kontrol edin.');
+    } finally { setOfferBusy(false); }
+  };
+
+  const updateOfferStatus = async (offer: any, status: 'pending'|'countered'|'accepted'|'rejected') => {
+    try {
+      const { error } = await getFirebaseClient().from('property_offers').update({ status, updated_at: new Date().toISOString() }).eq('id', offer.id).eq('office_id', officeId);
+      if (error) throw error;
+      setCustomerOffers(current => current.map(item => item.id === offer.id ? { ...item, status, updated_at: new Date().toISOString() } : item));
+    } catch (error) {
+      Alert.alert('Teklif güncellenemedi', error instanceof Error ? error.message : 'Teklif durumu güncellenemedi.');
+    }
+  };
+
   const openCustomerDetail = async (customer: Customer) => {
     setSelectedCustomer(customer);
+    setCustomerOffers([]); setOfferPropertyId(''); setOfferAmount(''); setOfferNotes('');
+    await loadCustomerOffers(officeId, customer.id);
     setEditCustomerName(customer.fullName);
     setEditCustomerPhone(customer.phone);
     setEditCustomerNotes(customer.notes);
@@ -1432,7 +1494,16 @@ export default function App() {
             <Pressable disabled={activityBusy} onPress={addCustomerActivity} style={[styles.saveButton,activityBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{activityBusy?'Kaydediliyor...':'Görüşme kaydet'}</Text><Ionicons name="add-circle-outline" size={21} color="#fff"/></Pressable>
             {customerActivities.map((a:any)=><View key={a.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{({call:'Telefon görüşmesi',whatsapp:'WhatsApp',meeting:'Toplantı',property_viewing:'Yer gösterme',note:'Not',email:'E-posta',other:'Diğer'} as Record<string,string>)[a.activity_type] || 'Müşteri aktivitesi'}</Text><Text style={styles.teamRole}>{a.summary}</Text><Text style={styles.teamMeta}>{new Date(a.occurred_at).toLocaleString('tr-TR')}</Text></View></View>)}
             {!customerActivities.length && <Text style={styles.pageSub}>Henüz görüşme kaydı yok.</Text>}
-            <View style={styles.matchSection}><Text style={styles.sectionTitle}>Arama talepleri</Text><Text style={styles.pageSub}>Bu müşterinin kayıtlı gayrimenkul kriterleri.</Text></View>
+            <View style={styles.matchSection}><Text style={styles.sectionTitle}>Teklif takibi</Text><Text style={styles.pageSub}>Müşteri ve portföy bazında teklifleri kaydet, kabul veya ret durumunu izle.</Text></View>
+             <Text style={styles.fieldLabel}>Portföy seç</Text>
+             {properties.filter(p=>p.status!=='Arşivde').map(p=><Pressable key={p.id} onPress={()=>setOfferPropertyId(p.id)} style={[styles.kindButton,{marginBottom:7,flexDirection:'row',justifyContent:'space-between'},offerPropertyId===p.id&&styles.kindButtonOn]}><Text style={[styles.kindText,offerPropertyId===p.id&&styles.kindTextOn]}>{p.title} · {money(p.price)}</Text><Ionicons name={offerPropertyId===p.id?'radio-button-on':'radio-button-off'} size={17} color={offerPropertyId===p.id?'#fff':palette.muted}/></Pressable>)}
+             <Text style={styles.fieldLabel}>Teklif tutarı (TL)</Text><TextInput value={offerAmount} onChangeText={setOfferAmount} keyboardType="decimal-pad" style={styles.input} placeholder="Örn. 4250000" placeholderTextColor={palette.muted}/>
+             <Text style={styles.fieldLabel}>Durum</Text><View style={styles.kindRow}>{([{key:'pending',label:'Bekliyor'},{key:'countered',label:'Karşı teklif'},{key:'accepted',label:'Kabul'},{key:'rejected',label:'Reddedildi'}] as const).map(s=><Pressable key={s.key} onPress={()=>setOfferStatus(s.key)} style={[styles.kindButton,offerStatus===s.key&&styles.kindButtonOn]}><Text style={[styles.kindText,offerStatus===s.key&&styles.kindTextOn]}>{s.label}</Text></Pressable>)}</View>
+             <Text style={styles.fieldLabel}>Not</Text><TextInput value={offerNotes} onChangeText={setOfferNotes} style={styles.input} placeholder="Pazarlık ve ödeme şartları" placeholderTextColor={palette.muted}/>
+             <Pressable disabled={offerBusy} onPress={addCustomerOffer} style={[styles.saveButton,offerBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{offerBusy?'Kaydediliyor...':'Teklifi kaydet'}</Text><Ionicons name="pricetag-outline" size={20} color="#fff"/></Pressable>
+             {customerOffers.map((offer:any)=><View key={offer.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{properties.find(p=>p.id===offer.property_id)?.title || 'Portföy'} · {money(Number(offer.amount)||0)}</Text><Text style={styles.teamRole}>{({pending:'Bekliyor',countered:'Karşı teklif',accepted:'Kabul edildi',rejected:'Reddedildi'} as Record<string,string>)[offer.status]||offer.status} · {new Date(offer.created_at).toLocaleString('tr-TR')}</Text>{offer.notes?<Text style={styles.teamMeta}>{offer.notes}</Text>:null}</View><View style={{gap:5}}>{offer.status!=='accepted'&&<Pressable onPress={()=>updateOfferStatus(offer,'accepted')} style={styles.memberStatusButtonOn}><Text style={styles.memberStatusButtonTextOn}>Kabul</Text></Pressable>}{offer.status!=='rejected'&&<Pressable onPress={()=>updateOfferStatus(offer,'rejected')} style={styles.memberStatusButton}><Text style={styles.memberStatusButtonText}>Reddet</Text></Pressable>}</View></View>)}
+             {!customerOffers.length&&<Text style={styles.pageSub}>Bu müşteri için henüz teklif kaydı yok.</Text>}
+             <View style={styles.matchSection}><Text style={styles.sectionTitle}>Arama talepleri</Text><Text style={styles.pageSub}>Bu müşterinin kayıtlı gayrimenkul kriterleri.</Text></View>
             {customerRequirementsLoading && <Text style={styles.pageSub}>Talepler yükleniyor…</Text>}
             {!customerRequirementsLoading && customerRequirements.map((r:any)=><View key={r.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{r.intent==='rent'?'Kiralık arıyor':'Satılık arıyor'} · {({apartment:'Daire',villa:'Villa',land:'Arsa',commercial:'İş yeri',house:'Ev',other:'Diğer',any:'Tümü'} as Record<string,string>)[r.property_type] || r.property_type}</Text><Text style={styles.teamRole}>{[r.city,r.district,r.neighborhood].filter(Boolean).join(' · ') || 'Konum fark etmez'}</Text><Text style={styles.teamMeta}>{r.max_price ? 'Azami '+money(Number(r.max_price)) : 'Bütçe belirtilmemiş'}{r.rooms?.length ? ' · '+r.rooms.join(', ') : ''}</Text>{!r.is_active && <Text style={styles.customerRoles}>Pasif talep</Text>}</View></View>)}
             {!customerRequirementsLoading && !customerRequirements.length && <View style={styles.empty}><Ionicons name="search-outline" size={28} color={palette.muted}/><Text style={styles.teamName}>Henüz arama talebi yok</Text><Text style={styles.pageSub}>Aşağıdan bu müşteri için ilk talebi ekleyebilirsin.</Text></View>}
