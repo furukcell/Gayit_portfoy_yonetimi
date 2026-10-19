@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
-import { getSupabaseClient } from './src/lib/supabase';
+import { getSupabaseClient } from './src/lib/firebaseClient';
 
 type Role = 'owner' | 'agent';
 type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
@@ -803,7 +803,7 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
-    const { getSupabaseClient } = await import('./src/lib/supabase');
+    const { getSupabaseClient } = await import('./src/lib/firebaseClient');
     await getSupabaseClient().auth.signOut();
     setAuthenticated(false); setMustChangePassword(false); setLoginPassword(''); setNewPassword(''); setConfirmPassword('');
   };
