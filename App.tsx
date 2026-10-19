@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { changeInitialPassword, signInWithUsername } from './src/lib/usernameAuth';
+import { changeInitialPassword, restoreUsernameSession, signInWithUsername } from './src/lib/usernameAuth';
 import {
   Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar, KeyboardAvoidingView, Platform,
   StyleSheet, Text, TextInput, View, Image
@@ -1013,6 +1013,37 @@ export default function App() {
     } catch (error) { Alert.alert('Müşteri kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.'); }
     finally { setCustomerBusy(false); }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    const restoreSession = async () => {
+      setAuthBusy(true);
+      try {
+        const result = await restoreUsernameSession();
+        if (!result || cancelled) return;
+        setRole(result.role);
+        if (result.role !== 'superadmin') {
+          setOfficeId(result.officeId);
+          await Promise.all([
+            loadProperties(result.officeId),
+            loadCustomers(result.officeId),
+            loadMatches(result.officeId),
+            loadNotifications(result.officeId),
+            ...(result.role === 'owner' ? [loadTeamMembers(result.officeId)] : []),
+          ]);
+          if (cancelled) return;
+          setMustChangePassword(result.mustChangePassword);
+        }
+        if (!cancelled) setAuthenticated(true);
+      } catch (error) {
+        if (!cancelled) setAuthError('Oturum kontrol edilemedi. İnternet bağlantısını kontrol edip tekrar deneyin.');
+      } finally {
+        if (!cancelled) setAuthBusy(false);
+      }
+    };
+    void restoreSession();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleLogin = async () => {
     setAuthBusy(true); setAuthError('');
