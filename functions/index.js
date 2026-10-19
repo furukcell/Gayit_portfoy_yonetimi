@@ -50,7 +50,7 @@ exports.createOffice = onCall({ region: REGION, enforceAppCheck: false }, async 
   const officeRef = db.collection('offices').doc();
   const batch = db.batch();
   batch.set(officeRef, { name: officeName.trim(), status: 'active', created_at: new Date().toISOString(), created_by: uid });
-  batch.set(db.doc('profiles/' + owner.uid), { username, full_name: ownerFullName.trim(), avatar_path: null, account_status: 'active', must_change_password: true, created_at: new Date().toISOString() });
+  batch.set(db.doc('profiles/' + owner.uid), { username, full_name: ownerFullName.trim(), office_id: officeRef.id, avatar_path: null, account_status: 'active', must_change_password: true, created_at: new Date().toISOString() });
   batch.set(db.doc('office_members/' + owner.uid), { office_id: officeRef.id, role: 'owner', status: 'active', created_at: new Date().toISOString() });
   await batch.commit();
   return { success: true, office: { id: officeRef.id, name: officeName.trim() }, owner: { id: owner.uid, username } };
@@ -58,13 +58,13 @@ exports.createOffice = onCall({ region: REGION, enforceAppCheck: false }, async 
 exports.createAgent = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const uid = requireAuth(request);
   const membership = await requireOwner(uid);
-  const { fullName, agentName, username: rawUsername, agentUsername, password, agentPassword } = request.data || {};
+  const { fullName, agentName, username: rawUsername, agentUsername, password, agentPassword, avatarPath } = request.data || {};
   const name = String(fullName || agentName || '').trim();
   if (name.length < 2) throw new HttpsError('invalid-argument', 'Danışman adı gerekli.');
   const username = validateUsername(rawUsername || agentUsername);
   const user = await createAccount(username, password || agentPassword, name);
   const batch = db.batch();
-  batch.set(db.doc('profiles/' + user.uid), { username, full_name: name, avatar_path: null, account_status: 'active', must_change_password: true, created_at: new Date().toISOString() });
+  batch.set(db.doc('profiles/' + user.uid), { username, full_name: name, office_id: membership.office_id, avatar_path: avatarPath || null, account_status: 'active', must_change_password: true, created_at: new Date().toISOString() });
   batch.set(db.doc('office_members/' + user.uid), { office_id: membership.office_id, role: 'agent', status: 'active', created_at: new Date().toISOString(), created_by: uid });
   await batch.commit();
   return { success: true, agent: { id: user.uid, username, full_name: name } };
@@ -96,7 +96,7 @@ exports.evaluateMatches = onCall({ region: REGION, enforceAppCheck: false }, asy
       const reqType = normalize(req.property_type || req.propertyType);
       if (reqType && normalize(p.property_type) && reqType !== normalize(p.property_type)) continue;
       const key = req.id + '__' + p.id;
-      matches.push({ key, office_id: officeId, requirement_id: req.id, customer_id: req.customer_id || null, property_id: p.id, score: 100, status: 'new', created_at: new Date().toISOString() });
+      matches.push({ key, office_id: officeId, requirement_id: req.id, customer_id: req.customer_id || null, property_id: p.id, score: 100, match_score: 100, match_kind: 'requirement_property', match_reasons: ['Kriterlerle eşleşti'], status: 'new', created_at: new Date().toISOString() });
     }
   }
   const batch = db.batch();
