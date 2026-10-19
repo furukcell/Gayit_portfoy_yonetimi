@@ -17,59 +17,40 @@ service cloud.firestore {
       return activeMembership(officeId)
         && get(/databases/$(database)/documents/office_members/$(request.auth.uid)).data.role == 'owner';
     }
-
-    // The initial superadmin document must be created by a trusted project owner
-    // in Firebase Console or Admin SDK. Clients can never grant themselves this role.
     match /superadmins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
     }
-
     match /profiles/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin() || (resource.data.office_id is string && activeMembership(resource.data.office_id)));
-      allow create: if signedIn() && request.auth.uid == uid
-        && !request.resource.data.keys().hasAny(['role', 'isSuperadmin', 'office_id']);
+      allow create: if (signedIn() && request.auth.uid == uid
+          && !request.resource.data.keys().hasAny(['role', 'isSuperadmin', 'office_id']))
+        || (isSuperadmin()
+          && request.resource.data.keys().hasOnly(['username','full_name','office_id','avatar_path','account_status','must_change_password','created_at'])
+          && request.resource.data.office_id is string
+          && request.resource.data.account_status == 'active');
       allow update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['full_name', 'avatar_path', 'updated_at', 'must_change_password']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['full_name', 'avatar_path', 'updated_at', 'must_change_password']);
       allow delete: if false;
     }
-
     match /office_members/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin()
-        || activeMembership(resource.data.office_id));
-      // Membership roles and office assignments are provisioned by a trusted admin flow.
-      allow write: if false;
+      allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin() || activeMembership(resource.data.office_id));
+      allow create: if isSuperadmin()
+        && request.resource.data.keys().hasOnly(['office_id','role','status','created_at','created_by'])
+        && request.resource.data.office_id is string
+        && request.resource.data.role == 'owner'
+        && request.resource.data.status == 'active';
+      allow update, delete: if false;
     }
-
     match /offices/{officeId} {
       allow read: if isSuperadmin() || activeMembership(officeId);
       allow create, update, delete: if isSuperadmin();
     }
-
-    // Flat collections use office_id on each document. Queries must constrain
-    // office_id so Firestore can prove the rule for every returned document.
     match /{collection}/{docId} {
-      allow read: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (
-        isSuperadmin() ||
-        (resource.data.office_id is string && activeMembership(resource.data.office_id))
-      );
-      allow create: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (
-        isSuperadmin() ||
-        (request.resource.data.office_id is string
-          && activeMembership(request.resource.data.office_id)
-          && request.resource.data.office_id == get(/databases/$(database)/documents/office_members/$(request.auth.uid)).data.office_id)
-      );
-      allow update: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (
-        isSuperadmin() ||
-        (resource.data.office_id is string
-          && activeMembership(resource.data.office_id)
-          && request.resource.data.office_id == resource.data.office_id)
-      );
-      allow delete: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (
-        isSuperadmin() ||
-        (resource.data.office_id is string && activeMembership(resource.data.office_id) && (isOwner(resource.data.office_id) || collection == 'property_favorites' || collection == 'property_recent_views'))
-      );
+      allow read: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (isSuperadmin() || (resource.data.office_id is string && activeMembership(resource.data.office_id)));
+      allow create: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (isSuperadmin() || (request.resource.data.office_id is string && activeMembership(request.resource.data.office_id) && request.resource.data.office_id == get(/databases/$(database)/documents/office_members/$(request.auth.uid)).data.office_id));
+      allow update: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (isSuperadmin() || (resource.data.office_id is string && activeMembership(resource.data.office_id) && request.resource.data.office_id == resource.data.office_id));
+      allow delete: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (isSuperadmin() || (resource.data.office_id is string && activeMembership(resource.data.office_id) && (isOwner(resource.data.office_id) || collection == 'property_favorites' || collection == 'property_recent_views')));
     }
   }
 }
