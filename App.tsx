@@ -155,12 +155,12 @@ export default function App() {
     if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(transactionDate) || officeCommission < 0 || agentCommission < 0 || officeCommission + agentCommission > finalPrice) { Alert.alert('Bilgileri kontrol et','Tarih YYYY-AA-GG olmalı; komisyonlar negatif olamaz ve toplamı işlem bedelini aşamaz.'); return; }
     setTransactionBusy(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data:userResult,error:userError } = await supabase.auth.getUser();
+      const firebaseClient = getFirebaseClient();
+      const { data:userResult,error:userError } = await firebaseClient.auth.getUser();
       if(userError||!userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
       const property = properties.find(p=>p.id===transactionPropertyId);
       if(!property) throw new Error('Seçilen portföy bulunamadı.');
-      const { error } = await supabase.from('property_transactions').insert({
+      const { error } = await firebaseClient.from('property_transactions').insert({
         office_id:officeId, property_id:property.id, agent_id:userResult.user.id,
         transaction_type:property.kind==='Kiralık'?'rent':'sale', final_price:finalPrice,
         office_commission:officeCommission, agent_commission:agentCommission,
@@ -191,10 +191,10 @@ export default function App() {
     if (!officeId) return;
     void (async()=>{
       try {
-        const supabase=getFirebaseClient();
-        const {data:userResult}=await supabase.auth.getUser();
+        const firebaseClient=getFirebaseClient();
+        const {data:userResult}=await firebaseClient.auth.getUser();
         if(!userResult.user) return;
-        const {error}=await supabase.from('property_recent_views').upsert(
+        const {error}=await firebaseClient.from('property_recent_views').upsert(
           {office_id:officeId,property_id:property.id,user_id:userResult.user.id,viewed_at:new Date().toISOString()},
           {onConflict:'office_id,property_id,user_id'}
         );
@@ -216,17 +216,17 @@ export default function App() {
   };
   const toggleFavorite = async (property: Property) => {
     if (!officeId) return;
-    const supabase = getFirebaseClient();
-    const { data: userResult, error: userError } = await supabase.auth.getUser();
+    const firebaseClient = getFirebaseClient();
+    const { data: userResult, error: userError } = await firebaseClient.auth.getUser();
     if (userError || !userResult.user) { Alert.alert('Oturum gerekli','Favori kaydetmek için tekrar giriş yap.'); return; }
     const isFavorite = favoriteIds.includes(property.id);
     try {
       if (isFavorite) {
-        const { error } = await supabase.from('property_favorites').delete().eq('office_id',officeId).eq('property_id',property.id).eq('user_id',userResult.user.id);
+        const { error } = await firebaseClient.from('property_favorites').delete().eq('office_id',officeId).eq('property_id',property.id).eq('user_id',userResult.user.id);
         if (error) throw error;
         setFavoriteIds(ids=>ids.filter(id=>id!==property.id));
       } else {
-        const { error } = await supabase.from('property_favorites').insert({office_id:officeId,property_id:property.id,user_id:userResult.user.id});
+        const { error } = await firebaseClient.from('property_favorites').insert({office_id:officeId,property_id:property.id,user_id:userResult.user.id});
         if (error) throw error;
         setFavoriteIds(ids=>[...ids,property.id]);
       }
@@ -254,9 +254,9 @@ export default function App() {
     if(payloads.some(p=>!p.title||p.title.length<3||!p.address||!Number.isSafeInteger(p.price)||p.price<=0)){Alert.alert('Satırları kontrol et','Her satırda başlık, adres ve pozitif tam sayı fiyat bulunmalı.');return;}
     setCsvImportBusy(true);
     try{
-      const supabase=getFirebaseClient();const {data:userResult,error:userError}=await supabase.auth.getUser();
+      const firebaseClient=getFirebaseClient();const {data:userResult,error:userError}=await firebaseClient.auth.getUser();
       if(userError||!userResult.user)throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
-      const {error}=await supabase.from('properties').insert(payloads.map(p=>({...p,owner_agent_id:userResult.user.id,created_by:userResult.user.id})));
+      const {error}=await firebaseClient.from('properties').insert(payloads.map(p=>({...p,owner_agent_id:userResult.user.id,created_by:userResult.user.id})));
       if(error)throw error;
       await loadProperties(officeId);setCsvImportOpen(false);setCsvImportText('');
       Alert.alert('Aktarım tamamlandı',`${payloads.length} portföy kaydı eklendi.`);
@@ -307,11 +307,11 @@ export default function App() {
   const loadPropertyPhotos = async (propertyId: string) => {
     setPhotosBusy(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data, error } = await supabase.from('property_photos').select('id,storage_path,sort_order').eq('property_id', propertyId).order('sort_order', { ascending: true });
+      const firebaseClient = getFirebaseClient();
+      const { data, error } = await firebaseClient.from('property_photos').select('id,storage_path,sort_order').eq('property_id', propertyId).order('sort_order', { ascending: true });
       if (error) throw error;
       const photos: PropertyPhoto[] = await Promise.all((data || []).map(async (row: any) => {
-        const { data: signed, error: signError } = await supabase.storage.from('property-photos').createSignedUrl(row.storage_path, 60 * 60);
+        const { data: signed, error: signError } = await firebaseClient.storage.from('property-photos').createSignedUrl(row.storage_path, 60 * 60);
         if (signError) throw signError;
         return { id: row.id, storagePath: row.storage_path, url: signed.signedUrl, sortOrder: row.sort_order || 0 };
       }));
@@ -335,11 +335,11 @@ export default function App() {
       const blob = await response.blob();
       const ext = asset.mimeType === 'image/png' ? 'png' : 'jpg';
       const storagePath = officeId + '/' + selected.id + '/' + Date.now() + '.' + ext;
-      const supabase = getFirebaseClient();
-      const { error: uploadError } = await supabase.storage.from('property-photos').upload(storagePath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
+      const firebaseClient = getFirebaseClient();
+      const { error: uploadError } = await firebaseClient.storage.from('property-photos').upload(storagePath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
       if (uploadError) throw uploadError;
-      const { error: rowError } = await supabase.from('property_photos').insert({ property_id: selected.id, office_id: officeId, storage_path: storagePath, sort_order: propertyPhotos.length });
-      if (rowError) { await supabase.storage.from('property-photos').remove([storagePath]); throw rowError; }
+      const { error: rowError } = await firebaseClient.from('property_photos').insert({ property_id: selected.id, office_id: officeId, storage_path: storagePath, sort_order: propertyPhotos.length });
+      if (rowError) { await firebaseClient.storage.from('property-photos').remove([storagePath]); throw rowError; }
       await loadPropertyPhotos(selected.id);
     } catch (error) { Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : 'Firebase Storage hizmetinin etkin olduğunu ve kuralların yayınlandığını kontrol edin.'); }
     finally { setPhotosBusy(false); }
@@ -355,10 +355,10 @@ export default function App() {
     [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
     setPhotosBusy(true);
     try {
-      const supabase = getFirebaseClient();
+      const firebaseClient = getFirebaseClient();
       // Persist sequential sort_order values; index 0 is the cover photo.
       for (let i = 0; i < reordered.length; i++) {
-        const { error } = await supabase.from('property_photos')
+        const { error } = await firebaseClient.from('property_photos')
           .update({ sort_order: i }).eq('id', reordered[i].id).eq('property_id', selected.id);
         if (error) throw error;
       }
@@ -380,16 +380,16 @@ export default function App() {
         if (photosBusy) return;
         setPhotosBusy(true);
         try {
-          const supabase = getFirebaseClient();
+          const firebaseClient = getFirebaseClient();
           // Delete the object first. If Storage rejects the operation, keep its
           // metadata row so the user can retry from the gallery.
-          const { error: storageError } = await supabase.storage.from('property-photos').remove([photo.storagePath]);
+          const { error: storageError } = await firebaseClient.storage.from('property-photos').remove([photo.storagePath]);
           if (storageError) {
             await loadPropertyPhotos(propertyId);
             Alert.alert('Fotoğraf silinemedi', 'Dosya depolamadan silinemedi; kayıt galeride bırakıldı, böylece tekrar deneyebilirsin. Firebase Storage izinlerini kontrol et.');
             return;
           }
-          const { error: rowError } = await supabase.from('property_photos')
+          const { error: rowError } = await firebaseClient.from('property_photos')
             .delete().eq('id', photo.id).eq('property_id', propertyId);
           if (rowError) {
             await loadPropertyPhotos(propertyId);
@@ -429,12 +429,12 @@ export default function App() {
   const loadProperties = async (targetOfficeId: string) => {
     setPropertiesLoading(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data, error } = await supabase.from('properties').select('*').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
+      const firebaseClient = getFirebaseClient();
+      const { data, error } = await firebaseClient.from('properties').select('*').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
       if (error) throw new Error('Portföyler yüklenemedi.');
       const rows = data || [];
       const ids = [...new Set(rows.map((row: any) => row.owner_agent_id))];
-      const { data: profiles } = ids.length ? await supabase.from('profiles').select('id,full_name').in('id', ids) : { data: [] as any[] };
+      const { data: profiles } = ids.length ? await firebaseClient.from('profiles').select('id,full_name').in('id', ids) : { data: [] as any[] };
       const names = new Map((profiles || []).map((profile: any) => [profile.id, profile.full_name]));
       const mapped: Property[] = rows.map((row: any) => ({
         id: row.id,
@@ -462,12 +462,12 @@ export default function App() {
   const loadCustomers = async (targetOfficeId: string) => {
     setCustomersLoading(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data, error } = await supabase.from('customers').select('id,full_name,phone,roles,assigned_agent_id,notes,is_active,next_follow_up_at,customer_requirements(id)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
+      const firebaseClient = getFirebaseClient();
+      const { data, error } = await firebaseClient.from('customers').select('id,full_name,phone,roles,assigned_agent_id,notes,is_active,next_follow_up_at,customer_requirements(id)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
       if (error) throw new Error('Müşteriler yüklenemedi. Migration 003 uygulanmış olmalı.');
       const rows = data || [];
       const ids = [...new Set(rows.map((row: any) => row.assigned_agent_id))];
-      const { data: profiles } = ids.length ? await supabase.from('profiles').select('id,full_name').in('id', ids) : { data: [] as any[] };
+      const { data: profiles } = ids.length ? await firebaseClient.from('profiles').select('id,full_name').in('id', ids) : { data: [] as any[] };
       const names = new Map((profiles || []).map((profile: any) => [profile.id, profile.full_name]));
       setCustomers(rows.map((row: any) => ({ id: row.id, fullName: row.full_name, phone: row.phone || '', roles: row.roles || [], assignedAgent: names.get(row.assigned_agent_id) || 'Danışman', assignedAgentId: row.assigned_agent_id, notes: row.notes || '', active: row.is_active, nextFollowUpAt: row.next_follow_up_at || null, requirementCount: Array.isArray(row.customer_requirements) ? row.customer_requirements.length : 0 })));
     } finally { setCustomersLoading(false); }
@@ -476,8 +476,8 @@ export default function App() {
   const loadMatches = async (targetOfficeId: string) => {
     setMatchesLoading(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data, error } = await supabase.from('matches').select('id,status,match_kind,match_score,match_reasons,created_at,properties(id,title,price,listing_type,district,rooms),customers(id,full_name,phone)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
+      const firebaseClient = getFirebaseClient();
+      const { data, error } = await firebaseClient.from('matches').select('id,status,match_kind,match_score,match_reasons,created_at,properties(id,title,price,listing_type,district,rooms),customers(id,full_name,phone)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
       if (error) throw new Error('Eşleşmeler yüklenemedi. Migration 003 uygulanmış olmalı.');
       setMatches(data || []);
     } finally { setMatchesLoading(false); }
@@ -486,8 +486,8 @@ export default function App() {
   const loadNotifications = async (targetOfficeId: string) => {
     setNotificationsLoading(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data, error } = await supabase.from('notifications')
+      const firebaseClient = getFirebaseClient();
+      const { data, error } = await firebaseClient.from('notifications')
         .select('id,notification_type,title,body,match_id,customer_id,property_id,read_at,created_at')
         .eq('office_id', targetOfficeId).order('created_at', { ascending: false }).limit(100);
       if (error) throw new Error('Bildirimler yüklenemedi. Migration 003 uygulanmış olmalı.');
@@ -499,8 +499,8 @@ export default function App() {
 
   const markNotificationRead = async (notificationId: string) => {
     try {
-      const supabase = getFirebaseClient();
-      const { error } = await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notificationId);
+      const firebaseClient = getFirebaseClient();
+      const { error } = await firebaseClient.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notificationId);
       if (error) throw error;
       setNotifications(current => current.map(n => n.id === notificationId ? {...n, read_at: new Date().toISOString()} : n));
     } catch (error) {
@@ -509,8 +509,8 @@ export default function App() {
   };
 
   const loadTeamMembers = async (targetOfficeId: string) => {
-    const supabase = getFirebaseClient();
-    const { data, error } = await supabase
+    const firebaseClient = getFirebaseClient();
+    const { data, error } = await firebaseClient
       .from('office_members')
       .select('role,status,profiles(id,full_name,username,avatar_path)')
       .eq('office_id', targetOfficeId)
@@ -520,7 +520,7 @@ export default function App() {
       const avatarPath = row.profiles?.avatar_path || null;
       let avatarUrl: string | null = null;
       if (avatarPath) {
-        const { data: signed } = await supabase.storage.from('avatars').createSignedUrl(avatarPath, 3600);
+        const { data: signed } = await firebaseClient.storage.from('avatars').createSignedUrl(avatarPath, 3600);
         avatarUrl = signed?.signedUrl || null;
       }
       return {
@@ -548,8 +548,8 @@ export default function App() {
         { text: 'Onayla', style: 'destructive', onPress: async () => {
           setTeamStatusBusyId(person.id);
           try {
-            const supabase = getFirebaseClient();
-            const { error } = await supabase
+            const firebaseClient = getFirebaseClient();
+            const { error } = await firebaseClient
               .from('office_members')
               .update({ status: nextStatus })
               .eq('office_id', officeId)
@@ -577,18 +577,18 @@ export default function App() {
     setCustomerDetailOpen(true);
     setCustomerRequirementsLoading(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data, error } = await supabase.from('customer_requirements')
+      const firebaseClient = getFirebaseClient();
+      const { data, error } = await firebaseClient.from('customer_requirements')
         .select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,must_have,notes,is_active,created_at')
         .eq('customer_id', customer.id).order('created_at', { ascending: false });
       if (error) throw error;
       setCustomerRequirements(data || []);
-      const { data: activities, error: activityError } = await supabase.from('customer_activities')
+      const { data: activities, error: activityError } = await firebaseClient.from('customer_activities')
         .select('id,activity_type,summary,occurred_at,created_by')
         .eq('customer_id', customer.id).order('occurred_at', { ascending: false }).limit(50);
       if (activityError) throw activityError;
       setCustomerActivities(activities || []);
-      const { data: appointments, error: appointmentError } = await supabase.from('appointments')
+      const { data: appointments, error: appointmentError } = await firebaseClient.from('appointments')
         .select('id,title,starts_at,ends_at,location,notes,status')
         .eq('customer_id', customer.id).order('starts_at', { ascending: true }).limit(50);
       if (appointmentError) throw appointmentError;
@@ -613,8 +613,8 @@ export default function App() {
     }
     setAppointmentBusy(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data, error } = await supabase.from('appointments').insert({
+      const firebaseClient = getFirebaseClient();
+      const { data, error } = await firebaseClient.from('appointments').insert({
         office_id: officeId, customer_id: selectedCustomer.id, assigned_agent_id: selectedCustomer.assignedAgentId,
         title: appointmentTitle.trim() || 'Müşteri görüşmesi', starts_at: parsedDate.toISOString(),
         notes: appointmentNotes.trim(), status: 'scheduled',
@@ -635,10 +635,10 @@ export default function App() {
     }
     setActivityBusy(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data: userResult, error: userError } = await supabase.auth.getUser();
+      const firebaseClient = getFirebaseClient();
+      const { data: userResult, error: userError } = await firebaseClient.auth.getUser();
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı.');
-      const { data, error } = await supabase.from('customer_activities').insert({
+      const { data, error } = await firebaseClient.from('customer_activities').insert({
         office_id: officeId, customer_id: selectedCustomer.id, created_by: userResult.user.id,
         activity_type: activityType, summary: activitySummary.trim(), occurred_at: new Date().toISOString(),
       }).select('id,activity_type,summary,occurred_at,created_by').single();
@@ -660,8 +660,8 @@ export default function App() {
     }
     setCustomerEditBusy(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data, error } = await supabase.from('customer_requirements').insert({
+      const firebaseClient = getFirebaseClient();
+      const { data, error } = await firebaseClient.from('customer_requirements').insert({
         office_id: officeId, customer_id: selectedCustomer.id, intent: requirementIntent,
         property_type: requirementType, city: requirementCity.trim(), district: requirementDistrict.trim(),
         max_price: maxPrice > 0 ? maxPrice : null,
@@ -669,7 +669,7 @@ export default function App() {
       }).select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,must_have,notes,is_active,created_at').single();
       if (error) throw error;
       setCustomerRequirements(current => [data, ...current]);
-      const { error: matchingError } = await supabase.functions.invoke('evaluate-matches', { body: { officeId, customerId: selectedCustomer.id } });
+      const { error: matchingError } = await firebaseClient.functions.invoke('evaluate-matches', { body: { officeId, customerId: selectedCustomer.id } });
       await loadMatches(officeId);
       await loadCustomers(officeId);
       if (matchingError) Alert.alert('Eşleştirme beklemede', 'Talep kaydedildi ancak otomatik eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
@@ -692,8 +692,8 @@ export default function App() {
     }
     setCustomerEditBusy(true);
     try {
-      const supabase = getFirebaseClient();
-      const { error } = await supabase.from('customers').update({
+      const firebaseClient = getFirebaseClient();
+      const { error } = await firebaseClient.from('customers').update({
         full_name: editCustomerName.trim(),
         phone: editCustomerPhone.trim(),
         notes: editCustomerNotes.trim(),
@@ -715,21 +715,21 @@ export default function App() {
     if (customerRoles.length === 0) { Alert.alert('Müşteri türü', 'En az bir müşteri rolü seç.'); return; }
     setCustomerBusy(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data: userResult, error: userError } = await supabase.auth.getUser();
+      const firebaseClient = getFirebaseClient();
+      const { data: userResult, error: userError } = await firebaseClient.auth.getUser();
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
-      const { data: customer, error } = await supabase.from('customers').insert({ office_id: officeId, assigned_agent_id: userResult.user.id, created_by: userResult.user.id, full_name: customerName.trim(), phone: customerPhone.trim(), roles: customerRoles, notes: customerNotes.trim() }).select('id').single();
+      const { data: customer, error } = await firebaseClient.from('customers').insert({ office_id: officeId, assigned_agent_id: userResult.user.id, created_by: userResult.user.id, full_name: customerName.trim(), phone: customerPhone.trim(), roles: customerRoles, notes: customerNotes.trim() }).select('id').single();
       if (error || !customer) throw new Error(error?.message || 'Müşteri kaydedilemedi. Migration 003 ve RLS ayarlarını kontrol et.');
       const maxPrice = Number(requirementMaxPrice.replace(/[^0-9]/g, ''));
       const hasRequirement = !!(requirementIntent !== 'sale' || requirementDistrict.trim() || requirementMaxPrice.trim() || requirementRooms.trim() || requirementType !== 'apartment' || requirementCity.trim() !== 'Muğla');
       if (hasRequirement) {
-        const { error: requirementError } = await supabase.from('customer_requirements').insert({ office_id: officeId, customer_id: customer.id, intent: requirementIntent, property_type: requirementType, city: requirementCity.trim(), district: requirementDistrict.trim(), max_price: maxPrice > 0 ? maxPrice : null, rooms: requirementRooms.trim() ? [requirementRooms.trim()] : [], is_active: true });
+        const { error: requirementError } = await firebaseClient.from('customer_requirements').insert({ office_id: officeId, customer_id: customer.id, intent: requirementIntent, property_type: requirementType, city: requirementCity.trim(), district: requirementDistrict.trim(), max_price: maxPrice > 0 ? maxPrice : null, rooms: requirementRooms.trim() ? [requirementRooms.trim()] : [], is_active: true });
         if (requirementError) throw new Error('Müşteri kaydedildi ancak arama talebi kaydedilemedi: ' + requirementError.message);
       }
       await loadCustomers(officeId);
       let matchWarning = '';
       if (hasRequirement) {
-        const { error: matchingError } = await supabase.functions.invoke('evaluate-matches', { body: { officeId, customerId: customer.id } });
+        const { error: matchingError } = await firebaseClient.functions.invoke('evaluate-matches', { body: { officeId, customerId: customer.id } });
         if (matchingError) matchWarning = ' Eşleştirme şu an çalışmadı; Edge Function ve migration kurulumu kontrol edilmeli.';
         else await loadMatches(officeId);
       }
@@ -782,17 +782,17 @@ export default function App() {
     if (agentPassword.length < 10) { Alert.alert('Şifre çok kısa', 'İlk şifre en az 10 karakter olmalı.'); return; }
     setAgentBusy(true);
     try {
-      const supabase = getFirebaseClient();
+      const firebaseClient = getFirebaseClient();
       let avatarPath: string | null = null;
       if (agentAvatarUri) {
         const response = await fetch(agentAvatarUri);
         const blob = await response.blob();
         const ext = agentAvatarUri.toLowerCase().includes('.png') ? 'png' : 'jpg';
         avatarPath = officeId + '/agent-' + Date.now() + '.' + ext;
-        const { error: uploadError } = await supabase.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
+        const { error: uploadError } = await firebaseClient.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
         if (uploadError) throw new Error('Fotoğraf yüklenemedi. Firebase Storage hizmetinin etkin olduğunu ve kuralların yayınlandığını kontrol edin.');
       }
-      const { data, error } = await supabase.functions.invoke('create-agent', { body: { officeId, username: agentUsername, password: agentPassword, fullName: agentName, avatarPath } });
+      const { data, error } = await firebaseClient.functions.invoke('create-agent', { body: { officeId, username: agentUsername, password: agentPassword, fullName: agentName, avatarPath } });
       if (error || !data?.success) throw new Error(data?.error || error?.message || 'Danışman oluşturulamadı.');
       await loadTeamMembers(officeId);
       Alert.alert('Danışman eklendi', agentName.trim() + ' için hesap oluşturuldu. İlk girişte şifresini değiştirmesi gerekecek.');
@@ -812,8 +812,8 @@ export default function App() {
     if (!selected) return;
     const statusMap: Record<PropertyStatus, string> = { 'Aktif': 'active', 'Opsiyonlu': 'optioned', 'Satıldı': 'sold', 'Kiralandı': 'rented', 'Arşivde': 'archived' };
     try {
-      const supabase = getFirebaseClient();
-      const { error } = await supabase.from('properties').update({ status: statusMap[nextStatus] }).eq('id', selected.id).eq('office_id', officeId);
+      const firebaseClient = getFirebaseClient();
+      const { error } = await firebaseClient.from('properties').update({ status: statusMap[nextStatus] }).eq('id', selected.id).eq('office_id', officeId);
       if (error) throw error;
       setProperties(current => current.map(p => p.id === selected.id ? {...p, status: nextStatus} : p));
       setSelected((current: Property | null) => current && current.id === selected.id ? {...current, status: nextStatus} : current);
@@ -837,8 +837,8 @@ export default function App() {
       {text:'Vazgeç',style:'cancel'},
       {text:'Arşivle',style:'destructive',onPress:async()=>{
         try {
-          const supabase=getFirebaseClient();
-          const {error}=await supabase.from('properties').update({status:'archived'}).eq('id',selected.id).eq('office_id',officeId);
+          const firebaseClient=getFirebaseClient();
+          const {error}=await firebaseClient.from('properties').update({status:'archived'}).eq('id',selected.id).eq('office_id',officeId);
           if(error) throw error;
           setSelected(null); await loadProperties(officeId);
           Alert.alert('Arşivlendi','Portföy arşivlendi.');
@@ -877,8 +877,8 @@ export default function App() {
     }
     setPropertyBusy(true);
     try {
-      const supabase = getFirebaseClient();
-      const { data: userResult, error: userError } = await supabase.auth.getUser();
+      const firebaseClient = getFirebaseClient();
+      const { data: userResult, error: userError } = await firebaseClient.auth.getUser();
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
       const parts = address.split(',').map((part) => part.trim());
       const payload = {
@@ -890,10 +890,10 @@ export default function App() {
       };
       let savedId = editingPropertyId;
       if (editingPropertyId) {
-        const {error}=await supabase.from('properties').update(payload).eq('id',editingPropertyId).eq('office_id',officeId);
+        const {error}=await firebaseClient.from('properties').update(payload).eq('id',editingPropertyId).eq('office_id',officeId);
         if(error) throw error;
       } else {
-        const {data:inserted,error}=await supabase.from('properties').insert({
+        const {data:inserted,error}=await firebaseClient.from('properties').insert({
           ...payload, office_id:officeId, owner_agent_id:userResult.user.id, created_by:userResult.user.id, status:'active',
         }).select('id').single();
         if(error || !inserted) throw new Error('Portföy kaydedilemedi. Ofis yetkilerini ve veritabanı kurulumunu kontrol et.');
@@ -901,7 +901,7 @@ export default function App() {
       }
       await loadProperties(officeId);
       if(savedId && !editingPropertyId) {
-        const {error:matchingError}=await supabase.functions.invoke('evaluate-matches',{body:{officeId,propertyId:savedId}});
+        const {error:matchingError}=await firebaseClient.functions.invoke('evaluate-matches',{body:{officeId,propertyId:savedId}});
         if(!matchingError) await loadMatches(officeId);
         else Alert.alert('Eşleştirme beklemede','Portföy kaydedildi ancak eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
       }
