@@ -160,6 +160,13 @@ export default function App() {
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [csvImportText, setCsvImportText] = useState('');
   const [csvImportBusy, setCsvImportBusy] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profilePhone, setProfilePhone] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profileAvatarPath, setProfileAvatarPath] = useState<string | null>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [profileAvatarUri, setProfileAvatarUri] = useState<string | null>(null);
+  const [profileBusy, setProfileBusy] = useState(false);
   const [excelFileName, setExcelFileName] = useState('');
   const [excelPreviewCount, setExcelPreviewCount] = useState(0);
   const [minPriceFilter, setMinPriceFilter] = useState('');
@@ -501,6 +508,13 @@ export default function App() {
   const createPdf = async (p: Property) => {
     try {
       const firebaseClient = getFirebaseClient();
+      const uid = getFirebaseAuth().currentUser?.uid;
+      const { data: profile } = uid ? await firebaseClient.from('profiles').select('full_name,phone,email,avatar_path').eq('id', uid).maybeSingle() : { data: null as any };
+      let agentAvatarUrl: string | null = null;
+      if (profile?.avatar_path) { const { data: avatar } = await firebaseClient.storage.from('avatars').createSignedUrl(profile.avatar_path, 3600); agentAvatarUrl = avatar?.signedUrl || null; }
+      const agentDisplayName = profile?.full_name || p.agent || 'GAYIT danışman ekibi';
+      const agentPhone = profile?.phone || '';
+      const agentEmail = profile?.email || '';
       const { data: photoRows, error: photoError } = await firebaseClient.from('property_photos')
         .select('storage_path,sort_order').eq('property_id', p.id).order('sort_order', { ascending: true }).limit(12);
       if (photoError) throw new Error('İlan fotoğrafları alınamadı.');
@@ -521,6 +535,7 @@ export default function App() {
       const locationParts = (p.address || '').split(',').map((part: string) => part.trim()).filter(Boolean);
       const locationShort = locationParts.slice(-2).join(' / ');
       const code = htmlEscape(String(p.id || '').slice(0, 18).toUpperCase());
+      const agentAvatarHtml = agentAvatarUrl ? '<img class="agent-photo" src="' + agentAvatarUrl + '" alt="Danışman" />' : '<div class="agent-mark">' + htmlEscape(agentDisplayName.split(/\\s+/).map((part: string) => part[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')) + '</div>';
       const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <style>
       @page{size:A4;margin:0}
@@ -576,7 +591,7 @@ export default function App() {
       .map-pin{font-size:14pt;color:#c74e42}
       .contact{display:grid;grid-template-columns:18mm 1fr;gap:3mm;align-items:center;background:#f3f6f9;border-radius:2.5mm;padding:3.5mm 4mm;margin-top:3.5mm;page-break-inside:avoid;break-inside:avoid}
       .agent-mark{height:17mm;width:17mm;border-radius:2mm;background:#dce5eb;color:#10283f;display:flex;align-items:center;justify-content:center;font-size:17pt;font-weight:bold}
-      .contact-label{font-size:7pt;letter-spacing:1.2px;color:#bd8e42;font-weight:bold}
+      .agent-photo{height:17mm;width:17mm;border-radius:50%;object-fit:cover}.contact-label{font-size:7pt;letter-spacing:1.2px;color:#bd8e42;font-weight:bold}
       .agent-name{font-size:11pt;font-weight:bold;margin:1mm 0;color:#10283f}
       .contact-note{font-size:7.5pt;color:#627487}
       .footer{margin:4mm -9mm 0;padding:4mm 9mm;background:#0c2336;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:4mm;border-top:2mm solid #d9b16a}
@@ -592,7 +607,7 @@ export default function App() {
       <section class="content-grid"><div class="left-col"><article class="panel"><h2><span class="symbol">▤</span> Gayrimenkul hakkında</h2><div class="description">${htmlEscape(p.description || 'Detaylı bilgi ve gösterim için danışmanımızla iletişime geçebilirsiniz.')}</div></article>
       <article class="panel"><h2><span class="symbol">✦</span> Öne çıkan özellikler</h2><div class="feature-list"><div class="feature"><span>Alan</span><b>${htmlEscape(p.area || 'Belirtilmedi')}</b></div><div class="feature"><span>Oda sayısı</span><b>${htmlEscape(p.rooms || 'Belirtilmedi')}</b></div><div class="feature"><span>Emlak tipi</span><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b></div><div class="feature"><span>İşlem türü</span><b>${htmlEscape(p.kind)}</b></div><div class="feature"><span>Durum</span><b>${htmlEscape(p.status)}</b></div><div class="feature"><span>Bölge</span><b>${htmlEscape(p.district || locationShort || 'Belirtilmedi')}</b></div><div class="feature"><span>Bina yaşı</span><b>${htmlEscape(p.buildingAge ? p.buildingAge + ' yıl' : 'Belirtilmedi')}</b></div><div class="feature"><span>Bulunduğu kat</span><b>${htmlEscape(p.floorNumber || 'Belirtilmedi')}</b></div><div class="feature"><span>Toplam kat</span><b>${htmlEscape(p.totalFloors || 'Belirtilmedi')}</b></div><div class="feature"><span>Banyo</span><b>${htmlEscape(p.bathrooms || 'Belirtilmedi')}</b></div><div class="feature"><span>Balkon</span><b>${htmlEscape(p.balcony || 'Belirtilmedi')}</b></div><div class="feature"><span>Otopark</span><b>${htmlEscape(p.parking || 'Belirtilmedi')}</b></div><div class="feature"><span>Isıtma</span><b>${htmlEscape(p.heating || 'Belirtilmedi')}</b></div><div class="feature"><span>Soğutma</span><b>${htmlEscape(p.cooling || 'Belirtilmedi')}</b></div><div class="feature"><span>İskan</span><b>${htmlEscape(p.occupancyPermit || 'Belirtilmedi')}</b></div><div class="feature"><span>Asansör</span><b>${htmlEscape(p.elevator || 'Belirtilmedi')}</b></div></div></article><article class="panel"><h2><span class="symbol">⌖</span> Yakın çevre</h2><div class="description">${htmlEscape(p.nearbyAmenities || 'Yakın çevre bilgisi belirtilmedi.')}</div></article></div>
       <div class="right-col"><article class="panel"><h2><span class="symbol">●</span> Konum</h2><div class="address-text">${htmlEscape(p.address)}</div><div class="map-placeholder"><div class="map-lines"></div><div class="map-label"><div class="map-pin">●</div>${htmlEscape(locationShort || 'Konum bilgisi')}</div></div><div class="muted" style="font-size:7pt;margin-top:2mm">Kesin konum için danışmanınızdan bilgi alabilirsiniz.</div></article></div></section>
-      <section class="contact"><div class="agent-mark">G</div><div><div class="contact-label">DANIŞMAN</div><div class="agent-name">${htmlEscape(p.agent || 'GAYIT danışman ekibi')}</div><div class="contact-note">Bu portföy hakkında detaylı bilgi ve gösterim için danışmanınızla iletişime geçebilirsiniz.</div></div></section>
+      <section class="contact">${agentAvatarHtml}<div><div class="contact-label">DANIŞMAN</div><div class="agent-name">${htmlEscape(agentDisplayName)}</div><div class="contact-note">${agentPhone ? 'Telefon: ' + htmlEscape(agentPhone) : ''}${agentPhone && agentEmail ? ' · ' : ''}${agentEmail ? 'E-posta: ' + htmlEscape(agentEmail) : ''}${!agentPhone && !agentEmail ? 'Bu portföy hakkında detaylı bilgi ve gösterim için danışmanınızla iletişime geçebilirsiniz.' : ''}</div></div></section>
       <footer class="footer"><div><div class="footer-brand">⌂ GAYIT</div><div class="footer-sub">GAYRİMENKUL SUNUMU</div></div><div class="footer-note">Bu portföy GAYIT Portföy Yönetimi ile oluşturulmuştur.</div><div class="footer-code">PORTFÖY KODU<br/><b>${code}</b></div></footer>
       </main></body></html>`;
       const file = await Print.printToFileAsync({ html });
