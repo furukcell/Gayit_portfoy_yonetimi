@@ -2,7 +2,7 @@ import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { addDoc, collection, deleteDoc, doc, getDocs, query, updateDoc, setDoc, where, orderBy, limit as take, documentId } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getFirebaseAuth, getFirebaseDb, getFirebaseStorage } from './firebase';
+import { getFirebaseApp, getFirebaseAuth, getFirebaseDb, getFirebaseStorage } from './firebase';
 
 type Row = Record<string, any>;
 const err = (message: string) => ({ message });
