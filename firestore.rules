@@ -28,18 +28,31 @@ service cloud.firestore {
         || (isSuperadmin()
           && request.resource.data.keys().hasOnly(['username','full_name','office_id','avatar_path','account_status','must_change_password','created_at'])
           && request.resource.data.office_id is string
-          && request.resource.data.account_status == 'active');
+          && request.resource.data.account_status == 'active')
+        || (signedIn()
+          && request.resource.data.keys().hasOnly(['username','full_name','office_id','avatar_path','account_status','must_change_password','created_at'])
+          && request.resource.data.office_id is string
+          && request.resource.data.account_status == 'active'
+          && request.resource.data.must_change_password == true
+          && isOwner(request.resource.data.office_id));
       allow update: if signedIn() && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['full_name', 'avatar_path', 'updated_at', 'must_change_password']);
       allow delete: if false;
     }
     match /office_members/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin() || activeMembership(resource.data.office_id));
-      allow create: if isSuperadmin()
-        && request.resource.data.keys().hasOnly(['office_id','role','status','created_at','created_by'])
-        && request.resource.data.office_id is string
-        && request.resource.data.role == 'owner'
-        && request.resource.data.status == 'active';
+      allow create: if (isSuperadmin()
+          && request.resource.data.keys().hasOnly(['office_id','role','status','created_at','created_by'])
+          && request.resource.data.office_id is string
+          && request.resource.data.role in ['owner','agent']
+          && request.resource.data.status == 'active')
+        || (signedIn()
+          && request.resource.data.keys().hasOnly(['office_id','role','status','created_at','created_by'])
+          && request.resource.data.office_id is string
+          && request.resource.data.role == 'agent'
+          && request.resource.data.status == 'active'
+          && request.resource.data.created_by == request.auth.uid
+          && isOwner(request.resource.data.office_id));
       allow update, delete: if false;
     }
     match /offices/{officeId} {
