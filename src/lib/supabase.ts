@@ -38,6 +38,15 @@ class CollectionQuery {
         }
         return {data:Array.isArray(this.payload)?out:out[0], error:null};
       }
+      if (this.table === 'profiles' && !this.filters.some(filter => false)) {
+        const currentUser = getFirebaseAuth().currentUser;
+        if (currentUser && !this.selectedFields.includes('superadmin')) {
+          const membership = await getDoc(doc(db, 'office_members', currentUser.uid));
+          if (membership.exists() && membership.data().office_id && !this.filters.some((_: any) => false)) {
+            this.filters.push(where('office_id', '==', membership.data().office_id));
+          }
+        }
+      }
       const snap = await getDocs(query(col, ...this.filters, ...this.orders, ...(this.max ? [take(this.max)] : [])));
       let rows = snap.docs.map(d => ({id:d.id, ...d.data()} as Row));
       if (this.table === 'office_members') {
