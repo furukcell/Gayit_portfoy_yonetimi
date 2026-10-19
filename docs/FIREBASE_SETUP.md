@@ -24,7 +24,7 @@ Firebase web configuration values are client configuration, not Admin SDK creden
 
 ## Superadmin bootstrap
 
-The app must not let users select or self-assign a superadmin role. Create the first administrator user in Firebase Authentication, then create `superadmins/{AUTH_UID}` from Firebase Console/ trusted Admin SDK workflow. Keep client writes to `superadmins` denied. Then deploy Functions with `firebase deploy --only functions`. The superadmin panel calls the server-side `createOffice` function; the mobile team panel calls `createAgent`; matching calls `evaluateMatches`. These operations require the first superadmin document to exist.
+The app must not let users select or self-assign a superadmin role. Create the first administrator user in Firebase Authentication with email `superadmin@accounts.gayit.invalid` (or another username using the same `@accounts.gayit.invalid` suffix), then create `superadmins/{AUTH_UID}` using that exact Auth UID from Firebase Console/trusted Admin SDK workflow. Keep client writes to `superadmins` denied. Then deploy Functions with `firebase deploy --only functions`. The superadmin panel calls the server-side `createOffice` function; the mobile team panel calls `createAgent`; matching calls `evaluateMatches`. These operations require the first superadmin document to exist.
 
 ## Data model expectations for the initial rules
 
