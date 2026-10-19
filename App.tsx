@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { changeInitialPassword, restoreUsernameSession, signInWithUsername } from './src/lib/usernameAuth';
 import {
   Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar, KeyboardAvoidingView, Platform,
-  StyleSheet, Text, TextInput, View, Image
+  StyleSheet, Text, TextInput, View, Image, ImageBackground, Animated, Easing
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,6 +51,26 @@ const propertyTypeLabel = (type?: string) => ({ apartment: 'Daire', villa: 'Vill
 const shareText = (p: Property) => `GAYIT | ${p.title}\n${p.address}\n${p.rooms} · ${p.area}\n${p.kind}: ${money(p.price)}${p.kind === 'Kiralık' ? '/ay' : ''}\n\nDetaylı bilgi için bizimle iletişime geçin.`;
 const htmlEscape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+function AnimatedSplash() {
+  const spin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const animation = Animated.loop(Animated.timing(spin, {
+      toValue: 1, duration: 1100, easing: Easing.linear, useNativeDriver: true,
+    }));
+    animation.start();
+    return () => animation.stop();
+  }, [spin]);
+  const rotation = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  return (
+    <ImageBackground source={require('./assets/images/splash.png')} resizeMode="cover" style={styles.splashScreen}>
+      <View style={styles.splashLoading}>
+        <Animated.View style={[styles.splashSpinner, { transform: [{ rotate: rotation }] }]} />
+        <Text style={styles.splashLoadingText}>YÜKLENİYOR</Text>
+      </View>
+    </ImageBackground>
+  );
+}
+
 export default function App() {
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -60,7 +80,7 @@ export default function App() {
   }, []);
   const [role, setRole] = useState<Role>('owner');
   const [authenticated, setAuthenticated] = useState(false);
-  const [authBusy, setAuthBusy] = useState(false);
+  const [authBusy, setAuthBusy] = useState(true);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -1402,6 +1422,7 @@ export default function App() {
   }
 
   if (!authenticated || mustChangePassword) {
+    if (authBusy && !mustChangePassword) return <AnimatedSplash />;
     return <SafeAreaView style={styles.safe} edges={['top','left','right','bottom']}>
       <StatusBar barStyle="dark-content" />
       <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
@@ -1757,6 +1778,10 @@ function Feature({icon,label,value}:{icon:keyof typeof Ionicons.glyphMap;label:s
 }
 
 const styles = StyleSheet.create({
+  splashScreen:{flex:1,backgroundColor:'#06172B',alignItems:'center',justifyContent:'flex-end'},
+  splashLoading:{alignItems:'center',justifyContent:'center',marginBottom:'28%',gap:12},
+  splashSpinner:{width:42,height:42,borderRadius:21,borderWidth:4,borderColor:'rgba(201,154,74,0.28)',borderTopColor:'#D9AD62',borderRightColor:'#D9AD62'},
+  splashLoadingText:{fontSize:10,fontWeight:'800',letterSpacing:3,color:'#F4EBDD'},
   safe:{flex:1,backgroundColor:palette.bg}, authPage:{flexGrow:1,justifyContent:'flex-start',paddingHorizontal:26,paddingTop:28,paddingBottom:44},authBrandMark:{width:64,height:64,borderRadius:20,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center',alignSelf:'center',marginBottom:14},authBrand:{fontSize:32,fontWeight:'900',letterSpacing:1.5,color:palette.navy,textAlign:'center'},authTitle:{fontSize:25,fontWeight:'900',color:palette.ink,marginTop:38},authSubtitle:{fontSize:13,lineHeight:20,color:palette.muted,marginTop:8,marginBottom:12},authSubmit:{backgroundColor:palette.navy,borderRadius:13,padding:16,alignItems:'center',marginTop:24},authSubmitText:{fontSize:14,fontWeight:'900',color:'#fff'},authHint:{fontSize:11,color:palette.muted,textAlign:'center',marginTop:15,lineHeight:17},authError:{flexDirection:'row',alignItems:'flex-start',gap:8,padding:12,borderRadius:12,backgroundColor:palette.redSoft,marginTop:16},authErrorText:{flex:1,fontSize:12,lineHeight:17,color:palette.red},signOutButton:{flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:11,paddingVertical:9,backgroundColor:'#E8ECF1',borderRadius:10},signOutText:{fontSize:11,fontWeight:'800',color:palette.navy}, topbar:{paddingHorizontal:20,paddingTop:8,paddingBottom:12,flexDirection:'row',justifyContent:'space-between',alignItems:'center'},
   brand:{fontSize:25,fontWeight:'900',letterSpacing:1.1,color:palette.navy},brandDot:{color:palette.gold},brandSub:{fontSize:8,fontWeight:'900',letterSpacing:1.6,color:palette.muted,marginTop:1},
   roleSwitch:{flexDirection:'row',backgroundColor:'#E8ECF1',padding:3,borderRadius:12},roleButton:{paddingHorizontal:10,paddingVertical:8,borderRadius:9},roleActive:{backgroundColor:palette.navy},roleText:{fontSize:10,fontWeight:'700',color:palette.muted},roleTextActive:{color:'#fff'},
