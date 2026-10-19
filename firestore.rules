@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isSuperadmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/superadmins/$(request.auth.uid));
+    }
+    function activeMembership(officeId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/office_members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/office_members/$(request.auth.uid)).data.office_id == officeId
+        && get(/databases/$(database)/documents/office_members/$(request.auth.uid)).data.status == 'active';
+    }
+    function isOwner(officeId) {
+      return activeMembership(officeId)
+        && get(/databases/$(database)/documents/office_members/$(request.auth.uid)).data.role == 'owner';
+    }
+
+    // The initial superadmin document must be created by a trusted project owner
+    // in Firebase Console or Admin SDK. Clients can never grant themselves this role.
+    match /superadmins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /profiles/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && !request.resource.data.keys().hasAny(['role', 'isSuperadmin', 'office_id']);
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['full_name', 'avatar_path', 'updated_at']);
+      allow delete: if false;
+    }
+
+    match /office_members/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin()
+        || activeMembership(resource.data.office_id));
+      // Membership roles and office assignments are provisioned by a trusted admin flow.
+      allow write: if false;
+    }
+
+    match /offices/{officeId} {
+      allow read: if isSuperadmin() || activeMembership(officeId);
+      allow create, update, delete: if isSuperadmin();
+    }
+
+    // Flat collections use office_id on each document. Queries must constrain
+    // office_id so Firestore can prove the rule for every returned document.
+    match /{collection}/{docId} {
+      allow read: if signedIn() && (
+        isSuperadmin() ||
+        (resource.data.office_id is string && activeMembership(resource.data.office_id))
+      );
+      allow create: if signedIn() && (
+        isSuperadmin() ||
+        (request.resource.data.office_id is string
+          && activeMembership(request.resource.data.office_id)
+          && request.resource.data.office_id == get(/databases/$(database)/documents/office_members/$(request.auth.uid)).data.office_id)
+      );
+      allow update: if signedIn() && (
+        isSuperadmin() ||
+        (resource.data.office_id is string
+          && activeMembership(resource.data.office_id)
+          && request.resource.data.office_id == resource.data.office_id)
+      );
+      allow delete: if signedIn() && (
+        isSuperadmin() ||
+        (resource.data.office_id is string && isOwner(resource.data.office_id))
+      );
+    }
+  }
+}
