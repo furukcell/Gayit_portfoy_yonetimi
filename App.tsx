@@ -496,48 +496,91 @@ export default function App() {
         if (error) throw new Error('Bir ilan fotoğrafı açılamadı.');
         return data.signedUrl as string;
       }));
-      const photoHtml = photosForPdf.map((url, index) =>
-        '<div class="photo-wrap"><img class="property-photo" src="' + url + '" alt="İlan fotoğrafı ' + (index + 1) + '" /></div>'
+      const heroPhoto = photosForPdf[0];
+      const galleryPhotos = photosForPdf.slice(1, 5);
+      const heroHtml = heroPhoto
+        ? '<img class="hero-photo" src="' + heroPhoto + '" alt="Gayrimenkul fotoğrafı" />'
+        : '<div class="hero-placeholder"><span>GAYIT</span><small>GAYRİMENKUL PORTFÖYÜ</small></div>';
+      const galleryHtml = galleryPhotos.map((url, index) =>
+        '<div class="thumb"><img src="' + url + '" alt="İlan fotoğrafı ' + (index + 2) + '" /></div>'
       ).join('');
+      const locationParts = (p.address || '').split(',').map((part: string) => part.trim()).filter(Boolean);
+      const locationShort = locationParts.slice(-2).join(' / ');
+      const code = htmlEscape(String(p.id || '').slice(0, 18).toUpperCase());
       const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <style>
-      @page{size:A4;margin:12mm}
+      @page{size:A4;margin:0}
       *{box-sizing:border-box}
-      body{font-family:Arial,Helvetica,sans-serif;color:#243447;margin:0;font-size:10pt;line-height:1.45;background:#fff}
-      .page-frame{border:1px solid #d8dee7;padding:7mm;position:relative}
-      .topline{height:4px;background:#c99a4a;margin-bottom:9mm}
-      .brand{background:#10283f;color:#fff;padding:9mm 8mm;border-radius:3mm;page-break-inside:avoid;break-inside:avoid}
-      .brand small{display:block;color:#e8c98f;letter-spacing:2px;font-size:8pt;font-weight:bold}
-      .brand h1{font-size:23pt;line-height:1.12;margin:5mm 0 3mm;font-weight:700}
-      .address{color:#dce5ed;font-size:9pt}
-      .summary{display:flex;justify-content:space-between;align-items:flex-end;gap:8mm;margin:8mm 0 5mm;page-break-inside:avoid;break-inside:avoid}
-      .eyebrow{font-size:8pt;text-transform:uppercase;letter-spacing:1.4px;color:#98702d;font-weight:bold;margin:0 0 2mm}
-      .price{font-size:25pt;font-weight:bold;color:#10283f;line-height:1.1}
-      .rent{font-size:9pt;color:#7a8794;margin-top:1mm}
-      .status{background:#e6f4ed;color:#187451;border-radius:20px;padding:2mm 4mm;font-size:8pt;font-weight:bold;white-space:nowrap}
-      .specs{display:flex;flex-wrap:wrap;gap:2mm;margin:4mm 0 6mm}
-      .spec{border:1px solid #dfe5ec;background:#f7f8fa;padding:2mm 3mm;border-radius:2mm;font-size:8.5pt}
-      .gallery{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin:4mm 0 5mm;page-break-inside:avoid;break-inside:avoid}
-      .photo-wrap{margin:0;page-break-inside:avoid;break-inside:avoid}
-      .property-photo{display:block;width:100%;height:34mm;object-fit:cover;border-radius:2mm;background:#f4f6f9}
-      .section{border-top:1px solid #e1e6ec;padding-top:4mm;margin-top:5mm;page-break-inside:avoid;break-inside:avoid}
-      h2{font-size:11pt;margin:0 0 2mm;color:#10283f}
-      .description{white-space:pre-wrap;overflow-wrap:anywhere}
-      .contact{background:#f7f8fc;border:1px solid #e1e5ef;border-left:3px solid #c99a4a;border-radius:2mm;padding:4mm 5mm;margin-top:6mm;page-break-inside:avoid;break-inside:avoid}
-      .contact strong{font-size:10pt;color:#10283f}
-      .muted{color:#7a8794;font-size:8pt}
-      .footer{border-top:1px solid #e1e6ec;margin-top:7mm;padding-top:3mm;color:#7a8794;font-size:7.5pt;display:flex;justify-content:space-between;gap:6mm;overflow-wrap:anywhere}
-      .gallery-title{font-size:8pt;text-transform:uppercase;letter-spacing:1.4px;color:#98702d;font-weight:bold;margin-top:5mm}
-      @media print{.page-frame{border:1px solid #d8dee7}.section,.contact,.brand,.summary,.gallery,.photo-wrap{break-inside:avoid}}
-      </style></head><body><main class="page-frame"><div class="topline"></div>
-      <header class="brand"><small>GAYIT  /  GAYRİMENKUL PORTFÖYÜ</small><h1>${htmlEscape(p.title)}</h1><div class="address">${htmlEscape(p.address)}</div></header>
-      <section class="summary"><div><div class="eyebrow">İstenen fiyat</div><div class="price">${money(p.price)}</div><div class="rent">${p.kind === 'Kiralık' ? 'Aylık kira bedeli' : 'Satış fiyatı'}</div></div><div class="status">${htmlEscape(p.status)}</div></section>
-      <div class="specs"><span class="spec">${htmlEscape(p.kind)}</span><span class="spec">${htmlEscape(propertyTypeLabel(p.propertyType))}</span><span class="spec">${htmlEscape(p.rooms || 'Oda bilgisi yok')}</span><span class="spec">${htmlEscape(p.area || 'Alan bilgisi yok')}</span>${p.district ? '<span class="spec">' + htmlEscape(p.district) + '</span>' : ''}</div>
-      ${photoHtml ? '<div class="gallery-title">Gayrimenkul fotoğrafları</div><div class="gallery">' + photoHtml + '</div>' : ''}
-      <section class="section"><h2>Gayrimenkul hakkında</h2><div class="description">${htmlEscape(p.description || 'Detaylı bilgi ve gösterim için danışmanımızla iletişime geçebilirsiniz.')}</div></section>
-      <section class="section"><h2>Konum</h2><div>${htmlEscape(p.address)}</div><div class="muted" style="margin-top:2mm">Harita ve gösterim bilgileri için danışmanınızla iletişime geçebilirsiniz.</div></section>
-      <section class="contact"><strong>Detaylı bilgi ve randevu</strong><div style="margin-top:2mm">Danışman: ${htmlEscape(p.agent || 'GAYIT danışman ekibi')}</div><div class="muted" style="margin-top:2mm">GAYIT gayrimenkul portföy sunumu</div></section>
-      <footer class="footer"><span>Portföy kodu: ${htmlEscape(p.id)}</span><span>GAYIT · Portföy Yönetimi</span></footer></main></body></html>`;
+      html,body{margin:0;padding:0;background:#fff;color:#10263a;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{font-size:9pt;line-height:1.38}
+      .sheet{width:210mm;min-height:297mm;padding:8mm 9mm 0;margin:0 auto;position:relative;background:#fff}
+      .masthead{display:flex;align-items:center;justify-content:space-between;gap:6mm;margin-bottom:5mm}
+      .brand{display:flex;align-items:center;gap:3mm;min-width:0}
+      .logo{width:13mm;height:13mm;border-radius:3mm;background:#d3aa62;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18pt;font-weight:bold}
+      .brand-name{font-size:22pt;line-height:1;font-weight:800;letter-spacing:.4px;color:#10283f}
+      .brand-sub{font-size:7.5pt;letter-spacing:1.5px;color:#728397;margin-top:1mm}
+      .motto{text-align:right;font-size:8pt;line-height:1.45;color:#10283f;white-space:nowrap}
+      .codebox{border-left:1px solid #cdd5de;padding-left:4mm;margin-left:4mm;text-align:right;min-width:31mm}
+      .codebox small{display:block;color:#8190a0;font-size:7pt;margin-bottom:1mm}
+      .codebox strong{font-size:8pt;overflow-wrap:anywhere}
+      .hero-row{display:grid;grid-template-columns:1.65fr 1fr;gap:2mm;height:88mm}
+      .hero-visual{position:relative;border-radius:3mm;overflow:hidden;background:#e9eef2;min-width:0}
+      .hero-photo{width:100%;height:100%;object-fit:cover;display:block}
+      .hero-placeholder{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#dce5eb,#f5f7f8);color:#10283f}
+      .hero-placeholder span{font-size:25pt;font-weight:800;letter-spacing:2px}.hero-placeholder small{letter-spacing:2px;color:#78899a}
+      .hero-chip{position:absolute;left:4mm;top:4mm;border-radius:20px;background:#10283f;color:#fff;padding:2mm 4mm;font-size:8pt;font-weight:bold}
+      .hero-location{position:absolute;bottom:0;left:0;right:0;padding:4mm;background:linear-gradient(transparent,rgba(4,17,27,.9));color:#fff;font-size:8pt;font-weight:bold}
+      .hero-info{background:#0c2336;color:#fff;border-radius:3mm;padding:5mm 4.5mm;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+      .status{align-self:flex-end;background:#d9b16a;color:#10283f;padding:1.5mm 3.5mm;border-radius:20px;font-size:7.5pt;font-weight:bold}
+      .hero-info h1{font-size:19pt;line-height:1.12;margin:3mm 0 2mm;overflow-wrap:anywhere}
+      .subtitle{font-size:8pt;color:#cbd7e0;min-height:8mm}
+      .gold-line{width:15mm;height:1mm;background:#d9b16a;margin:3mm 0}
+      .rent-label{font-size:8pt;color:#d4dde4}
+      .price{font-size:23pt;line-height:1.15;font-weight:800;color:#e4bd73;margin:1mm 0 3mm;overflow-wrap:anywhere}
+      .price-caption{font-size:7pt;color:#b6c5d1}
+      .mini-specs{display:grid;grid-template-columns:1fr 1fr;gap:2mm;margin-top:auto}
+      .mini-spec{border:1px solid #315065;border-radius:2.5mm;padding:2.5mm 2mm;min-width:0}
+      .mini-spec b{display:block;font-size:10pt;color:#fff}
+      .mini-spec small{display:block;color:#bdcbd5;font-size:7pt;margin-top:1mm}
+      .thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:2mm;margin-top:2.5mm;height:28mm}
+      .thumb{overflow:hidden;border-radius:2mm;background:#e8edf1}
+      .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+      .more-photos{display:flex;align-items:center;justify-content:center;text-align:center;color:#10283f;background:#eef2f5;font-size:9pt;font-weight:bold}
+      .content-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:3.5mm;margin-top:4mm}
+      .left-col,.right-col{display:flex;flex-direction:column;gap:3mm;min-width:0}
+      .panel{background:#f3f6f9;border-radius:2.5mm;padding:4mm;page-break-inside:avoid;break-inside:avoid}
+      .panel h2{font-size:10.5pt;margin:0 0 2.5mm;color:#10283f;display:flex;align-items:center;gap:2mm}
+      .panel h2 .symbol{font-size:12pt;color:#bd8e42}
+      .description{font-size:8.5pt;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+      .feature-list{display:grid;grid-template-columns:1fr 1fr;gap:1.5mm}
+      .feature{background:#fff;border-radius:1.5mm;padding:2mm 2.5mm;display:flex;justify-content:space-between;align-items:center;gap:2mm;font-size:7.5pt}
+      .feature span{color:#637386}.feature b{color:#10283f;text-align:right}
+      .address-text{font-size:8.5pt;line-height:1.5;color:#53677b;overflow-wrap:anywhere}
+      .map-placeholder{height:26mm;border-radius:2mm;margin-top:3mm;overflow:hidden;background:#e6edf0;position:relative;display:flex;align-items:center;justify-content:center;text-align:center;color:#758899}
+      .map-lines{position:absolute;inset:0;background:linear-gradient(28deg,transparent 44%,#fff 45%,#fff 47%,transparent 48%),linear-gradient(145deg,transparent 35%,#fff 36%,#fff 39%,transparent 40%),linear-gradient(80deg,transparent 62%,#fff 63%,#fff 65%,transparent 66%);opacity:.9}
+      .map-label{position:relative;background:#fffE;padding:2mm 4mm;border-radius:2mm;font-size:7.5pt}
+      .map-pin{font-size:14pt;color:#c74e42}
+      .contact{display:grid;grid-template-columns:18mm 1fr;gap:3mm;align-items:center;background:#f3f6f9;border-radius:2.5mm;padding:3.5mm 4mm;margin-top:3.5mm;page-break-inside:avoid;break-inside:avoid}
+      .agent-mark{height:17mm;width:17mm;border-radius:2mm;background:#dce5eb;color:#10283f;display:flex;align-items:center;justify-content:center;font-size:17pt;font-weight:bold}
+      .contact-label{font-size:7pt;letter-spacing:1.2px;color:#bd8e42;font-weight:bold}
+      .agent-name{font-size:11pt;font-weight:bold;margin:1mm 0;color:#10283f}
+      .contact-note{font-size:7.5pt;color:#627487}
+      .footer{margin:4mm -9mm 0;padding:4mm 9mm;background:#0c2336;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:4mm;border-top:2mm solid #d9b16a}
+      .footer-brand{font-size:13pt;font-weight:800;letter-spacing:.5px}.footer-sub{font-size:6.5pt;color:#9eb5c5;letter-spacing:1px}
+      .footer-note{text-align:center;color:#d4dee6;font-size:7pt;flex:1}
+      .footer-code{text-align:right;font-size:7pt;color:#d4dee6;overflow-wrap:anywhere;max-width:35mm}
+      @media print{.sheet{margin:0}.panel,.contact,.hero-row,.thumbs{break-inside:avoid}}
+      </style></head><body><main class="sheet">
+      <header class="masthead"><div class="brand"><div class="logo">⌂</div><div><div class="brand-name">GAYIT</div><div class="brand-sub">GAYRİMENKUL SUNUMU</div></div></div><div class="motto">Doğru portföy,<br/>doğru müşteri.</div><div class="codebox"><small>PORTFÖY KODU</small><strong>${code}</strong></div></header>
+      <section class="hero-row"><div class="hero-visual">${heroHtml}<div class="hero-chip">${htmlEscape(p.kind)}</div><div class="hero-location">${htmlEscape(p.address)}</div></div>
+      <div class="hero-info"><span class="status">${htmlEscape(p.status)}</span><h1>${htmlEscape(p.title)}</h1><div class="subtitle">${htmlEscape((p.description || '').split(/[.!?]/)[0] || propertyTypeLabel(p.propertyType))}</div><div class="gold-line"></div><div class="rent-label">${p.kind === 'Kiralık' ? 'AYLIK KİRA BEDELİ' : 'İSTENEN SATIŞ FİYATI'}</div><div class="price">${money(p.price)}</div><div class="price-caption">İlan fiyatı</div><div class="mini-specs"><div class="mini-spec"><b>${htmlEscape(p.rooms || '—')}</b><small>Oda sayısı</small></div><div class="mini-spec"><b>${htmlEscape(p.area || '—')}</b><small>Alan</small></div><div class="mini-spec"><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b><small>Emlak tipi</small></div><div class="mini-spec"><b>${htmlEscape(p.kind)}</b><small>İşlem türü</small></div></div></div></section>
+      ${galleryHtml ? '<section class="thumbs">' + galleryHtml + (photosForPdf.length > 5 ? '<div class="thumb more-photos">+' + (photosForPdf.length - 5) + '<br/>fotoğraf</div>' : '') + '</section>' : ''}
+      <section class="content-grid"><div class="left-col"><article class="panel"><h2><span class="symbol">▤</span> Gayrimenkul hakkında</h2><div class="description">${htmlEscape(p.description || 'Detaylı bilgi ve gösterim için danışmanımızla iletişime geçebilirsiniz.')}</div></article>
+      <article class="panel"><h2><span class="symbol">✦</span> Öne çıkan özellikler</h2><div class="feature-list"><div class="feature"><span>Alan</span><b>${htmlEscape(p.area || 'Belirtilmedi')}</b></div><div class="feature"><span>Oda sayısı</span><b>${htmlEscape(p.rooms || 'Belirtilmedi')}</b></div><div class="feature"><span>Emlak tipi</span><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b></div><div class="feature"><span>İşlem türü</span><b>${htmlEscape(p.kind)}</b></div><div class="feature"><span>Durum</span><b>${htmlEscape(p.status)}</b></div><div class="feature"><span>Bölge</span><b>${htmlEscape(p.district || locationShort || 'Belirtilmedi')}</b></div></div></article></div>
+      <div class="right-col"><article class="panel"><h2><span class="symbol">●</span> Konum</h2><div class="address-text">${htmlEscape(p.address)}</div><div class="map-placeholder"><div class="map-lines"></div><div class="map-label"><div class="map-pin">●</div>${htmlEscape(locationShort || 'Konum bilgisi')}</div></div><div class="muted" style="font-size:7pt;margin-top:2mm">Kesin konum için danışmanınızdan bilgi alabilirsiniz.</div></article></div></section>
+      <section class="contact"><div class="agent-mark">G</div><div><div class="contact-label">DANIŞMAN</div><div class="agent-name">${htmlEscape(p.agent || 'GAYIT danışman ekibi')}</div><div class="contact-note">Bu portföy hakkında detaylı bilgi ve gösterim için danışmanınızla iletişime geçebilirsiniz.</div></div></section>
+      <footer class="footer"><div><div class="footer-brand">⌂ GAYIT</div><div class="footer-sub">GAYRİMENKUL SUNUMU</div></div><div class="footer-note">Bu portföy GAYIT Portföy Yönetimi ile oluşturulmuştur.</div><div class="footer-code">PORTFÖY KODU<br/><b>${code}</b></div></footer>
+      </main></body></html>`;
       const file = await Print.printToFileAsync({ html });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', dialogTitle: 'Gayrimenkul sunumunu paylaş' });
       else Alert.alert('PDF hazır', 'PDF dosyası oluşturuldu: ' + file.uri);
