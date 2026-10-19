@@ -8,13 +8,13 @@ type Row = Record<string, any>;
 const err = (message: string) => ({ message });
 
 class CollectionQuery {
-  filters: any[] = []; orders: any[] = []; max?: number; op = 'select'; payload: any; one = false; optional = false; conflict: string[] = []; selectedFields = '*'; hasOfficeFilter = false;
+  filters: any[] = []; orders: {field:string; direction:'asc'|'desc'}[] = []; max?: number; op = 'select'; payload: any; one = false; optional = false; conflict: string[] = []; selectedFields = '*'; hasOfficeFilter = false;
   constructor(private table: string) {}
   select(_fields = '*') { this.selectedFields = _fields; return this; }
   eq(k: string, v: any) { if (k === 'office_id') this.hasOfficeFilter = true; this.filters.push((k === 'id' || (this.table === 'office_members' && k === 'user_id')) ? where(documentId(), '==', String(v)) : where(k, '==', v)); return this; }
   neq(k: string, v: any) { this.filters.push((k === 'id' || (this.table === 'office_members' && k === 'user_id')) ? where(documentId(), '!=', String(v)) : where(k, '!=', v)); return this; }
   in(k: string, v: any[]) { this.filters.push(v.length ? where(k === 'id' ? documentId() : k, 'in', v.slice(0, 30)) : where(documentId(), '==', '__empty__')); return this; }
-  order(k: string, o?: {ascending?: boolean}) { this.orders.push(orderBy(k, o?.ascending === false ? 'desc' : 'asc')); return this; }
+  order(k: string, o?: {ascending?: boolean}) { this.orders.push({field:k, direction:o?.ascending === false ? 'desc' : 'asc'}); return this; }
   limit(n: number) { this.max = n; return this; }
   insert(v: any) { this.op = 'insert'; this.payload = v; return this; }
   upsert(v: any, options?: {onConflict?: string}) { this.op = 'upsert'; this.payload = v; this.conflict = options?.onConflict?.split(',').map(s => s.trim()).filter(Boolean) || []; return this; }
@@ -47,7 +47,7 @@ class CollectionQuery {
           }
         }
       }
-      const snap = await getDocs(query(col, ...this.filters, ...this.orders, ...(this.max ? [take(this.max)] : [])));
+      const snap = await getDocs(query(col, ...this.filters));
       let rows = snap.docs.map(d => ({id:d.id, ...d.data()} as Row));
       if (this.table === 'office_members') {
         rows = await Promise.all(rows.map(async row => {
@@ -68,6 +68,14 @@ class CollectionQuery {
           return { ...row, properties: propertySnap?.exists() ? { id: propertySnap.id, ...propertySnap.data() } : null, customers: customerSnap?.exists() ? { id: customerSnap.id, ...customerSnap.data() } : null };
         }));
       }
+      for (const order of [...this.orders].reverse()) {
+        rows.sort((a, b) => {
+          const av = a[order.field], bv = b[order.field];
+          const cmp = av == null ? (bv == null ? 0 : -1) : bv == null ? 1 : av < bv ? -1 : av > bv ? 1 : 0;
+          return order.direction === 'desc' ? -cmp : cmp;
+        });
+      }
+      if (this.max) rows = rows.slice(0, this.max);
       if (this.op === 'update' || this.op === 'delete') {
         for (const row of rows) {
           if (this.table === 'office_members' && this.op === 'update' && typeof this.payload?.status === 'string') {
