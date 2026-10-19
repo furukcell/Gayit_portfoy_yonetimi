@@ -120,7 +120,7 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
   const Nav=()=> <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.nav}>{([{key:'overview',label:'Genel Bakış',icon:'grid-outline'},{key:'offices',label:'Ofisler',icon:'business-outline'},{key:'payments',label:'Tahsilatlar',icon:'card-outline'},{key:'create',label:'Ofis Oluştur',icon:'add-circle-outline'}] as const).map(item=><Pressable key={item.key} onPress={()=>{setSection(item.key);setSelected(null);setMessage('');}} style={[s.navItem,section===item.key&&s.navOn]}><Ionicons name={item.icon as any} size={17} color={section===item.key?'#fff':C.muted}/><Text style={[s.navText,section===item.key&&{color:'#fff'}]}>{item.label}</Text></Pressable>)}</ScrollView>;
   const Metric=({label,value,icon,note}:{label:string;value:string;icon:any;note?:string})=><View style={s.metric}><View style={s.metricIcon}><Ionicons name={icon} size={18} color={C.navy2}/></View><Text style={s.metricValue}>{value}</Text><Text style={s.metricLabel}>{label}</Text>{!!note&&<Text style={s.metricNote}>{note}</Text>}</View>;
 
-  return <SafeAreaView style={s.safe} edges={['top','left','right','bottom']}><StatusBar barStyle="light-content" backgroundColor={C.navy}/><Header/><Nav/>
+  return <SafeAreaView style={s.safe} edges={['top','left','right','bottom']}><StatusBar barStyle="light-content"/><Header/><Nav/>
     <ScrollView contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
       {loading&&<View style={s.loading}><ActivityIndicator color={C.navy}/><Text style={s.muted}>Veriler yükleniyor…</Text></View>}
       {section==='overview'&&<>
