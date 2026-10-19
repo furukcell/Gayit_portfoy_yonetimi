@@ -36,7 +36,7 @@ service cloud.firestore {
           && request.resource.data.must_change_password == true
           && isOwner(request.resource.data.office_id));
       allow update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['full_name', 'avatar_path', 'updated_at', 'must_change_password']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['full_name', 'avatar_path', 'phone', 'email', 'updated_at', 'must_change_password']);
       allow delete: if false;
     }
     match /office_members/{uid} {
