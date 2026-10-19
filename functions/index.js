@@ -15,7 +15,7 @@ function requireAuth(request) {
 }
 async function requireSuperadmin(uid) {
   const snap = await db.doc('superadmins/' + uid).get();
-  if (!snap.exists) throw new HttpsError('permission-denied', 'Süperadmin yetkisi gerekli.');
+  if (!snap.exists || snap.data().enabled !== true) throw new HttpsError('permission-denied', 'Etkin süperadmin yetkisi gerekli.');
 }
 async function requireOwner(uid) {
   const snap = await db.doc('office_members/' + uid).get();
@@ -41,15 +41,27 @@ async function createAccount(username, password, displayName) {
 exports.createOffice = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const uid = requireAuth(request);
   await requireSuperadmin(uid);
-  const { officeName, ownerFullName, ownerUsername: rawUsername, ownerPassword } = request.data || {};
+  const { officeName, ownerFullName, ownerUsername: rawUsername, ownerPassword, planName, feeAmount, billingCycle, nextDueDate } = request.data || {};
   if (typeof officeName !== 'string' || officeName.trim().length < 2 || typeof ownerFullName !== 'string' || ownerFullName.trim().length < 2) {
     throw new HttpsError('invalid-argument', 'Ofis adı ve ofis sahibi adı gerekli.');
   }
   const username = validateUsername(rawUsername);
+  const amount = Number(feeAmount || 0);
+  const cycle = billingCycle === 'yearly' ? 'yearly' : 'monthly';
+  if (!Number.isFinite(amount) || amount < 0) throw new HttpsError('invalid-argument', 'Abonelik ücreti geçersiz.');
+  const defaultDue = new Date();
+  defaultDue.setDate(defaultDue.getDate() + (cycle === 'yearly' ? 365 : 30));
+  const due = typeof nextDueDate === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(nextDueDate) ? nextDueDate : defaultDue.toISOString().slice(0, 10);
+  const now = new Date().toISOString();
   const owner = await createAccount(username, ownerPassword, ownerFullName.trim());
   const officeRef = db.collection('offices').doc();
   const batch = db.batch();
-  batch.set(officeRef, { name: officeName.trim(), status: 'active', created_at: new Date().toISOString(), created_by: uid });
+  batch.set(officeRef, {
+    name: officeName.trim(), status: 'active', created_at: now, created_by: uid,
+    plan_name: String(planName || 'Standart').trim().slice(0, 80),
+    fee_amount: amount, billing_cycle: cycle, subscription_status: 'active',
+    subscription_start: now, next_due_date: due
+  });
   batch.set(db.doc('profiles/' + owner.uid), { username, full_name: ownerFullName.trim(), office_id: officeRef.id, avatar_path: null, account_status: 'active', must_change_password: true, created_at: new Date().toISOString() });
   batch.set(db.doc('office_members/' + owner.uid), { office_id: officeRef.id, role: 'owner', status: 'active', created_at: new Date().toISOString() });
   await batch.commit();
