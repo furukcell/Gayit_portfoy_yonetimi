@@ -122,6 +122,10 @@ export default function App() {
   const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'Tümü' | 'Satılık' | 'Kiralık'>('Tümü');
+  const [quickTypeFilter, setQuickTypeFilter] = useState('Tümü');
+  const [quickCityFilter, setQuickCityFilter] = useState('Tümü');
+  const [quickDistrictFilter, setQuickDistrictFilter] = useState('Tümü');
+  const [quickDropdown, setQuickDropdown] = useState<null | 'type' | 'city' | 'district'>(null);
   const [sortBy, setSortBy] = useState<'newest' | 'priceAsc' | 'priceDesc'>('newest');
   const [showArchived, setShowArchived] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'Tümü' | PropertyStatus>('Tümü');
@@ -175,10 +179,15 @@ export default function App() {
     const minPrice = minPriceFilter.trim() ? Number(minPriceFilter.replace(/[^0-9]/g, '')) : null;
     const maxPrice = maxPriceFilter.trim() ? Number(maxPriceFilter.replace(/[^0-9]/g, '')) : null;
     const statusMatch = statusFilter === 'Tümü' || p.status === statusFilter;
+    const city = (p.address.split(',').map(part => part.trim()).filter(Boolean).slice(-1)[0] || '').toLocaleLowerCase('tr-TR');
+    const district = (p.district || p.address.split(',').map(part => part.trim()).filter(Boolean).slice(-2)[0] || '').toLocaleLowerCase('tr-TR');
+    const typeMatch = quickTypeFilter === 'Tümü' || propertyTypeLabel(p.propertyType) === quickTypeFilter;
+    const cityMatch = quickCityFilter === 'Tümü' || city === quickCityFilter.toLocaleLowerCase('tr-TR');
+    const districtMatch = quickDistrictFilter === 'Tümü' || district === quickDistrictFilter.toLocaleLowerCase('tr-TR');
     const minMatch = minPrice === null || p.price >= minPrice;
     const maxMatch = maxPrice === null || p.price <= maxPrice;
-    return searchMatch && (showArchived ? p.status === 'Arşivde' : p.status !== 'Arşivde') && (filter === 'Tümü' || p.kind === filter) && statusMatch && minMatch && maxMatch && (!favoritesOnly || favoriteIds.includes(p.id)) && (!recentOnly || recentPropertyIds.includes(p.id));
-  }).sort((a,b) => sortBy === 'priceAsc' ? a.price-b.price : sortBy === 'priceDesc' ? b.price-a.price : sortBy === 'newest' ? 0 : 0), [properties, role, search, filter, sortBy, showArchived, statusFilter, minPriceFilter, maxPriceFilter, favoritesOnly, favoriteIds, recentOnly, recentPropertyIds]);
+    return searchMatch && (showArchived ? p.status === 'Arşivde' : p.status !== 'Arşivde') && (filter === 'Tümü' || p.kind === filter) && typeMatch && cityMatch && districtMatch && statusMatch && minMatch && maxMatch && (!favoritesOnly || favoriteIds.includes(p.id)) && (!recentOnly || recentPropertyIds.includes(p.id));
+  }).sort((a,b) => sortBy === 'priceAsc' ? a.price-b.price : sortBy === 'priceDesc' ? b.price-a.price : sortBy === 'newest' ? 0 : 0), [properties, role, search, filter, quickTypeFilter, quickCityFilter, quickDistrictFilter, sortBy, showArchived, statusFilter, minPriceFilter, maxPriceFilter, favoritesOnly, favoriteIds, recentOnly, recentPropertyIds]);
 
   const saveTransaction = async () => {
     if (transactionBusy) return;
@@ -1146,6 +1155,24 @@ export default function App() {
         {tab === 'portfolio' && <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
           <Text style={styles.eyebrow}>GAYIT · PORTFÖY</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Portföyler</Text><Text style={styles.pageSub}>{role === 'owner' ? 'Ofisteki tüm gayrimenkuller' : 'Sana ait gayrimenkuller'}</Text></View><Pressable onPress={()=>setAddOpen(true)} style={styles.addButton}><Ionicons name="add" size={25} color="#fff"/></Pressable></View>
           <View style={styles.search}><Ionicons name="search-outline" size={19} color={palette.muted}/><TextInput value={search} onChangeText={setSearch} placeholder="İlan, adres veya kod ara" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
+          <Text style={[styles.sectionTitle,{marginTop:12,marginBottom:8}]}>Hızlı ilan bul</Text>
+          <View style={{flexDirection:'row',gap:8}}>
+            {([{key:'type' as const,label:quickTypeFilter==='Tümü'?'Gayrimenkul tipi':quickTypeFilter},{key:'city' as const,label:quickCityFilter==='Tümü'?'Şehir':quickCityFilter},{key:'district' as const,label:quickDistrictFilter==='Tümü'?'Mahalle / ilçe':quickDistrictFilter}]).map(item=><Pressable key={item.key} onPress={()=>setQuickDropdown(item.key)} style={{flex:1,minHeight:44,paddingHorizontal:9,borderRadius:11,borderWidth:1,borderColor:palette.line,backgroundColor:palette.white,flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><Text numberOfLines={1} style={{fontSize:12,color:palette.ink,flexShrink:1}}>{item.label}</Text><Ionicons name="chevron-down" size={16} color={palette.muted}/></Pressable>)}
+          </View>
+          {(quickTypeFilter!=='Tümü'||quickCityFilter!=='Tümü'||quickDistrictFilter!=='Tümü')&&<Pressable onPress={()=>{setQuickTypeFilter('Tümü');setQuickCityFilter('Tümü');setQuickDistrictFilter('Tümü');}} style={{alignSelf:'flex-start',marginTop:7,paddingVertical:4}}><Text style={{fontSize:12,color:palette.green,fontWeight:'600'}}>Hızlı filtreleri temizle</Text></Pressable>}
+          <Modal visible={quickDropdown!==null} transparent animationType="fade" onRequestClose={()=>setQuickDropdown(null)}>
+            <Pressable onPress={()=>setQuickDropdown(null)} style={{flex:1,backgroundColor:'rgba(10,22,36,0.45)',justifyContent:'flex-end'}}>
+              <Pressable onPress={()=>{}} style={{backgroundColor:palette.white,borderTopLeftRadius:22,borderTopRightRadius:22,padding:18,maxHeight:'72%'}}>
+                <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12}}><Text style={{fontSize:18,fontWeight:'700',color:palette.navy}}>{quickDropdown==='type'?'Gayrimenkul tipi':quickDropdown==='city'?'Şehir seç':'Mahalle / ilçe seç'}</Text><Pressable onPress={()=>setQuickDropdown(null)}><Ionicons name="close" size={23} color={palette.ink}/></Pressable></View>
+                <ScrollView keyboardShouldPersistTaps="handled">
+                  {['Tümü',...(quickDropdown==='type'?['Daire','Villa','Arsa','İş yeri','Müstakil ev','Diğer']:quickDropdown==='city'?Array.from(new Set(properties.map(p=>p.address.split(',').map(part=>part.trim()).filter(Boolean).slice(-1)[0]).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'tr')):Array.from(new Set(properties.map(p=>p.district||p.address.split(',').map(part=>part.trim()).filter(Boolean).slice(-2)[0]).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'tr')))].map(option=>{
+                    const active=quickDropdown==='type'?quickTypeFilter===option:quickDropdown==='city'?quickCityFilter===option:quickDistrictFilter===option;
+                    return <Pressable key={option} onPress={()=>{if(quickDropdown==='type')setQuickTypeFilter(option);else if(quickDropdown==='city'){setQuickCityFilter(option);setQuickDistrictFilter('Tümü');}else setQuickDistrictFilter(option);setQuickDropdown(null);}} style={{paddingVertical:13,paddingHorizontal:12,borderBottomWidth:1,borderBottomColor:palette.line,flexDirection:'row',alignItems:'center',justifyContent:'space-between',backgroundColor:active?palette.goldSoft:palette.white}}><Text style={{fontSize:15,color:palette.ink}}>{option}</Text>{active&&<Ionicons name="checkmark-circle" size={19} color={palette.green}/>}</Pressable>
+                  })}
+                </ScrollView>
+              </Pressable>
+            </Pressable>
+          </Modal>
           <View style={styles.filters}>{(['Tümü','Satılık','Kiralık'] as const).map(f=><Pressable key={f} onPress={()=>setFilter(f)} style={[styles.filter,filter===f&&styles.filterOn]}><Text style={[styles.filterText,filter===f&&styles.filterTextOn]}>{f}</Text></Pressable>)}</View>
           <View style={[styles.filters,{marginTop:10}]}>{([{key:'newest',label:'En yeni'},{key:'priceAsc',label:'Fiyat ↑'},{key:'priceDesc',label:'Fiyat ↓'}] as const).map(opt=><Pressable key={opt.key} onPress={()=>setSortBy(opt.key)} style={[styles.filter,sortBy===opt.key&&styles.filterOn]}><Text style={[styles.filterText,sortBy===opt.key&&styles.filterTextOn]}>{opt.label}</Text></Pressable>)}</View>
           <Pressable onPress={()=>{setRecentOnly(v=>!v);setFavoritesOnly(false);}} style={[styles.filter,{alignSelf:'flex-start',marginTop:8},recentOnly&&styles.filterOn]}><Text style={[styles.filterText,recentOnly&&styles.filterTextOn]}>{recentOnly?'Son görüntülenenler gösteriliyor':'◷ Son görüntülenenler'}</Text></Pressable>
