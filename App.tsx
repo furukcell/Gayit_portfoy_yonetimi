@@ -138,6 +138,8 @@ export default function App() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [recentOnly, setRecentOnly] = useState(false);
   const [recentPropertyIds, setRecentPropertyIds] = useState<string[]>([]);
+  const [portfolioPresentationMode, setPortfolioPresentationMode] = useState(false);
+  const [selectedPresentationIds, setSelectedPresentationIds] = useState<string[]>([]);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [transactionPropertyId, setTransactionPropertyId] = useState('');
   const [transactionFinalPrice, setTransactionFinalPrice] = useState('');
@@ -530,6 +532,41 @@ export default function App() {
       else Alert.alert('PDF hazır', 'PDF dosyası oluşturuldu: ' + file.uri);
     } catch (error) {
       Alert.alert('PDF oluşturulamadı', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
+    }
+  };
+  const createMultiPropertyPdf = async () => {
+    const selectedProperties = properties.filter(p => selectedPresentationIds.includes(p.id));
+    if (selectedProperties.length < 2) {
+      Alert.alert('Portföy seç', 'Müşteriye sunmak için en az iki portföy seç.');
+      return;
+    }
+    try {
+      const client = getFirebaseClient();
+      const pages = await Promise.all(selectedProperties.map(async p => {
+        const { data: photoRows, error } = await client.from('property_photos')
+          .select('storage_path,sort_order').eq('property_id', p.id).order('sort_order', { ascending: true }).limit(6);
+        if (error) throw new Error(p.title + ' fotoğrafları alınamadı.');
+        const urls = await Promise.all((photoRows || []).map(async (photo: any) => {
+          const { data, error: urlError } = await client.storage.from('property-photos').createSignedUrl(photo.storage_path, 3600);
+          if (urlError) throw new Error('Bir portföy fotoğrafı açılamadı.');
+          return data.signedUrl as string;
+        }));
+        const gallery = urls.map(url => '<img src="' + url + '" />').join('');
+        return '<section class="property"><div class="brand"><small>GAYIT · MÜŞTERİYE ÖZEL PORTFÖY SEÇKİSİ</small><h1>' + htmlEscape(p.title) + '</h1><div>' + htmlEscape(p.address) + '</div></div>' +
+          (gallery ? '<div class="gallery">' + gallery + '</div>' : '') +
+          '<div class="price">' + money(p.price) + (p.kind === 'Kiralık' ? ' / ay' : '') + '</div>' +
+          '<div class="specs">' + [p.kind, propertyTypeLabel(p.propertyType), p.rooms || 'Oda belirtilmedi', p.area || 'Alan belirtilmedi', p.district || ''].filter(Boolean).map(v => '<span>' + htmlEscape(v) + '</span>').join('') + '</div>' +
+          '<h2>Gayrimenkul hakkında</h2><p>' + htmlEscape(p.description || 'Detaylı bilgi için danışmanınızla iletişime geçebilirsiniz.') + '</p>' +
+          '<p class="muted">Portföy kodu: ' + htmlEscape(p.id) + ' · Danışman: ' + htmlEscape(p.agent || 'GAYIT danışman ekibi') + '</p></section>';
+      }));
+      const html = '<!doctype html><html lang="tr"><head><meta charset="utf-8"><style>@page{size:A4;margin:15mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#17283b;font-size:11pt}.property{page-break-after:always;break-after:page}.property:last-child{page-break-after:auto;break-after:auto}.brand{background:#10243a;color:white;padding:24px;border-radius:12px}.brand small{color:#e8c98f;letter-spacing:1.5px}.brand h1{font-size:23pt;margin:12px 0}.gallery{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0}.gallery img{width:100%;height:170px;object-fit:cover;border-radius:8px}.price{font-size:25pt;font-weight:bold;color:#10243a;margin:22px 0}.specs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}.specs span{padding:8px;background:#f4f6f9;border:1px solid #e3e8ef;border-radius:7px}h2{font-size:14pt;color:#10243a}.muted{color:#778597;font-size:9pt}</style></head><body>' + pages.join('') + '</body></html>';
+      const file = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', dialogTitle: 'Müşteriye özel portföy sunumunu paylaş' });
+      else Alert.alert('PDF hazır', 'PDF dosyası oluşturuldu: ' + file.uri);
+      setPortfolioPresentationMode(false);
+      setSelectedPresentationIds([]);
+    } catch (error) {
+      Alert.alert('Sunum oluşturulamadı', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
     }
   };
   const loadProperties = async (targetOfficeId: string) => {
@@ -1212,7 +1249,7 @@ export default function App() {
         </ScrollView>}
 
         {tab === 'portfolio' && <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
-          <Text style={styles.eyebrow}>GAYIT · PORTFÖY</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Portföyler</Text><Text style={styles.pageSub}>{role === 'owner' ? 'Ofisteki tüm gayrimenkuller' : 'Sana ait gayrimenkuller'}</Text></View><Pressable onPress={()=>setAddOpen(true)} style={styles.addButton}><Ionicons name="add" size={25} color="#fff"/></Pressable></View>
+          <Text style={styles.eyebrow}>GAYIT · PORTFÖY</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Portföyler</Text><Text style={styles.pageSub}>{role === 'owner' ? 'Ofisteki tüm gayrimenkuller' : 'Sana ait gayrimenkuller'}</Text></View><View style={{flexDirection:'row',gap:8}}><Pressable onPress={()=>{setPortfolioPresentationMode(v=>!v);setSelectedPresentationIds([]);}} style={[styles.addButton,{backgroundColor:portfolioPresentationMode?palette.green:palette.navy2}]}><Ionicons name="documents-outline" size={22} color="#fff"/></Pressable><Pressable onPress={()=>setAddOpen(true)} style={styles.addButton}><Ionicons name="add" size={25} color="#fff"/></Pressable></View></View>
           <View style={styles.search}><Ionicons name="search-outline" size={19} color={palette.muted}/><TextInput value={search} onChangeText={setSearch} placeholder="İlan, adres veya kod ara" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
           <Text style={[styles.sectionTitle,{marginTop:12,marginBottom:8}]}>Hızlı ilan bul</Text>
           <View style={{flexDirection:'row',gap:8}}>
@@ -1244,9 +1281,9 @@ export default function App() {
           <Text style={[styles.sectionTitle,{marginTop:14,marginBottom:8}]}>İlan durumu</Text>
           <View style={styles.filters}>{(['Tümü','Aktif','Opsiyonlu','Satıldı','Kiralandı'] as const).map(status=><Pressable key={status} onPress={()=>setStatusFilter(status)} style={[styles.filter,statusFilter===status&&styles.filterOn]}><Text style={[styles.filterText,statusFilter===status&&styles.filterTextOn]}>{status}</Text></Pressable>)}</View>
           <Pressable onPress={()=>setShowArchived(v=>!v)} style={[styles.filter,{alignSelf:'flex-start',marginTop:10},showArchived&&styles.filterOn]}><Text style={[styles.filterText,showArchived&&styles.filterTextOn]}>{showArchived ? 'Arşivden çıkış · Aktif portföyleri göster' : 'Arşivlenmiş portföyleri göster'}</Text></Pressable>
-          <Text style={styles.resultCount}>{propertiesLoading ? 'Portföyler yükleniyor…' : `${visibleProperties.length} portföy`}</Text>
+          {portfolioPresentationMode && <View style={{backgroundColor:palette.goldSoft,borderRadius:14,padding:13,marginBottom:12}}><Text style={styles.teamName}>Müşteriye özel sunum</Text><Text style={styles.pageSub}>Listeden en az 2 portföy seç. Seçilen ilanlar tek PDF dosyasında, her biri ayrı sayfada hazırlanır.</Text><Text style={[styles.teamRole,{marginTop:6}]}>{selectedPresentationIds.length} portföy seçildi</Text><Pressable disabled={selectedPresentationIds.length<2} onPress={createMultiPropertyPdf} style={[styles.saveButton,{marginTop:10,opacity:selectedPresentationIds.length<2?0.45:1}]}><Text style={styles.saveButtonText}>Tek PDF oluştur ve paylaş</Text><Ionicons name="share-outline" size={19} color="#fff"/></Pressable></View>}<Text style={styles.resultCount}>{propertiesLoading ? 'Portföyler yükleniyor…' : `${visibleProperties.length} portföy`}</Text>
 
-          {visibleProperties.map(p=><View key={p.id} style={{flexDirection:'row',alignItems:'center',gap:4}}><View style={{flex:1}}><PropertyRow property={p} onPress={()=>openProperty(p)} /></View><Pressable onPress={()=>toggleFavorite(p)} accessibilityLabel={favoriteIds.includes(p.id)?'Favorilerden çıkar':'Favorilere ekle'} style={{width:40,height:48,alignItems:'center',justifyContent:'center',backgroundColor:palette.white,borderRadius:12,borderWidth:1,borderColor:palette.line,marginBottom:11}}><Ionicons name={favoriteIds.includes(p.id)?'heart':'heart-outline'} size={20} color={favoriteIds.includes(p.id)?palette.red:palette.muted}/></Pressable></View>)}
+          {visibleProperties.map(p=><View key={p.id} style={{flexDirection:'row',alignItems:'center',gap:4}}>{portfolioPresentationMode&&<Pressable onPress={()=>setSelectedPresentationIds(ids=>ids.includes(p.id)?ids.filter(id=>id!==p.id):[...ids,p.id])} style={{width:38,height:48,alignItems:'center',justifyContent:'center',marginBottom:11}}><Ionicons name={selectedPresentationIds.includes(p.id)?'checkbox':'square-outline'} size={24} color={selectedPresentationIds.includes(p.id)?palette.green:palette.muted}/></Pressable>}<View style={{flex:1}}><PropertyRow property={p} onPress={()=>portfolioPresentationMode?setSelectedPresentationIds(ids=>ids.includes(p.id)?ids.filter(id=>id!==p.id):[...ids,p.id]):openProperty(p)} /></View>{!portfolioPresentationMode&&<Pressable onPress={()=>toggleFavorite(p)} accessibilityLabel={favoriteIds.includes(p.id)?'Favorilerden çıkar':'Favorilere ekle'} style={{width:40,height:48,alignItems:'center',justifyContent:'center',backgroundColor:palette.white,borderRadius:12,borderWidth:1,borderColor:palette.line,marginBottom:11}}><Ionicons name={favoriteIds.includes(p.id)?'heart':'heart-outline'} size={20} color={favoriteIds.includes(p.id)?palette.red:palette.muted}/></Pressable>}</View>)}
           {!visibleProperties.length && <View style={styles.empty}><Ionicons name="file-tray-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Portföy bulunamadı</Text><Text style={styles.pageSub}>Aramanı değiştir veya yeni ilan ekle.</Text></View>}
         </ScrollView>}
 
