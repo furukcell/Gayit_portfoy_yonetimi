@@ -171,7 +171,7 @@ export default function App() {
       await loadProperties(officeId);
       setTransactionModalOpen(false); setTransactionPropertyId(''); setTransactionFinalPrice(''); setTransactionOfficeCommission(''); setTransactionAgentCommission(''); setTransactionNotes('');
       Alert.alert('İşlem kaydedildi','Satış/kiralama ve komisyon kaydı oluşturuldu.');
-    } catch(error) { Alert.alert('İşlem kaydedilemedi',error instanceof Error?error.message:'Supabase 011 migration dosyasını ve ofis yetkilerini kontrol et.'); }
+    } catch(error) { Alert.alert('İşlem kaydedilemedi',error instanceof Error?error.message:'Firebase Firestore kurallarını ve ofis yetkilerini kontrol et.'); }
     finally { setTransactionBusy(false); }
   };
 
@@ -211,7 +211,7 @@ export default function App() {
       if (error) throw error;
       setFavoriteIds((data || []).map((row: any) => row.property_id));
     } catch {
-      Alert.alert('Favoriler yüklenemedi','Supabase 011 migration dosyasını uyguladığından emin ol.');
+      Alert.alert('Favoriler yüklenemedi','Firebase Firestore kurallarını ve Storage kurulumunu kontrol et.');
     }
   };
   const toggleFavorite = async (property: Property) => {
@@ -230,7 +230,7 @@ export default function App() {
         if (error) throw error;
         setFavoriteIds(ids=>[...ids,property.id]);
       }
-    } catch (error) { Alert.alert('Favori kaydedilemedi',error instanceof Error?error.message:'Supabase 011 migration dosyasını ve yetkileri kontrol et.'); }
+    } catch (error) { Alert.alert('Favori kaydedilemedi',error instanceof Error?error.message:'Firebase 011 migration dosyasını ve yetkileri kontrol et.'); }
   };
 
   const importPortfolioCsv = async () => {
@@ -318,7 +318,7 @@ export default function App() {
       setPropertyPhotos(photos);
     } catch (error) {
       setPropertyPhotos([]);
-      Alert.alert('Fotoğraflar yüklenemedi', 'Supabase 004 migration ve Storage izinlerini kontrol edin.');
+      Alert.alert('Fotoğraflar yüklenemedi', 'Firebase Firestore kurallarını ve Storage izinlerini kontrol edin.');
     } finally { setPhotosBusy(false); }
   };
 
@@ -341,7 +341,7 @@ export default function App() {
       const { error: rowError } = await supabase.from('property_photos').insert({ property_id: selected.id, office_id: officeId, storage_path: storagePath, sort_order: propertyPhotos.length });
       if (rowError) { await supabase.storage.from('property-photos').remove([storagePath]); throw rowError; }
       await loadPropertyPhotos(selected.id);
-    } catch (error) { Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : 'Supabase migration ve Storage izinlerini kontrol edin.'); }
+    } catch (error) { Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : 'Firebase Storage'ın etkin olduğunu ve kuralların yayınlandığını kontrol edin.'); }
     finally { setPhotosBusy(false); }
   };
 
@@ -386,7 +386,7 @@ export default function App() {
           const { error: storageError } = await supabase.storage.from('property-photos').remove([photo.storagePath]);
           if (storageError) {
             await loadPropertyPhotos(propertyId);
-            Alert.alert('Fotoğraf silinemedi', 'Dosya depolamadan silinemedi; kayıt galeride bırakıldı, böylece tekrar deneyebilirsin. Supabase Storage izinlerini kontrol et.');
+            Alert.alert('Fotoğraf silinemedi', 'Dosya depolamadan silinemedi; kayıt galeride bırakıldı, böylece tekrar deneyebilirsin. Firebase Storage izinlerini kontrol et.');
             return;
           }
           const { error: rowError } = await supabase.from('property_photos')
@@ -790,7 +790,7 @@ export default function App() {
         const ext = agentAvatarUri.toLowerCase().includes('.png') ? 'png' : 'jpg';
         avatarPath = officeId + '/agent-' + Date.now() + '.' + ext;
         const { error: uploadError } = await supabase.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
-        if (uploadError) throw new Error('Fotoğraf yüklenemedi. Supabase avatar migration ve izinlerini kontrol edin.');
+        if (uploadError) throw new Error('Fotoğraf yüklenemedi. Firebase Storage'ın etkin olduğunu ve kuralların yayınlandığını kontrol edin.');
       }
       const { data, error } = await supabase.functions.invoke('create-agent', { body: { officeId, username: agentUsername, password: agentPassword, fullName: agentName, avatarPath } });
       if (error || !data?.success) throw new Error(data?.error || error?.message || 'Danışman oluşturulamadı.');
@@ -970,7 +970,7 @@ export default function App() {
           </View>
           <View style={styles.sectionHead}><Text style={styles.sectionTitle}>{role === 'owner' ? 'Son portföy hareketleri' : 'Portföyümden'}</Text><Pressable onPress={()=>setTab('portfolio')}><Text style={styles.link}>Tümünü gör</Text></Pressable></View>
           {roleProperties.slice(0,3).map(p=><PropertyRow key={p.id} property={p} onPress={()=>openProperty(p)} />)}
-          <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Portföy ve ekip kayıtları bağlı Supabase veritabanından yüklenir. Görüntülenme analitiği ve otomatik eşleştirme henüz etkin değil.</Text></View>
+          <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Portföy ve ekip kayıtları Firebase Firestore üzerinden yüklenir. Otomatik eşleştirme için Firebase Functions dağıtılmış olmalıdır; görüntülenme analitiği henüz etkin değil.</Text></View>
         </ScrollView>}
 
         {tab === 'portfolio' && <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
@@ -1027,7 +1027,7 @@ export default function App() {
           <Text style={styles.eyebrow}>EKİP YÖNETİMİ</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Danışmanlar</Text><Text style={styles.pageSub}>Ofis ekibinin portföy ve performans özeti.</Text></View><Pressable onPress={()=>setAgentModalOpen(true)} style={styles.addButton}><Ionicons name="person-add-outline" size={22} color="#fff"/></Pressable></View>
           {teamMembers.map((person)=><View key={person.id || person.username} style={[styles.teamCard,person.status==='disabled'&&{opacity:0.72}]}><View style={styles.avatar}>{person.avatarUrl ? <Image source={{uri:person.avatarUrl}} style={styles.avatarImage}/> : <Text style={styles.avatarText}>{person.name.split(/\s+/).map((part:string)=>part[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')}</Text>}</View><View style={{flex:1}}><Text style={styles.teamName}>{person.name}</Text><Text style={styles.teamRole}>{person.role === 'owner' ? 'Ofis sahibi' : 'Gayrimenkul danışmanı'}{person.role==='agent' ? (person.status==='disabled'?' · Devre dışı':' · Aktif') : ''}</Text><Text style={styles.teamMeta}>@{person.username || 'kullanıcı adı yok'}</Text></View>{person.role==='agent'&&<Pressable disabled={teamStatusBusyId===person.id} onPress={()=>toggleAgentStatus(person)} style={[styles.memberStatusButton,person.status==='disabled'&&styles.memberStatusButtonOn,teamStatusBusyId===person.id&&{opacity:0.5}]}><Text style={[styles.memberStatusButtonText,person.status==='disabled'&&styles.memberStatusButtonTextOn]}>{teamStatusBusyId===person.id?'…':person.status==='active'?'Devre dışı bırak':'Etkinleştir'}</Text></Pressable>}</View>)}
           {!teamMembers.length && <View style={styles.empty}><Ionicons name="people-outline" size={30} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz ekip üyesi yok</Text><Text style={styles.pageSub}>Sağ üstteki butondan ilk danışmanını ekleyebilirsin.</Text></View>}
-          <View style={styles.notice}><Ionicons name="shield-checkmark-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Ekip üyeleri oturum açmış ofisin veritabanından yüklenir. Hesap oluşturma fonksiyonunun deploy edilmiş ve Supabase bağlantısının ayarlanmış olması gerekir.</Text></View>        </ScrollView>}
+          <View style={styles.notice}><Ionicons name="shield-checkmark-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Ekip üyeleri oturum açmış ofisin veritabanından yüklenir. Firebase Functions dağıtılmış ve Firebase yapılandırması tamamlanmış olmalıdır.</Text></View>        </ScrollView>}
 
         {tab === 'stats' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>PERFORMANS ANALİZİ</Text><Text style={styles.pageTitle}>{role === 'owner' ? 'Ofis istatistikleri' : 'Performansım'}</Text><Text style={styles.pageSub}>Portföy ve görüntülenme metrikleri.</Text>
@@ -1177,7 +1177,7 @@ export default function App() {
             <Text style={styles.fieldLabel}>Kullanıcı adı * (3-32 karakter)</Text><TextInput value={agentUsername} onChangeText={setAgentUsername} autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="ornek.ayse" placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>İlk şifre * (en az 10 karakter)</Text><TextInput value={agentPassword} onChangeText={setAgentPassword} secureTextEntry autoCapitalize="none" style={styles.input} placeholder="İlk giriş şifresi" placeholderTextColor={palette.muted}/>
             <Pressable disabled={agentBusy} onPress={createAgent} style={[styles.saveButton,agentBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{agentBusy?'Hesap oluşturuluyor...':'Danışman hesabını oluştur'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
-            <Text style={styles.noticeText}>Fotoğraf yükleme için Supabase'de 002_private_avatars.sql migration uygulanmış olmalı. Hesap oluşturma Edge Function deploy edilmeden işlem tamamlanmaz.</Text>
+            <Text style={styles.noticeText}>Fotoğraf yüklemek için Firebase Storage etkin olmalı ve Storage kuralları yayınlanmalıdır. Danışman hesabı oluşturmak için Firebase Functions dağıtılmış olmalıdır.</Text>
           </ScrollView>
         </SafeAreaView>
       </Modal>
