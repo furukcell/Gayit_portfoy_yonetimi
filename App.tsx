@@ -167,13 +167,6 @@ export default function App() {
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileAvatarUri, setProfileAvatarUri] = useState<string | null>(null);
   const [profileBusy, setProfileBusy] = useState(false);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [profilePhone, setProfilePhone] = useState('');
-  const [profileEmail, setProfileEmail] = useState('');
-  const [profileAvatarPath, setProfileAvatarPath] = useState<string | null>(null);
-  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
-  const [profileAvatarUri, setProfileAvatarUri] = useState<string | null>(null);
-  const [profileBusy, setProfileBusy] = useState(false);
   const [excelFileName, setExcelFileName] = useState('');
   const [excelPreviewCount, setExcelPreviewCount] = useState(0);
   const [minPriceFilter, setMinPriceFilter] = useState('');
