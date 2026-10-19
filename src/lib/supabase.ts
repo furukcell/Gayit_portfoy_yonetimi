@@ -11,8 +11,8 @@ class CollectionQuery {
   filters: any[] = []; orders: any[] = []; max?: number; op = 'select'; payload: any; one = false; optional = false; conflict: string[] = []; selectedFields = '*';
   constructor(private table: string) {}
   select(_fields = '*') { this.selectedFields = _fields; return this; }
-  eq(k: string, v: any) { this.filters.push(k === 'id' ? where(documentId(), '==', String(v)) : where(k, '==', v)); return this; }
-  neq(k: string, v: any) { this.filters.push(k === 'id' ? where(documentId(), '!=', String(v)) : where(k, '!=', v)); return this; }
+  eq(k: string, v: any) { this.filters.push((k === 'id' || (this.table === 'office_members' && k === 'user_id')) ? where(documentId(), '==', String(v)) : where(k, '==', v)); return this; }
+  neq(k: string, v: any) { this.filters.push((k === 'id' || (this.table === 'office_members' && k === 'user_id')) ? where(documentId(), '!=', String(v)) : where(k, '!=', v)); return this; }
   in(k: string, v: any[]) { this.filters.push(v.length ? where(k === 'id' ? documentId() : k, 'in', v.slice(0, 30)) : where(documentId(), '==', '__empty__')); return this; }
   order(k: string, o?: {ascending?: boolean}) { this.orders.push(orderBy(k, o?.ascending === false ? 'desc' : 'asc')); return this; }
   limit(n: number) { this.max = n; return this; }
