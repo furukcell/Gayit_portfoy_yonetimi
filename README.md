@@ -48,7 +48,8 @@ GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve 
 - Müşteri detayından yer gösterme aktivitesi ve randevu kaydı tutma.
 - Gerçekleşen satış/kiralama için portföy, işlem bedeli, tarih, not, ofis komisyonu ve danışman komisyonu alanları.
 - İşlem kaydından sonra portföy durumunu satıldı/kiralandı olarak güncelleme akışı.
-- **Sınırlama:** Teklif aşaması için ayrı, tam bir teklif panosu/teklif geçmişi henüz tamamlanmış bir özellik olarak kabul edilmemelidir. Yer gösterme geçmişi ve gerçekleşen işlem kaydı, teklif yönetimiyle aynı şey değildir.
+- Müşteri detayına bağlı teklif takibi: portföy seçme, tutar, not, bekliyor/karşı teklif/kabul/ret durumları ve teklif geçmişi.
+- Teklifler Firestore'da `property_offers` koleksiyonuna kaydedilir; canlı rules ve yetki testleri yapılmalıdır. Tekliflerin ayrı bir genel kanban panosu henüz yoktur.
 
 ### 5. Danışman ve ofis yönetimi
 - Danışmanları listeleme ve üyeliği etkinleştirme/devre dışı bırakma akışları.
@@ -58,7 +59,7 @@ GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve 
 - Danışman hesabı oluşturma kodu ücretli Cloud Functions kullanmadan Firebase Authentication üzerinden ayrı bir Firebase uygulama oturumu açmayı hedefler. Bunun çalışması için Firebase Authentication sağlayıcısı etkin olmalı, Firestore rules canlı projeye yayımlanmalı ve hesap oluşturma izinleri test edilmelidir.
 
 ### 6. Performans ve raporlama
-- Portföy durum adetleri ve ofis/ekip özetleri.
+- Portföy durum adetleri, aktif müşteri sayısı, bugün/geciken takipler ve önümüzdeki 7 günlük takip özeti.
 - Satış/kiralama kayıtlarında ofis ve danışman komisyonlarını saklama.
 - Portföy verisini CSV olarak paylaşma ve özet rapor akışları.
 - Raporların doğruluğu mevcut veri kayıtlarının eksiksizliğine bağlıdır; kaydedilmemiş işlem veya ölçülmeyen görüntülenme sayıları varsayılmamalıdır.
@@ -73,6 +74,8 @@ GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve 
 - Danışman oluşturma akışının Cloud Functions olmadan çalışması için istemci tarafı Firebase Authentication + Firestore yazma yolu.
 - Ofis sahibi/süperadmin danışman ekleme akışına yönelik Firestore rules düzenlemesi.
 - Portföy ekranında çoklu seçim ve müşteriye özel tek PDF sunumu.
+- Müşteri detayında portföy bazlı teklif tutarı/durumu/notu kaydetme ve teklif durumunu güncelleme.
+- Ana sayfa istatistiklerinde takip ve müşteri göstergeleri.
 - Portföy filtreleri, Excel içe aktarma, fotoğraf sıralama ve komisyon kaydı akışları.
 
 Bu geliştirmeler GitHub'a gönderilmiş olsa da bu belge cihaz testinin veya canlı Firebase deploy işleminin yapıldığını iddia etmez.
@@ -108,7 +111,7 @@ Bu geliştirmeler GitHub'a gönderilmiş olsa da bu belge cihaz testinin veya ca
 ## Bilinen sınırlamalar ve sonraki işler
 1. Danışman oluşturma ve persistence değişiklikleri gerçek cihazda doğrulanmalı.
 2. Ücretli Cloud Functions'a bağlı eşleştirme/ofis oluşturma gibi akışlar Spark planı kısıtlarıyla yeniden ele alınmalı; ücretli altyapı olmadan çalışan alternatifler tamamlanmalı.
-3. Yer gösterme kayıtlarını belirli portföyle ilişkilendiren ve teklif tutarı/durum/geçmişini tutan ayrı bir teklif panosu geliştirilmeli.
+3. Yer gösterme kayıtlarını belirli portföyle ilişkilendirme ve ayrı bir teklif kanban panosu geliştirme.
 4. Danışman performans raporları gerçekleşen işlem, komisyon, yeni müşteri, takip, randevu ve teklif verileriyle tutarlı hesaplanmalı.
 5. Firestore rules ve Storage rules gerçek Firebase projesinde yayımlanıp farklı rollerde negatif/pozitif testlerden geçirilmeli.
 6. Excel içe aktarma ve birleşik PDF akışları gerçek dosya ve fotoğraflarla test edilmeli.
