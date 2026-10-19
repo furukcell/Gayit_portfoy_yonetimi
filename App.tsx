@@ -30,6 +30,8 @@ type Property = {
   id: string; title: string; address: string; district: string; price: number;
   rooms: string; area: string; propertyType?: string; kind: 'Satılık' | 'Kiralık'; status: PropertyStatus;
   agent: string; ownerAgentId: string; views: number; createdAt: string; description: string;
+  bathrooms?: string; balcony?: string; parking?: string; heating?: string; cooling?: string;
+  occupancyPermit?: string; elevator?: string; nearbyAmenities?: string;
 };
 
 const palette = {
@@ -171,6 +173,14 @@ export default function App() {
   const [kind, setKind] = useState<'Satılık' | 'Kiralık'>('Satılık');
   const [propertyType, setPropertyType] = useState('apartment');
   const [description, setDescription] = useState('');
+  const [bathrooms, setBathrooms] = useState('');
+  const [balcony, setBalcony] = useState('Belirtilmedi');
+  const [parking, setParking] = useState('Belirtilmedi');
+  const [heating, setHeating] = useState('Belirtilmedi');
+  const [cooling, setCooling] = useState('Belirtilmedi');
+  const [occupancyPermit, setOccupancyPermit] = useState('Belirtilmedi');
+  const [elevator, setElevator] = useState('Belirtilmedi');
+  const [nearbyAmenities, setNearbyAmenities] = useState('');
   const [ownerContactName, setOwnerContactName] = useState('');
   const [ownerContactPhone, setOwnerContactPhone] = useState('');
   const [selectedOwnerContact, setSelectedOwnerContact] = useState<{ name: string; phone: string } | null>(null);
@@ -576,7 +586,7 @@ export default function App() {
       <div class="hero-info"><span class="status">${htmlEscape(p.status)}</span><h1>${htmlEscape(p.title)}</h1><div class="subtitle">${htmlEscape((p.description || '').split(/[.!?]/)[0] || propertyTypeLabel(p.propertyType))}</div><div class="gold-line"></div><div class="rent-label">${p.kind === 'Kiralık' ? 'AYLIK KİRA BEDELİ' : 'İSTENEN SATIŞ FİYATI'}</div><div class="price">${money(p.price)}</div><div class="price-caption">İlan fiyatı</div><div class="mini-specs"><div class="mini-spec"><b>${htmlEscape(p.rooms || '—')}</b><small>Oda sayısı</small></div><div class="mini-spec"><b>${htmlEscape(p.area || '—')}</b><small>Alan</small></div><div class="mini-spec"><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b><small>Emlak tipi</small></div><div class="mini-spec"><b>${htmlEscape(p.kind)}</b><small>İşlem türü</small></div></div></div></section>
       ${galleryHtml ? '<section class="thumbs">' + galleryHtml + (photosForPdf.length > 5 ? '<div class="thumb more-photos">+' + (photosForPdf.length - 5) + '<br/>fotoğraf</div>' : '') + '</section>' : ''}
       <section class="content-grid"><div class="left-col"><article class="panel"><h2><span class="symbol">▤</span> Gayrimenkul hakkında</h2><div class="description">${htmlEscape(p.description || 'Detaylı bilgi ve gösterim için danışmanımızla iletişime geçebilirsiniz.')}</div></article>
-      <article class="panel"><h2><span class="symbol">✦</span> Öne çıkan özellikler</h2><div class="feature-list"><div class="feature"><span>Alan</span><b>${htmlEscape(p.area || 'Belirtilmedi')}</b></div><div class="feature"><span>Oda sayısı</span><b>${htmlEscape(p.rooms || 'Belirtilmedi')}</b></div><div class="feature"><span>Emlak tipi</span><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b></div><div class="feature"><span>İşlem türü</span><b>${htmlEscape(p.kind)}</b></div><div class="feature"><span>Durum</span><b>${htmlEscape(p.status)}</b></div><div class="feature"><span>Bölge</span><b>${htmlEscape(p.district || locationShort || 'Belirtilmedi')}</b></div></div></article></div>
+      <article class="panel"><h2><span class="symbol">✦</span> Öne çıkan özellikler</h2><div class="feature-list"><div class="feature"><span>Alan</span><b>${htmlEscape(p.area || 'Belirtilmedi')}</b></div><div class="feature"><span>Oda sayısı</span><b>${htmlEscape(p.rooms || 'Belirtilmedi')}</b></div><div class="feature"><span>Emlak tipi</span><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b></div><div class="feature"><span>İşlem türü</span><b>${htmlEscape(p.kind)}</b></div><div class="feature"><span>Durum</span><b>${htmlEscape(p.status)}</b></div><div class="feature"><span>Bölge</span><b>${htmlEscape(p.district || locationShort || 'Belirtilmedi')}</b></div><div class="feature"><span>Banyo</span><b>${htmlEscape(p.bathrooms || 'Belirtilmedi')}</b></div><div class="feature"><span>Balkon</span><b>${htmlEscape(p.balcony || 'Belirtilmedi')}</b></div><div class="feature"><span>Otopark</span><b>${htmlEscape(p.parking || 'Belirtilmedi')}</b></div><div class="feature"><span>Isıtma</span><b>${htmlEscape(p.heating || 'Belirtilmedi')}</b></div><div class="feature"><span>Soğutma</span><b>${htmlEscape(p.cooling || 'Belirtilmedi')}</b></div><div class="feature"><span>İskan</span><b>${htmlEscape(p.occupancyPermit || 'Belirtilmedi')}</b></div><div class="feature"><span>Asansör</span><b>${htmlEscape(p.elevator || 'Belirtilmedi')}</b></div></div></article><article class="panel"><h2><span class="symbol">⌖</span> Yakın çevre</h2><div class="description">${htmlEscape(p.nearbyAmenities || 'Yakın çevre bilgisi belirtilmedi.')}</div></article></div>
       <div class="right-col"><article class="panel"><h2><span class="symbol">●</span> Konum</h2><div class="address-text">${htmlEscape(p.address)}</div><div class="map-placeholder"><div class="map-lines"></div><div class="map-label"><div class="map-pin">●</div>${htmlEscape(locationShort || 'Konum bilgisi')}</div></div><div class="muted" style="font-size:7pt;margin-top:2mm">Kesin konum için danışmanınızdan bilgi alabilirsiniz.</div></article></div></section>
       <section class="contact"><div class="agent-mark">G</div><div><div class="contact-label">DANIŞMAN</div><div class="agent-name">${htmlEscape(p.agent || 'GAYIT danışman ekibi')}</div><div class="contact-note">Bu portföy hakkında detaylı bilgi ve gösterim için danışmanınızla iletişime geçebilirsiniz.</div></div></section>
       <footer class="footer"><div><div class="footer-brand">⌂ GAYIT</div><div class="footer-sub">GAYRİMENKUL SUNUMU</div></div><div class="footer-note">Bu portföy GAYIT Portföy Yönetimi ile oluşturulmuştur.</div><div class="footer-code">PORTFÖY KODU<br/><b>${code}</b></div></footer>
@@ -649,6 +659,11 @@ export default function App() {
         views: 0,
         createdAt: new Date(row.created_at).toLocaleDateString('tr-TR'),
         description: row.description || '',
+        bathrooms: row.bathrooms == null ? '' : String(row.bathrooms),
+        balcony: row.balcony || 'Belirtilmedi', parking: row.parking || 'Belirtilmedi',
+        heating: row.heating || 'Belirtilmedi', cooling: row.cooling || 'Belirtilmedi',
+        occupancyPermit: row.occupancy_permit || 'Belirtilmedi', elevator: row.elevator || 'Belirtilmedi',
+        nearbyAmenities: row.nearby_amenities || '',
       }));
       setProperties(mapped);
     } finally {
@@ -1119,6 +1134,10 @@ export default function App() {
     setEditingPropertyId(p.id);
     setTitle(p.title); setAddress(p.address); setPrice(String(p.price)); setArea(p.area.replace(/[^0-9.]/g, ''));
     setKind(p.kind); setRooms(p.rooms || '3+1'); setDescription(p.description || '');
+    setBathrooms(p.bathrooms || ''); setBalcony(p.balcony || 'Belirtilmedi');
+    setParking(p.parking || 'Belirtilmedi'); setHeating(p.heating || 'Belirtilmedi');
+    setCooling(p.cooling || 'Belirtilmedi'); setOccupancyPermit(p.occupancyPermit || 'Belirtilmedi');
+    setElevator(p.elevator || 'Belirtilmedi'); setNearbyAmenities(p.nearbyAmenities || '');
     // Contact fields are loaded separately from the private property record.
     void (async () => {
       const client = getFirebaseClient();
@@ -1219,6 +1238,8 @@ export default function App() {
         city: parts.length > 0 ? parts[parts.length - 1] : '',
         price: numericPrice, rooms, property_type: propertyType, area_m2: numericArea,
         listing_type: kind === 'Kiralık' ? 'rent' : 'sale', description: description.trim(),
+        bathrooms: bathrooms.trim() ? Number(bathrooms) : null, balcony, parking, heating, cooling,
+        occupancy_permit: occupancyPermit, elevator, nearby_amenities: nearbyAmenities.trim() || null,
         owner_contact_name: ownerContactName.trim() || null,
         owner_contact_phone: ownerContactPhone.trim() || null,
       };
@@ -1607,6 +1628,14 @@ export default function App() {
             <Text style={styles.fieldLabel}>Fiyat (TL) *</Text><TextInput value={price} onChangeText={setPrice} keyboardType="numeric" placeholder="4250000" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Oda sayısı</Text><View style={styles.kindRow}>{['1+1','2+1','3+1','4+1','5+1'].map(r=><Pressable key={r} onPress={()=>setRooms(r)} style={[styles.roomButton,rooms===r&&styles.kindButtonOn]}><Text style={[styles.kindText,rooms===r&&styles.kindTextOn]}>{r}</Text></Pressable>)}</View>
             <Text style={styles.fieldLabel}>Metrekare *</Text><TextInput value={area} onChangeText={setArea} keyboardType="numeric" placeholder="145" style={styles.input} placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Banyo sayısı</Text><TextInput value={bathrooms} onChangeText={setBathrooms} keyboardType="number-pad" placeholder="Örn. 2" style={styles.input} placeholderTextColor={palette.muted}/>
+            <Text style={styles.fieldLabel}>Balkon</Text><View style={styles.kindRow}>{['Var','Yok','Belirtilmedi'].map(v=><Pressable key={v} onPress={()=>setBalcony(v)} style={[styles.kindButton,balcony===v&&styles.kindButtonOn]}><Text style={[styles.kindText,balcony===v&&styles.kindTextOn]}>{v}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>Otopark</Text><View style={styles.kindRow}>{['Açık','Kapalı','Açık ve kapalı','Yok','Belirtilmedi'].map(v=><Pressable key={v} onPress={()=>setParking(v)} style={[styles.kindButton,parking===v&&styles.kindButtonOn]}><Text style={[styles.kindText,parking===v&&styles.kindTextOn]}>{v}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>Isıtma</Text><View style={styles.kindRow}>{['Doğalgaz','Kombi','Merkezi','Yerden ısıtma','Klima','Soba','Yok','Belirtilmedi'].map(v=><Pressable key={v} onPress={()=>setHeating(v)} style={[styles.kindButton,heating===v&&styles.kindButtonOn]}><Text style={[styles.kindText,heating===v&&styles.kindTextOn]}>{v}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>Soğutma</Text><View style={styles.kindRow}>{['Klima','Merkezi soğutma','Yok','Belirtilmedi'].map(v=><Pressable key={v} onPress={()=>setCooling(v)} style={[styles.kindButton,cooling===v&&styles.kindButtonOn]}><Text style={[styles.kindText,cooling===v&&styles.kindTextOn]}>{v}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>İskan durumu</Text><View style={styles.kindRow}>{['Var','Yok','Başvuru sürecinde','Belirtilmedi'].map(v=><Pressable key={v} onPress={()=>setOccupancyPermit(v)} style={[styles.kindButton,occupancyPermit===v&&styles.kindButtonOn]}><Text style={[styles.kindText,occupancyPermit===v&&styles.kindTextOn]}>{v}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>Asansör</Text><View style={styles.kindRow}>{['Var','Yok','Belirtilmedi'].map(v=><Pressable key={v} onPress={()=>setElevator(v)} style={[styles.kindButton,elevator===v&&styles.kindButtonOn]}><Text style={[styles.kindText,elevator===v&&styles.kindTextOn]}>{v}</Text></Pressable>)}</View>
+            <Text style={styles.fieldLabel}>Yakın çevrede neler var?</Text><TextInput value={nearbyAmenities} onChangeText={setNearbyAmenities} placeholder="Örn. okul, market, hastane, sahil, toplu taşıma" style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Açıklama</Text><TextInput value={description} onChangeText={setDescription} placeholder="Gayrimenkul hakkında kısa bilgi" style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholderTextColor={palette.muted}/>
             <View style={{marginTop:18,padding:14,borderRadius:12,borderWidth:1,borderColor:palette.line,backgroundColor:'#FFFDF8'}}><Text style={[styles.fieldLabel,{marginBottom:4}]}>Ev sahibi bilgileri · Özel</Text><Text style={styles.noticeText}>Bu bilgiler müşteri PDF sunumuna eklenmez.</Text><Text style={styles.fieldLabel}>Ev sahibinin adı</Text><TextInput value={ownerContactName} onChangeText={setOwnerContactName} placeholder="Ad soyad" style={styles.input} placeholderTextColor={palette.muted}/><Text style={styles.fieldLabel}>Ev sahibinin telefonu</Text><TextInput value={ownerContactPhone} onChangeText={setOwnerContactPhone} placeholder="05xx xxx xx xx" keyboardType="phone-pad" style={styles.input} placeholderTextColor={palette.muted}/></View>
             <View style={{marginTop:18,marginBottom:8}}><View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:8}}><Text style={styles.fieldLabel}>İlan fotoğrafları ({pendingPhotoUris.length}/12)</Text><Pressable onPress={choosePropertyPhotos} disabled={propertyBusy||pendingPhotoUris.length>=12} style={[styles.pdfButton,{flex:0,paddingHorizontal:12,paddingVertical:8,opacity:propertyBusy||pendingPhotoUris.length>=12?0.5:1}]}><Ionicons name="images-outline" size={18} color={palette.navy}/><Text style={styles.pdfButtonText}>Galeriden seç</Text></Pressable></View><Text style={styles.noticeText}>İlanı kaydetmeden önce birden fazla fotoğraf seçebilirsin. Fotoğraflar kaydetme sırasında yüklenir; mevcut ilan fotoğrafları detay ekranından da eklenebilir.</Text>{pendingPhotoUris.length>0&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:9,marginTop:10}}>{pendingPhotoUris.map((photo,index)=><View key={photo.uri+index} style={{width:'31%',height:116,borderRadius:10,overflow:'hidden',backgroundColor:palette.line}}><Image source={{uri:photo.uri}} style={{width:'100%',height:116}} resizeMode="cover"/><Pressable onPress={()=>setPendingPhotoUris(current=>current.filter((_,i)=>i!==index))} style={{position:'absolute',right:5,top:5,backgroundColor:'#fff',borderRadius:14,padding:4}}><Ionicons name="close" size={16} color={palette.red}/></Pressable></View>)}</View>}</View>
