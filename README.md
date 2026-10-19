@@ -4,7 +4,7 @@
 
 GAYIT, herkese açık bir emlak ilan sitesi veya ilan pazaryeri değildir. Ofis içinde kullanılan bir yönetim aracıdır. Hedef platformlar Android ve iOS'tur.
 
-> **Önemli durum notu:** Repoda mobil ekranlar, uygulama akışları, Supabase bağlantı kodu, SQL migration taslakları ve sunucu fonksiyonları bulunur. Ancak veritabanı migration'larının gerçek Supabase projesine uygulanması, sunucu fonksiyonlarının deploy edilmesi ve uçtan uca yetki testleri tamamlanmış değildir. Bu nedenle aşağıdaki özellikler “kod/akış hazır” ile “gerçek ortamda doğrulanmış” olarak ayrılmıştır. Üretime hazır olduğu varsayılmamalıdır.
+> **Firebase geçiş durumu (2026-10-19):** Mobil uygulama Firebase Auth, Firestore ve Storage istemcisine taşındı; ofis/danışman oluşturma ve eşleştirme için Firebase callable Functions eklendi. TypeScript ve fonksiyon kontrolleri GitHub Actions üzerinden doğrulanıyor. Ancak Firebase proje yapılandırması, Functions/rules dağıtımı, Firebase Secrets ve gerçek cihazda uçtan uca testler tamamlanmadan uygulama üretime hazır sayılmaz. Eski `supabase/` SQL dosyaları geçiş referansı olarak durur; otomatik veri aktarımı yapılmaz.
 
 ## İçindekiler
 
@@ -171,10 +171,10 @@ Bu liste, uygulamanın gerçekten kullanılabilir ve güvenli bir MVP olarak tes
 ## Teknik yapı
 
 - **Mobil uygulama:** Expo SDK 58, React Native 0.88, React 19.3, TypeScript.
-- **Kimlik doğrulama ve veritabanı:** Supabase Auth ve PostgreSQL.
-- **Erişim kontrolü:** PostgreSQL Row Level Security (RLS) politikaları.
-- **Dosyalar:** Supabase Storage için özel bucket ve imzalı bağlantılar.
-- **Sunucu işlemleri:** Supabase Edge Functions (ofis/danışman oluşturma, ilk giriş şifresi değiştirme, eşleştirme).
+- **Kimlik doğrulama:** Firebase Authentication (E-posta/Şifre; kullanıcı adı iç e-posta biçimine dönüştürülür).
+- **Veritabanı ve erişim kontrolü:** Cloud Firestore ve `firestore.rules`.
+- **Dosyalar:** Firebase Storage ve `storage.rules` ile ofis bazlı erişim.
+- **Sunucu işlemleri:** Firebase callable Functions (`createOffice`, `createAgent`, `setAgentStatus`, `evaluateMatches`).
 - **PDF:** Expo Print ve Expo Sharing.
 - **Fotoğraf seçimi:** Expo Image Picker.
 - **Paylaşım ve konum:** WhatsApp bağlantısı ve Google Maps bağlantısı.
@@ -187,7 +187,7 @@ Node.js **22.13 veya daha yeni** bir sürüm kullanılması önerilir.
 1. Depoyu bilgisayarınıza alın.
 2. Bağımlılıkları kurun.
 3. `.env.example` dosyasını temel alarak yerel `.env` dosyanızı oluşturun.
-4. Supabase proje URL'si ve istemci için uygun publishable/anon anahtarını yapılandırın.
+4. `.env.example` içindeki altı `EXPO_PUBLIC_FIREBASE_*` değişkenini Firebase Console > Project settings > Your apps bölümünden doldurun.
 5. Geliştirme komutlarını çalıştırın.
 
 ```bash
@@ -205,14 +205,14 @@ Repoda iki derleme seçeneği yapılandırılmıştır:
 **Codemagic (imzalı test APK'sı)**
 
 - `codemagic.yaml` içindeki `gayit` Android keystore referansı Codemagic hesabındaki mevcut GAYIT keystore kaydıyla aynı olmalıdır.
-- Codemagic ortam değişkenlerine `EXPO_PUBLIC_SUPABASE_URL` ve `EXPO_PUBLIC_SUPABASE_ANON_KEY` ekleyin. Mobil uygulamada `service_role` anahtarı kullanmayın.
+- Codemagic ortam değişkenlerine `docs/FIREBASE_SETUP.md` içinde listelenen altı Firebase istemci değişkenini ekleyin.
 - Workflow, Expo'nun native Android projesini yeniden oluşturur, TypeScript kontrolü yapar ve release APK'sını üretir.
 - Build sonucu `android/app/build/outputs/apk/release/*.apk` artifact olarak sunulur.
 - Workflow imzalama değişkenlerini Codemagic'in Android keystore bağlantısından (`CM_KEYSTORE_PATH`, `CM_KEYSTORE_PASSWORD`, `CM_KEY_ALIAS`, `CM_KEY_PASSWORD`) kullanır. Keystore bağlantısı kurulmamışsa imzalı APK üretimi başarısız olur.
 
 **EAS Build**
 
-Önce EAS hesabına giriş yapın ve proje bağlantısını kurun; EAS ortam değişkenlerine de aynı iki Supabase istemci değişkenini tanımlayın. Ardından:
+Önce EAS hesabına giriş yapın ve proje bağlantısını kurun; EAS ortam değişkenlerine de aynı altı Firebase istemci değişkenini tanımlayın. Ardından:
 
 ```bash
 npx eas-cli login
@@ -231,12 +231,12 @@ Supabase olmadan veya gerekli migration'lar uygulanmadan tüm ekranların gerçe
 
 - `App.tsx` — mobil uygulamanın ekranları ve ana akışları.
 - `ROADMAP.md` — aşamalar, ilerleme ve teslim kriterleri.
-- `supabase/migrations/` — veritabanı tabloları ve RLS politikaları için SQL taslakları.
-- `supabase/functions/` — sunucu tarafında çalışması planlanan Edge Functions.
+- `supabase/` — eski veri modelini anlamak için bırakılan geçiş referansları; aktif uygulama bağlantısı değildir.
+- `functions/` — Firebase callable Functions.
 - `superadmin/index.html` — süper yönetici ofis oluşturma paneli taslağı.
-- `src/lib/supabase.ts` — Supabase istemci yapılandırması.
+- `src/lib/firebase.ts` ve `src/lib/firebaseClient.ts` — Firebase istemci yapılandırması ve veri erişimi.
 - `src/lib/usernameAuth.ts` — kullanıcı adıyla giriş yardımcıları.
-- `docs/SUPABASE_SETUP.md` — Supabase kurulum ve güvenlik notları.
+- `docs/FIREBASE_SETUP.md` — Firebase kurulum ve güvenlik notları.
 - `docs/USERNAME_AUTH.md` — kullanıcı adıyla giriş akışı.
 - `docs/RLS_VALIDATION_CHECKLIST.md` — doğrudan API üzerinden çalıştırılması gereken güvenlik testleri.
 - `.env.example` — yerel ortam değişkenleri şablonu.
@@ -244,10 +244,10 @@ Supabase olmadan veya gerekli migration'lar uygulanmadan tüm ekranların gerçe
 ## Güvenlik notları
 
 - `.env` dosyasını veya gizli anahtarları Git deposuna eklemeyin.
-- Supabase `service_role` anahtarını mobil uygulamaya, web panelinin istemci koduna veya herkese açık bir dosyaya **asla** koymayın. Yalnızca güvenilir sunucu ortamında gizli değişken olarak saklayın.
+- Firebase Admin SDK service-account anahtarlarını mobil uygulamaya veya Git deposuna **asla** koymayın.
 - Arayüzde bir butonu gizlemek güvenlik sağlamaz; yetki veritabanı politikalarında ve sunucu fonksiyonlarında kontrol edilmelidir.
-- Gerçek kullanıcı verisi kullanmadan önce farklı ofislerle RLS ve Storage erişim testleri yapılmalıdır.
-- Migration 011 repoda bulunur ancak canlı Supabase'e otomatik uygulanmaz. Önce test ortamında uygulayın ve RLS politikalarını doğrulayın.
+- Gerçek kullanıcı verisi kullanmadan önce farklı ofislerle Firestore Rules ve Storage erişim testleri yapılmalıdır.
+- Eski Supabase kayıtları Firestore'a otomatik taşınmaz; canlı veri varsa ayrı bir dışa aktarma/aktarım ve doğrulama adımı gerekir.
 - CSV aktarımı yeni portföy oluşturur; mevcut portföyleri güncellemez. İçe aktarmadan önce başlık, adres ve fiyat alanlarını kontrol edin.
 - Bu README ürün kapsamını ve geliştirme durumunu anlatır; tek başına güvenlik veya mağaza yayını onayı değildir.
 
