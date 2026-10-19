@@ -93,17 +93,25 @@ exports.createAgent = onCall({ region: REGION, enforceAppCheck: false }, async r
 });
 exports.setAgentStatus = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const uid = requireAuth(request);
-  const membership = await requireOwner(uid);
-  const { userId, status } = request.data || {};
+  const { userId, status, officeId: requestedOfficeId } = request.data || {};
   if (typeof userId !== 'string' || !['active', 'disabled'].includes(status)) {
     throw new HttpsError('invalid-argument', 'Danışman ve geçerli durum gerekli.');
   }
+  const superadminSnap = await db.doc('superadmins/' + uid).get();
+  let officeId;
+  if (superadminSnap.exists && superadminSnap.data().enabled === true) {
+    if (typeof requestedOfficeId !== 'string' || !requestedOfficeId.trim()) throw new HttpsError('invalid-argument', 'Süperadmin işlemi için ofis seçilmelidir.');
+    officeId = requestedOfficeId;
+  } else {
+    const membership = await requireOwner(uid);
+    officeId = membership.office_id;
+  }
   const target = await db.doc('office_members/' + userId).get();
-  if (!target.exists || target.data().office_id !== membership.office_id || target.data().role !== 'agent') {
-    throw new HttpsError('permission-denied', 'Bu danışman senin ofisine ait değil.');
+  if (!target.exists || target.data().office_id !== officeId || target.data().role !== 'agent') {
+    throw new HttpsError('permission-denied', 'Bu danışman seçilen ofise ait değil.');
   }
   await target.ref.update({ status, updated_at: new Date().toISOString() });
-  return { success: true, userId, status };
+  return { success: true, userId, status, office_id: officeId };
 });
 exports.evaluateMatches = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const uid = requireAuth(request);
