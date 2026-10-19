@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
-import { getSupabaseClient } from './src/lib/firebaseClient';
+import { getFirebaseClient } from './src/lib/firebaseClient';
 
 type Role = 'owner' | 'agent';
 type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
@@ -155,7 +155,7 @@ export default function App() {
     if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(transactionDate) || officeCommission < 0 || agentCommission < 0 || officeCommission + agentCommission > finalPrice) { Alert.alert('Bilgileri kontrol et','Tarih YYYY-AA-GG olmalı; komisyonlar negatif olamaz ve toplamı işlem bedelini aşamaz.'); return; }
     setTransactionBusy(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data:userResult,error:userError } = await supabase.auth.getUser();
       if(userError||!userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
       const property = properties.find(p=>p.id===transactionPropertyId);
@@ -167,7 +167,7 @@ export default function App() {
         closed_on:transactionDate, notes:transactionNotes.trim(), created_by:userResult.user.id,
       });
       if(error) throw error;
-      await getSupabaseClient().from('properties').update({status:property.kind==='Kiralık'?'rented':'sold'}).eq('id',property.id).eq('office_id',officeId);
+      await getFirebaseClient().from('properties').update({status:property.kind==='Kiralık'?'rented':'sold'}).eq('id',property.id).eq('office_id',officeId);
       await loadProperties(officeId);
       setTransactionModalOpen(false); setTransactionPropertyId(''); setTransactionFinalPrice(''); setTransactionOfficeCommission(''); setTransactionAgentCommission(''); setTransactionNotes('');
       Alert.alert('İşlem kaydedildi','Satış/kiralama ve komisyon kaydı oluşturuldu.');
@@ -178,7 +178,7 @@ export default function App() {
   const loadRecentViews = async () => {
     if (!officeId) return;
     try {
-      const { data, error } = await getSupabaseClient().from('property_recent_views').select('property_id,viewed_at').eq('office_id',officeId).order('viewed_at',{ascending:false}).limit(50);
+      const { data, error } = await getFirebaseClient().from('property_recent_views').select('property_id,viewed_at').eq('office_id',officeId).order('viewed_at',{ascending:false}).limit(50);
       if (error) throw error;
       setRecentPropertyIds([...new Set((data||[]).map((row:any)=>row.property_id))]);
     } catch {
@@ -191,7 +191,7 @@ export default function App() {
     if (!officeId) return;
     void (async()=>{
       try {
-        const supabase=getSupabaseClient();
+        const supabase=getFirebaseClient();
         const {data:userResult}=await supabase.auth.getUser();
         if(!userResult.user) return;
         const {error}=await supabase.from('property_recent_views').upsert(
@@ -207,7 +207,7 @@ export default function App() {
   const loadFavorites = async () => {
     if (!officeId) return;
     try {
-      const { data, error } = await getSupabaseClient().from('property_favorites').select('property_id').eq('office_id', officeId);
+      const { data, error } = await getFirebaseClient().from('property_favorites').select('property_id').eq('office_id', officeId);
       if (error) throw error;
       setFavoriteIds((data || []).map((row: any) => row.property_id));
     } catch {
@@ -216,7 +216,7 @@ export default function App() {
   };
   const toggleFavorite = async (property: Property) => {
     if (!officeId) return;
-    const supabase = getSupabaseClient();
+    const supabase = getFirebaseClient();
     const { data: userResult, error: userError } = await supabase.auth.getUser();
     if (userError || !userResult.user) { Alert.alert('Oturum gerekli','Favori kaydetmek için tekrar giriş yap.'); return; }
     const isFavorite = favoriteIds.includes(property.id);
@@ -254,7 +254,7 @@ export default function App() {
     if(payloads.some(p=>!p.title||p.title.length<3||!p.address||!Number.isSafeInteger(p.price)||p.price<=0)){Alert.alert('Satırları kontrol et','Her satırda başlık, adres ve pozitif tam sayı fiyat bulunmalı.');return;}
     setCsvImportBusy(true);
     try{
-      const supabase=getSupabaseClient();const {data:userResult,error:userError}=await supabase.auth.getUser();
+      const supabase=getFirebaseClient();const {data:userResult,error:userError}=await supabase.auth.getUser();
       if(userError||!userResult.user)throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
       const {error}=await supabase.from('properties').insert(payloads.map(p=>({...p,owner_agent_id:userResult.user.id,created_by:userResult.user.id})));
       if(error)throw error;
@@ -307,7 +307,7 @@ export default function App() {
   const loadPropertyPhotos = async (propertyId: string) => {
     setPhotosBusy(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data, error } = await supabase.from('property_photos').select('id,storage_path,sort_order').eq('property_id', propertyId).order('sort_order', { ascending: true });
       if (error) throw error;
       const photos: PropertyPhoto[] = await Promise.all((data || []).map(async (row: any) => {
@@ -335,7 +335,7 @@ export default function App() {
       const blob = await response.blob();
       const ext = asset.mimeType === 'image/png' ? 'png' : 'jpg';
       const storagePath = officeId + '/' + selected.id + '/' + Date.now() + '.' + ext;
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { error: uploadError } = await supabase.storage.from('property-photos').upload(storagePath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
       if (uploadError) throw uploadError;
       const { error: rowError } = await supabase.from('property_photos').insert({ property_id: selected.id, office_id: officeId, storage_path: storagePath, sort_order: propertyPhotos.length });
@@ -355,7 +355,7 @@ export default function App() {
     [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
     setPhotosBusy(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       // Persist sequential sort_order values; index 0 is the cover photo.
       for (let i = 0; i < reordered.length; i++) {
         const { error } = await supabase.from('property_photos')
@@ -380,7 +380,7 @@ export default function App() {
         if (photosBusy) return;
         setPhotosBusy(true);
         try {
-          const supabase = getSupabaseClient();
+          const supabase = getFirebaseClient();
           // Delete the object first. If Storage rejects the operation, keep its
           // metadata row so the user can retry from the gallery.
           const { error: storageError } = await supabase.storage.from('property-photos').remove([photo.storagePath]);
@@ -429,7 +429,7 @@ export default function App() {
   const loadProperties = async (targetOfficeId: string) => {
     setPropertiesLoading(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data, error } = await supabase.from('properties').select('*').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
       if (error) throw new Error('Portföyler yüklenemedi.');
       const rows = data || [];
@@ -462,7 +462,7 @@ export default function App() {
   const loadCustomers = async (targetOfficeId: string) => {
     setCustomersLoading(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data, error } = await supabase.from('customers').select('id,full_name,phone,roles,assigned_agent_id,notes,is_active,next_follow_up_at,customer_requirements(id)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
       if (error) throw new Error('Müşteriler yüklenemedi. Migration 003 uygulanmış olmalı.');
       const rows = data || [];
@@ -476,7 +476,7 @@ export default function App() {
   const loadMatches = async (targetOfficeId: string) => {
     setMatchesLoading(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data, error } = await supabase.from('matches').select('id,status,match_kind,match_score,match_reasons,created_at,properties(id,title,price,listing_type,district,rooms),customers(id,full_name,phone)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
       if (error) throw new Error('Eşleşmeler yüklenemedi. Migration 003 uygulanmış olmalı.');
       setMatches(data || []);
@@ -486,7 +486,7 @@ export default function App() {
   const loadNotifications = async (targetOfficeId: string) => {
     setNotificationsLoading(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data, error } = await supabase.from('notifications')
         .select('id,notification_type,title,body,match_id,customer_id,property_id,read_at,created_at')
         .eq('office_id', targetOfficeId).order('created_at', { ascending: false }).limit(100);
@@ -499,7 +499,7 @@ export default function App() {
 
   const markNotificationRead = async (notificationId: string) => {
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { error } = await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notificationId);
       if (error) throw error;
       setNotifications(current => current.map(n => n.id === notificationId ? {...n, read_at: new Date().toISOString()} : n));
@@ -509,7 +509,7 @@ export default function App() {
   };
 
   const loadTeamMembers = async (targetOfficeId: string) => {
-    const supabase = getSupabaseClient();
+    const supabase = getFirebaseClient();
     const { data, error } = await supabase
       .from('office_members')
       .select('role,status,profiles(id,full_name,username,avatar_path)')
@@ -548,7 +548,7 @@ export default function App() {
         { text: 'Onayla', style: 'destructive', onPress: async () => {
           setTeamStatusBusyId(person.id);
           try {
-            const supabase = getSupabaseClient();
+            const supabase = getFirebaseClient();
             const { error } = await supabase
               .from('office_members')
               .update({ status: nextStatus })
@@ -577,7 +577,7 @@ export default function App() {
     setCustomerDetailOpen(true);
     setCustomerRequirementsLoading(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data, error } = await supabase.from('customer_requirements')
         .select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,must_have,notes,is_active,created_at')
         .eq('customer_id', customer.id).order('created_at', { ascending: false });
@@ -613,7 +613,7 @@ export default function App() {
     }
     setAppointmentBusy(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data, error } = await supabase.from('appointments').insert({
         office_id: officeId, customer_id: selectedCustomer.id, assigned_agent_id: selectedCustomer.assignedAgentId,
         title: appointmentTitle.trim() || 'Müşteri görüşmesi', starts_at: parsedDate.toISOString(),
@@ -635,7 +635,7 @@ export default function App() {
     }
     setActivityBusy(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data: userResult, error: userError } = await supabase.auth.getUser();
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı.');
       const { data, error } = await supabase.from('customer_activities').insert({
@@ -660,7 +660,7 @@ export default function App() {
     }
     setCustomerEditBusy(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data, error } = await supabase.from('customer_requirements').insert({
         office_id: officeId, customer_id: selectedCustomer.id, intent: requirementIntent,
         property_type: requirementType, city: requirementCity.trim(), district: requirementDistrict.trim(),
@@ -692,7 +692,7 @@ export default function App() {
     }
     setCustomerEditBusy(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { error } = await supabase.from('customers').update({
         full_name: editCustomerName.trim(),
         phone: editCustomerPhone.trim(),
@@ -715,7 +715,7 @@ export default function App() {
     if (customerRoles.length === 0) { Alert.alert('Müşteri türü', 'En az bir müşteri rolü seç.'); return; }
     setCustomerBusy(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data: userResult, error: userError } = await supabase.auth.getUser();
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
       const { data: customer, error } = await supabase.from('customers').insert({ office_id: officeId, assigned_agent_id: userResult.user.id, created_by: userResult.user.id, full_name: customerName.trim(), phone: customerPhone.trim(), roles: customerRoles, notes: customerNotes.trim() }).select('id').single();
@@ -782,7 +782,7 @@ export default function App() {
     if (agentPassword.length < 10) { Alert.alert('Şifre çok kısa', 'İlk şifre en az 10 karakter olmalı.'); return; }
     setAgentBusy(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       let avatarPath: string | null = null;
       if (agentAvatarUri) {
         const response = await fetch(agentAvatarUri);
@@ -803,8 +803,8 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
-    const { getSupabaseClient } = await import('./src/lib/firebaseClient');
-    await getSupabaseClient().auth.signOut();
+    const { getFirebaseClient } = await import('./src/lib/firebaseClient');
+    await getFirebaseClient().auth.signOut();
     setAuthenticated(false); setMustChangePassword(false); setLoginPassword(''); setNewPassword(''); setConfirmPassword('');
   };
 
@@ -812,7 +812,7 @@ export default function App() {
     if (!selected) return;
     const statusMap: Record<PropertyStatus, string> = { 'Aktif': 'active', 'Opsiyonlu': 'optioned', 'Satıldı': 'sold', 'Kiralandı': 'rented', 'Arşivde': 'archived' };
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { error } = await supabase.from('properties').update({ status: statusMap[nextStatus] }).eq('id', selected.id).eq('office_id', officeId);
       if (error) throw error;
       setProperties(current => current.map(p => p.id === selected.id ? {...p, status: nextStatus} : p));
@@ -837,7 +837,7 @@ export default function App() {
       {text:'Vazgeç',style:'cancel'},
       {text:'Arşivle',style:'destructive',onPress:async()=>{
         try {
-          const supabase=getSupabaseClient();
+          const supabase=getFirebaseClient();
           const {error}=await supabase.from('properties').update({status:'archived'}).eq('id',selected.id).eq('office_id',officeId);
           if(error) throw error;
           setSelected(null); await loadProperties(officeId);
@@ -877,7 +877,7 @@ export default function App() {
     }
     setPropertyBusy(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getFirebaseClient();
       const { data: userResult, error: userError } = await supabase.auth.getUser();
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
       const parts = address.split(',').map((part) => part.trim());
