@@ -13,6 +13,7 @@ import { getFirebaseClient } from './src/lib/firebaseClient';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirebaseApp, getFirebaseAuth } from './src/lib/firebase';
 import { signOut } from 'firebase/auth';
+import SuperadminPanel from './src/SuperadminPanel';
 
 type Role = 'owner' | 'agent' | 'superadmin';
 type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
@@ -958,27 +959,19 @@ export default function App() {
   };
 
   if (authenticated && role === 'superadmin') {
-    return <SafeAreaView style={styles.safe} edges={['top','left','right','bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor={palette.navy}/>
-      <ScrollView contentContainerStyle={styles.authPage} keyboardShouldPersistTaps="handled">
-        <View style={[styles.authBrandMark,{backgroundColor:palette.navy}]}><Ionicons name="shield-checkmark" size={32} color={palette.gold}/></View>
-        <Text style={styles.authBrand}>GAYIT<Text style={styles.brandDot}>.</Text></Text>
-        <Text style={styles.brandSub}>SÜPERADMİN YÖNETİMİ</Text>
-        <Text style={styles.authTitle}>Ofis oluştur</Text>
-        <Text style={styles.authSubtitle}>Yeni emlak ofisini ve ofis yöneticisinin giriş bilgilerini buradan oluştur.</Text>
-        <Text style={styles.fieldLabel}>Ofis adı</Text>
-        <TextInput value={superOfficeName} onChangeText={setSuperOfficeName} style={styles.input} placeholder="Örn. Milas Gayrimenkul" placeholderTextColor={palette.muted}/>
-        <Text style={styles.fieldLabel}>Ofis sahibi adı soyadı</Text>
-        <TextInput value={superOwnerName} onChangeText={setSuperOwnerName} style={styles.input} placeholder="Ad soyad" placeholderTextColor={palette.muted}/>
-        <Text style={styles.fieldLabel}>Ofis sahibi kullanıcı adı</Text>
-        <TextInput value={superOwnerUsername} onChangeText={setSuperOwnerUsername} autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Örn. milasemlak" placeholderTextColor={palette.muted}/>
-        <Text style={styles.fieldLabel}>Geçici şifre (en az 10 karakter)</Text>
-        <TextInput value={superOwnerPassword} onChangeText={setSuperOwnerPassword} secureTextEntry autoCapitalize="none" style={styles.input} placeholder="İlk giriş şifresi" placeholderTextColor={palette.muted}/>
-        <Pressable disabled={superCreateBusy} onPress={handleCreateOfficeAsSuperadmin} style={[styles.authSubmit,superCreateBusy&&{opacity:0.6}]}><Text style={styles.authSubmitText}>{superCreateBusy?'Oluşturuluyor...':'Ofisi oluştur'}</Text></Pressable>
-        {!!superResult && <View style={styles.authError}><Text style={styles.authErrorText}>{superResult}</Text></View>}
-        <Pressable onPress={handleSuperadminLogout} style={{padding:16,alignItems:'center'}}><Text style={{color:palette.muted,fontWeight:'600'}}>Güvenli çıkış yap</Text></Pressable>
-      </ScrollView>
-    </SafeAreaView>;
+    return <SuperadminPanel
+      onLogout={handleSuperadminLogout}
+      onEnterOffice={async (office) => {
+        setOfficeId(office.id);
+        setRole('owner');
+        setTab('home');
+        await loadProperties(office.id);
+        await loadCustomers(office.id);
+        await loadMatches(office.id);
+        await loadNotifications(office.id);
+        await loadTeamMembers(office.id);
+      }}
+    />;
   }
 
   if (!authenticated || mustChangePassword) {
