@@ -30,6 +30,43 @@ export async function signInWithUsername(usernameInput:string,password:string):P
     return {user,profile:{...profile,id:user.uid},mustChangePassword:!!profile.must_change_password,role:membership.role,officeId:membership.office_id};
   } catch(e) { await signOut(auth); throw e; }
 }
+export async function restoreUsernameSession(): Promise<UsernameLoginResult | null> {
+  const auth = getFirebaseAuth();
+  const user = auth.currentUser;
+  if (!user) return null;
+  const db = getFirebaseDb();
+  try {
+    const superadminSnap = await getDoc(doc(db, 'superadmins', user.uid));
+    if (superadminSnap.exists() && superadminSnap.data().enabled === true) {
+      return { user, profile: null, mustChangePassword: false, role: 'superadmin', officeId: '' };
+    }
+    const [profileSnap, membershipSnap] = await Promise.all([
+      getDoc(doc(db, 'profiles', user.uid)),
+      getDoc(doc(db, 'office_members', user.uid)),
+    ]);
+    if (!profileSnap.exists() || !membershipSnap.exists()) {
+      await signOut(auth);
+      return null;
+    }
+    const profile = profileSnap.data() as GayitProfile;
+    const membership = membershipSnap.data();
+    if (profile.account_status !== 'active' || membership.status !== 'active' || !['owner', 'agent'].includes(membership.role)) {
+      await signOut(auth);
+      return null;
+    }
+    return {
+      user,
+      profile: { ...profile, id: user.uid },
+      mustChangePassword: !!profile.must_change_password,
+      role: membership.role,
+      officeId: membership.office_id,
+    };
+  } catch (error) {
+    // Keep the Firebase session if this is a temporary network/Firestore error.
+    throw error;
+  }
+}
+
 export async function changeInitialPassword(newPassword:string):Promise<void> {
   if(newPassword.length<10) throw new Error('Yeni şifre en az 10 karakter olmalıdır.');
   const user=getFirebaseAuth().currentUser;
