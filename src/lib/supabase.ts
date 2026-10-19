@@ -1,22 +1,23 @@
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { addDoc, collection, deleteDoc, doc, getDocs, query, updateDoc, setDoc, where, orderBy, limit as take, documentId } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirebaseAuth, getFirebaseDb, getFirebaseStorage } from './firebase';
 
 type Row = Record<string, any>;
 const err = (message: string) => ({ message });
 
 class CollectionQuery {
-  filters: any[] = []; orders: any[] = []; max?: number; op = 'select'; payload: any; one = false; optional = false;
+  filters: any[] = []; orders: any[] = []; max?: number; op = 'select'; payload: any; one = false; optional = false; conflict: string[] = [];
   constructor(private table: string) {}
   select(_fields = '*') { return this; }
-  eq(k: string, v: any) { this.filters.push(where(k, '==', v)); return this; }
-  neq(k: string, v: any) { this.filters.push(where(k, '!=', v)); return this; }
-  in(k: string, v: any[]) { this.filters.push(v.length ? where(k, 'in', v.slice(0, 30)) : where(documentId(), '==', '__empty__')); return this; }
+  eq(k: string, v: any) { this.filters.push(k === 'id' ? where(documentId(), '==', String(v)) : where(k, '==', v)); return this; }
+  neq(k: string, v: any) { this.filters.push(k === 'id' ? where(documentId(), '!=', String(v)) : where(k, '!=', v)); return this; }
+  in(k: string, v: any[]) { this.filters.push(v.length ? where(k === 'id' ? documentId() : k, 'in', v.slice(0, 30)) : where(documentId(), '==', '__empty__')); return this; }
   order(k: string, o?: {ascending?: boolean}) { this.orders.push(orderBy(k, o?.ascending === false ? 'desc' : 'asc')); return this; }
   limit(n: number) { this.max = n; return this; }
   insert(v: any) { this.op = 'insert'; this.payload = v; return this; }
-  upsert(v: any) { this.op = 'upsert'; this.payload = v; return this; }
+  upsert(v: any, options?: {onConflict?: string}) { this.op = 'upsert'; this.payload = v; this.conflict = options?.onConflict?.split(',').map(s => s.trim()).filter(Boolean) || []; return this; }
   update(v: any) { this.op = 'update'; this.payload = v; return this; }
   delete() { this.op = 'delete'; return this; }
   single() { this.one = true; return this; }
@@ -29,8 +30,11 @@ class CollectionQuery {
         const values: Row[] = Array.isArray(this.payload) ? this.payload : [this.payload], out: Row[] = [];
         for (const value of values) {
           const id = value.id; const clean = {...value}; delete clean.id;
-          if (this.op === 'upsert' && id) { await setDoc(doc(db, this.table, String(id)), clean, {merge:true}); out.push({id, ...clean}); }
-          else { const saved = await addDoc(col, clean); out.push({id:saved.id, ...clean}); }
+          if (this.op === 'upsert') {
+            const targetId = id ? String(id) : this.conflict.length ? this.conflict.map(k => String(clean[k] ?? '')).join('__') : '';
+            if (!targetId || targetId.includes('undefined')) throw new Error('Upsert için belge ID veya onConflict alanları gerekli.');
+            await setDoc(doc(db, this.table, targetId), clean, {merge:true}); out.push({id:targetId, ...clean});
+          } else { const saved = await addDoc(col, clean); out.push({id:saved.id, ...clean}); }
         }
         return {data:Array.isArray(this.payload)?out:out[0], error:null};
       }
@@ -61,11 +65,11 @@ export function getSupabaseClient(): any {
     },
     from: (table:string) => new CollectionQuery(table),
     storage: {from:(bucket:string)=>({
-      upload:async(path:string,body:Blob,options?:any)=>{try{await uploadBytes(ref(storage,`${bucket}/${path}`),body,options);return {data:{path},error:null};}catch(e:any){return {data:null,error:err(e.message)};}},
-      createSignedUrl:async(path:string)=>{try{return {data:{signedUrl:await getDownloadURL(ref(storage,`${bucket}/${path}`))},error:null};}catch(e:any){return {data:null,error:err(e.message)};}},
-      remove:async(paths:string[])=>{try{await Promise.all(paths.map(p=>deleteObject(ref(storage,`${bucket}/${p}`))));return {data:paths.map(name=>({name})),error:null};}catch(e:any){return {data:null,error:err(e.message)};}}
+      upload:async(path:string,body:Blob,options?:any)=>{try{await uploadBytes(ref(storage,path),body,options);return {data:{path},error:null};}catch(e:any){return {data:null,error:err(e.message)};}},
+      createSignedUrl:async(path:string)=>{try{return {data:{signedUrl:await getDownloadURL(ref(storage,path))},error:null};}catch(e:any){return {data:null,error:err(e.message)};}},
+      remove:async(paths:string[])=>{try{await Promise.all(paths.map(p=>deleteObject(ref(storage,p))));return {data:paths.map(name=>({name})),error:null};}catch(e:any){return {data:null,error:err(e.message)};}}
     })},
-    functions:{invoke:async(name:string)=>({data:null,error:err(`Firebase sunucu işlemi '${name}' henüz kurulmadı; bu işlem tamamlanmadı.`)})}
+    functions:{invoke:async(name:string, options?:{body?:any})=>{try{const fn=getFunctions(getFirebaseApp(),'europe-west1');const callableName=({ 'create-agent':'createAgent', 'create-office':'createOffice', 'evaluate-matches':'evaluateMatches' } as Record<string,string>)[name];if(!callableName)return {data:null,error:err(`Firebase sunucu işlemi '${name}' tanımlı değil.`)};const result=await httpsCallable(fn,callableName)(options?.body||{});return {data:result.data,error:null};}catch(e:any){return {data:null,error:err(e?.message||'Firebase sunucu işlemi başarısız.')}}}}
   };
   return client;
 }
