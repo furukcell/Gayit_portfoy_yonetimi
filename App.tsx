@@ -14,6 +14,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as XLSX from 'xlsx';
 import { getFirebaseClient } from './src/lib/firebaseClient';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { getFirebaseApp, getFirebaseAuth } from './src/lib/firebase';
 import { signOut } from 'firebase/auth';
 import SuperadminPanel from './src/SuperadminPanel';
@@ -900,8 +903,40 @@ export default function App() {
         const { error: uploadError } = await firebaseClient.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
         if (uploadError) throw new Error('Fotoğraf yüklenemedi. Firebase Storage hizmetinin etkin olduğunu ve kuralların yayınlandığını kontrol edin.');
       }
-      const { data, error } = await firebaseClient.functions.invoke('create-agent', { body: { officeId, username: agentUsername, password: agentPassword, fullName: agentName, avatarPath } });
-      if (error || !data?.success) throw new Error(data?.error || error?.message || 'Danışman oluşturulamadı.');
+      // Create the agent with a secondary Firebase app so the current owner/superadmin
+      // session is not replaced. This path works without paid Cloud Functions.
+      const mainApp = getFirebaseApp();
+      const secondaryApp = initializeApp(mainApp.options, 'agent-creation-' + Date.now());
+      let agentUid = '';
+      try {
+        const secondaryAuth = (await import('firebase/auth')).getAuth(secondaryApp);
+        const credential = await createUserWithEmailAndPassword(
+          secondaryAuth,
+          agentUsername.trim().toLowerCase() + '@accounts.gayit.invalid',
+          agentPassword
+        );
+        agentUid = credential.user.uid;
+        const db = (await import('firebase/firestore')).getFirestore(mainApp);
+        const now = new Date().toISOString();
+        await setDoc(doc(db, 'profiles', agentUid), {
+          username: agentUsername.trim().toLowerCase(),
+          full_name: agentName.trim(),
+          office_id: officeId,
+          avatar_path: avatarPath,
+          account_status: 'active',
+          must_change_password: true,
+          created_at: now
+        });
+        await setDoc(doc(db, 'office_members', agentUid), {
+          office_id: officeId,
+          role: 'agent',
+          status: 'active',
+          created_at: now,
+          created_by: getFirebaseAuth().currentUser?.uid || ''
+        });
+      } finally {
+        await deleteApp(secondaryApp).catch(() => {});
+      }
       await loadTeamMembers(officeId);
       Alert.alert('Danışman eklendi', agentName.trim() + ' için hesap oluşturuldu. İlk girişte şifresini değiştirmesi gerekecek.');
       setAgentModalOpen(false); setAgentName(''); setAgentUsername(''); setAgentPassword(''); setAgentAvatarUri(null);
