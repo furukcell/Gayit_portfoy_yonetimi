@@ -113,11 +113,33 @@ exports.evaluateMatches = onCall({ region: REGION, enforceAppCheck: false }, asy
       matches.push({ key, office_id: officeId, requirement_id: req.id, customer_id: req.customer_id || null, property_id: p.id, score: 100, match_score: 100, match_kind: 'requirement_property', match_reasons: ['Kriterlerle eşleşti'], status: 'new', created_at: new Date().toISOString() });
     }
   }
-  const batch = db.batch();
   const col = db.collection('matches');
   const existing = await col.where('office_id', '==', officeId).get();
-  existing.docs.forEach(d => batch.delete(d.ref));
-  matches.forEach(m => { const ref = col.doc(m.key); batch.set(ref, m); });
-  await batch.commit();
+  const existingById = new Map(existing.docs.map(d => [d.id, d.data()]));
+  const nextKeys = new Set(matches.map(m => m.key));
+  const writes = [];
+  existing.docs.forEach(d => { if (!nextKeys.has(d.id)) writes.push({ type: 'delete', ref: d.ref }); });
+  for (const match of matches) {
+    const old = existingById.get(match.key);
+    const ref = col.doc(match.key);
+    writes.push({ type: 'set', ref, data: { ...match, status: old?.status || 'new', created_at: old?.created_at || match.created_at }, merge: true });
+    if (!old) {
+      const notificationRef = db.collection('notifications').doc('match_' + match.key);
+      writes.push({ type: 'set', ref: notificationRef, data: {
+        office_id: officeId, notification_type: 'match', title: 'Yeni portföy eşleşmesi',
+        body: 'Bir müşteri talebi portföyünüzle eşleşti.', match_id: match.key,
+        customer_id: match.customer_id, property_id: match.property_id, read_at: null,
+        created_at: new Date().toISOString()
+      }, merge: true });
+    }
+  }
+  for (let i = 0; i < writes.length; i += 400) {
+    const batch = db.batch();
+    for (const write of writes.slice(i, i + 400)) {
+      if (write.type === 'delete') batch.delete(write.ref);
+      else batch.set(write.ref, write.data, { merge: write.merge });
+    }
+    await batch.commit();
+  }
   return { success: true, count: matches.length, matches };
 });
