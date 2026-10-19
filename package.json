@@ -9,7 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "doctor": "npx expo-doctor"
+    "doctor": "npx expo-doctor",
+    "postinstall": "node scripts/generate-adaptive-icon.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -26,7 +27,8 @@
     "react-native-safe-area-context": "~5.10.1",
     "expo-navigation-bar": "~58.0.0",
     "expo-document-picker": "~58.0.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "sharp": "^0.34.3"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
