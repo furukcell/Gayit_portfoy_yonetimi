@@ -341,7 +341,7 @@ export default function App() {
       const { error: rowError } = await supabase.from('property_photos').insert({ property_id: selected.id, office_id: officeId, storage_path: storagePath, sort_order: propertyPhotos.length });
       if (rowError) { await supabase.storage.from('property-photos').remove([storagePath]); throw rowError; }
       await loadPropertyPhotos(selected.id);
-    } catch (error) { Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : 'Firebase Storage'ın etkin olduğunu ve kuralların yayınlandığını kontrol edin.'); }
+    } catch (error) { Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : 'Firebase Storage hizmetinin etkin olduğunu ve kuralların yayınlandığını kontrol edin.'); }
     finally { setPhotosBusy(false); }
   };
 
@@ -790,7 +790,7 @@ export default function App() {
         const ext = agentAvatarUri.toLowerCase().includes('.png') ? 'png' : 'jpg';
         avatarPath = officeId + '/agent-' + Date.now() + '.' + ext;
         const { error: uploadError } = await supabase.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
-        if (uploadError) throw new Error('Fotoğraf yüklenemedi. Firebase Storage'ın etkin olduğunu ve kuralların yayınlandığını kontrol edin.');
+        if (uploadError) throw new Error('Fotoğraf yüklenemedi. Firebase Storage hizmetinin etkin olduğunu ve kuralların yayınlandığını kontrol edin.');
       }
       const { data, error } = await supabase.functions.invoke('create-agent', { body: { officeId, username: agentUsername, password: agentPassword, fullName: agentName, avatarPath } });
       if (error || !data?.success) throw new Error(data?.error || error?.message || 'Danışman oluşturulamadı.');
