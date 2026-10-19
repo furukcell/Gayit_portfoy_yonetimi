@@ -107,6 +107,13 @@ exports.evaluateMatches = onCall({ region: REGION, enforceAppCheck: false }, asy
       if (min > 0 && Number(p.price || 0) < min) continue;
       const reqDistrict = normalize(req.district);
       if (reqDistrict && normalize(p.district) && reqDistrict !== normalize(p.district)) continue;
+      const reqRooms = Array.isArray(req.rooms) ? req.rooms.map(normalize).filter(Boolean) : [];
+      if (reqRooms.length && !reqRooms.includes(normalize(p.rooms))) continue;
+      const minArea = Number(req.min_area_m2 || req.minArea || 0);
+      const maxArea = Number(req.max_area_m2 || req.maxArea || 0);
+      const area = Number(p.area_m2 || 0);
+      if (minArea > 0 && area > 0 && area < minArea) continue;
+      if (maxArea > 0 && area > maxArea) continue;
       const reqType = normalize(req.property_type || req.propertyType);
       if (reqType && normalize(p.property_type) && reqType !== normalize(p.property_type)) continue;
       const key = req.id + '__' + p.id;
