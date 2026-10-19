@@ -17,6 +17,8 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
   const [section,setSection] = useState<'overview'|'offices'|'payments'|'create'>('overview');
   const [offices,setOffices] = useState<Office[]>([]);
   const [payments,setPayments] = useState<Payment[]>([]);
+  const [memberCount,setMemberCount] = useState(0);
+  const [agentCount,setAgentCount] = useState(0);
   const [loading,setLoading] = useState(true);
   const [saving,setSaving] = useState(false);
   const [search,setSearch] = useState('');
@@ -37,12 +39,15 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
     setLoading(true);
     try {
       const db=getFirebaseDb();
-      const [officeSnap,paymentSnap] = await Promise.all([
+      const [officeSnap,paymentSnap,membersSnap] = await Promise.all([
         getDocs(query(collection(db,'offices'),orderBy('created_at','desc'))),
-        getDocs(query(collection(db,'superadmin_payments'),orderBy('paid_at','desc')))
+        getDocs(query(collection(db,'superadmin_payments'),orderBy('paid_at','desc'))),
+        getDocs(collection(db,'office_members'))
       ]);
       setOffices(officeSnap.docs.map(d=>({id:d.id,...d.data()} as Office)));
       setPayments(paymentSnap.docs.map(d=>({id:d.id,...d.data()} as Payment)));
+      setMemberCount(membersSnap.size);
+      setAgentCount(membersSnap.docs.filter(d=>d.data().role==='agent').length);
     } catch(e:any) {
       setMessage('Veriler yüklenemedi: '+(e?.message||'Firestore kurallarını kontrol et.'));
     } finally { setLoading(false); }
@@ -125,7 +130,7 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
       {loading&&<View style={s.loading}><ActivityIndicator color={C.navy}/><Text style={s.muted}>Veriler yükleniyor…</Text></View>}
       {section==='overview'&&<>
         <Text style={s.eyebrow}>SİSTEM DURUMU</Text><Text style={s.title}>Kontrol sende.</Text><Text style={s.desc}>Bütün ofisler, abonelikler ve tahsilatlar tek merkezde.</Text>
-        <View style={s.grid}><Metric label="Toplam ofis" value={String(offices.length)} icon="business-outline"/><Metric label="Aktif ofis" value={String(active)} icon="checkmark-circle-outline"/><Metric label="Vadesi geçen" value={String(overdue)} icon="alert-circle-outline" note="Ödeme takibi"/><Metric label="14 günde yenilenecek" value={String(dueSoon)} icon="calendar-outline"/></View>
+        <View style={s.grid}><Metric label="Toplam ofis" value={String(offices.length)} icon="business-outline"/><Metric label="Aktif ofis" value={String(active)} icon="checkmark-circle-outline"/><Metric label="Vadesi geçen" value={String(overdue)} icon="alert-circle-outline" note="Ödeme takibi"/><Metric label="14 günde yenilenecek" value={String(dueSoon)} icon="calendar-outline"/><Metric label="Toplam kullanıcı" value={String(memberCount)} icon="people-outline"/><Metric label="Danışman sayısı" value={String(agentCount)} icon="person-outline"/></View>
         <View style={s.revenue}><Text style={s.revenueLabel}>Tahmini aylık abonelik geliri</Text><Text style={s.revenueValue}>{fmt(monthlyExpected)}</Text><View style={s.revenueDivider}/><Text style={s.revenueLabel}>Bu ay kaydedilen tahsilat</Text><Text style={s.revenueValue}>{fmt(receivedThisMonth)}</Text></View>
         <Text style={s.sectionTitle}>Yaklaşan işlemler</Text>
         {offices.filter(o=>o.next_due_date).sort((a,b)=>String(a.next_due_date).localeCompare(String(b.next_due_date))).slice(0,5).map(o=><Pressable key={o.id} onPress={()=>{setSelected(o);setSection('offices');}} style={s.rowCard}><View style={s.officeIcon}><Ionicons name="business-outline" size={20} color={C.navy}/></View><View style={{flex:1}}><Text style={s.officeName}>{o.name}</Text><Text style={s.muted}>Vade: {dateLabel(o.next_due_date)} · {fmt(Number(o.fee_amount||0))}/{o.billing_cycle==='yearly'?'yıl':'ay'}</Text></View><Ionicons name="chevron-forward" size={18} color={C.muted}/></Pressable>)}
