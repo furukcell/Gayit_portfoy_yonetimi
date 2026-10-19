@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, doc, getDocs, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getFirebaseApp, getFirebaseAuth, getFirebaseDb } from './src/lib/firebase';
+import { getFirebaseApp, getFirebaseAuth, getFirebaseDb } from './lib/firebase';
 import { signOut } from 'firebase/auth';
 
 const C = { navy:'#10243A', navy2:'#1A3652', gold:'#C99A4A', goldSoft:'#F6EBDD', bg:'#F4F6F9', white:'#FFFFFF', ink:'#17283B', muted:'#778597', line:'#E3E8EF', green:'#16805D', greenSoft:'#E5F5ED', red:'#B54747', redSoft:'#FCEBEC', amber:'#9A6714', amberSoft:'#FFF3D9' };
@@ -141,7 +141,7 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
           <View style={s.detailCard}><Text style={s.officeNameLarge}>{selected.name}</Text><Text style={s.muted}>ID: {selected.id}</Text>
             <Text style={s.label}>Ofis durumu</Text><View style={s.choiceRow}>{(['active','disabled'] as const).map(v=><Pressable key={v} onPress={()=>setSelected({...selected,status:v})} style={[s.choice,selected.status===v&&s.choiceOn]}><Text style={[s.choiceText,selected.status===v&&s.choiceTextOn]}>{v==='active'?'Aktif':'Pasif'}</Text></Pressable>)}</View>
             <Text style={s.label}>Paket adı</Text><TextInput value={String(selected.plan_name||'Standart')} onChangeText={v=>setSelected({...selected,plan_name:v})} style={s.input}/>
-            <Text style={s.label}>Abonelik ücreti (TL)</Text><TextInput value={String(selected.fee_amount??0)} onChangeText={v=>setSelected({...selected,fee_amount:v.replace(/[^0-9.]/g,'')})} keyboardType="numeric" style={s.input}/>
+            <Text style={s.label}>Abonelik ücreti (TL)</Text><TextInput value={String(selected.fee_amount??0)} onChangeText={v=>setSelected({...selected,fee_amount:Number(v.replace(/[^0-9.]/g,''))})} keyboardType="numeric" style={s.input}/>
             <Text style={s.label}>Faturalama dönemi</Text><View style={s.choiceRow}>{(['monthly','yearly'] as const).map(v=><Pressable key={v} onPress={()=>setSelected({...selected,billing_cycle:v})} style={[s.choice,selected.billing_cycle===v&&s.choiceOn]}><Text style={[s.choiceText,selected.billing_cycle===v&&s.choiceTextOn]}>{v==='monthly'?'Aylık':'Yıllık'}</Text></Pressable>)}</View>
             <Text style={s.label}>Abonelik durumu</Text><View style={s.choiceRow}>{(['active','past_due','cancelled','trial'] as const).map(v=><Pressable key={v} onPress={()=>setSelected({...selected,subscription_status:v})} style={[s.choice,selected.subscription_status===v&&s.choiceOn]}><Text style={[s.choiceText,selected.subscription_status===v&&s.choiceTextOn]}>{({active:'Aktif',past_due:'Gecikmiş',cancelled:'İptal',trial:'Deneme'} as any)[v]}</Text></Pressable>)}</View>
             <Text style={s.label}>Sonraki vade (YYYY-AA-GG)</Text><TextInput value={String(selected.next_due_date||'')} onChangeText={v=>setSelected({...selected,next_due_date:v})} placeholder="2026-11-19" style={s.input}/>
