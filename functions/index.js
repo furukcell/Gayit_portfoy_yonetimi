@@ -69,6 +69,20 @@ exports.createAgent = onCall({ region: REGION, enforceAppCheck: false }, async r
   await batch.commit();
   return { success: true, agent: { id: user.uid, username, full_name: name } };
 });
+exports.setAgentStatus = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+  const uid = requireAuth(request);
+  const membership = await requireOwner(uid);
+  const { userId, status } = request.data || {};
+  if (typeof userId !== 'string' || !['active', 'disabled'].includes(status)) {
+    throw new HttpsError('invalid-argument', 'Danışman ve geçerli durum gerekli.');
+  }
+  const target = await db.doc('office_members/' + userId).get();
+  if (!target.exists || target.data().office_id !== membership.office_id || target.data().role !== 'agent') {
+    throw new HttpsError('permission-denied', 'Bu danışman senin ofisine ait değil.');
+  }
+  await target.ref.update({ status, updated_at: new Date().toISOString() });
+  return { success: true, userId, status };
+});
 exports.evaluateMatches = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const uid = requireAuth(request);
   const membershipSnap = await db.doc('office_members/' + uid).get();
