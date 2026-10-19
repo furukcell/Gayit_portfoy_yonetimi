@@ -1153,6 +1153,7 @@ export default function App() {
 
   const updatePropertyStatus = async (nextStatus: PropertyStatus) => {
     if (!selected) return;
+    if (role === 'agent' && selected.ownerAgentId !== getFirebaseAuth().currentUser?.uid) { Alert.alert('İşlem yetkisi yok', 'Yalnızca kendi ilanlarının durumunu değiştirebilirsin.'); return; }
     const statusMap: Record<PropertyStatus, string> = { 'Aktif': 'active', 'Opsiyonlu': 'optioned', 'Satıldı': 'sold', 'Kiralandı': 'rented', 'Arşivde': 'archived' };
     try {
       const firebaseClient = getFirebaseClient();
@@ -1168,6 +1169,8 @@ export default function App() {
   };
 
   const openPropertyEditor = (p: Property) => {
+    const currentUid = getFirebaseAuth().currentUser?.uid;
+    if (role === 'agent' && p.ownerAgentId !== currentUid) { Alert.alert('Düzenleme yetkisi yok', 'Ofis ilanlarını görebilirsin ancak yalnızca kendi eklediğin ilanları düzenleyebilirsin.'); return; }
     setPendingPhotoUris([]);
     setEditingPropertyId(p.id);
     setTitle(p.title); setAddress(p.address); setPrice(String(p.price)); setArea(p.area.replace(/[^0-9.]/g, ''));
@@ -1189,6 +1192,7 @@ export default function App() {
 
   const archiveProperty = async () => {
     if (!selected) return;
+    if (role === 'agent' && selected.ownerAgentId !== getFirebaseAuth().currentUser?.uid) { Alert.alert('İşlem yetkisi yok', 'Yalnızca kendi ilanlarını arşivleyebilirsin.'); return; }
     Alert.alert('Portföyü arşivle', 'Bu ilan aktif portföy listesinden çıkarılacak. Devam edilsin mi?', [
       {text:'Vazgeç',style:'cancel'},
       {text:'Arşivle',style:'destructive',onPress:async()=>{
@@ -1239,6 +1243,7 @@ export default function App() {
 
   const saveProperty = async () => {
     if (propertyBusy) return;
+    if (editingPropertyId) { const existing = properties.find(p => p.id === editingPropertyId); if (role === 'agent' && existing?.ownerAgentId !== getFirebaseAuth().currentUser?.uid) { Alert.alert('Düzenleme yetkisi yok', 'Yalnızca kendi ilanlarını düzenleyebilirsin.'); return; } }
     const cleanTitle = title.trim();
     const cleanAddress = address.trim();
     const priceDigits = price.replace(/[^0-9]/g, '');
