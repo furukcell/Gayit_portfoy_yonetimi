@@ -47,10 +47,8 @@ export default function App() {
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     // Immersive sticky: hide Android system navigation controls and let a swipe reveal them temporarily.
-    void NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
+    // Use only APIs supported by the installed expo-navigation-bar version.
     void NavigationBar.setVisibilityAsync('hidden').catch(() => {});
-    void NavigationBar.setBackgroundColorAsync('#10243A').catch(() => {});
-    void NavigationBar.setButtonStyleAsync('light').catch(() => {});
   }, []);
   const [role, setRole] = useState<Role>('owner');
   const [authenticated, setAuthenticated] = useState(false);
