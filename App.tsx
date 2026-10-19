@@ -10,6 +10,8 @@ import * as NavigationBar from 'expo-navigation-bar';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as XLSX from 'xlsx';
 import { getFirebaseClient } from './src/lib/firebaseClient';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirebaseApp, getFirebaseAuth } from './src/lib/firebase';
@@ -144,6 +146,8 @@ export default function App() {
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [csvImportText, setCsvImportText] = useState('');
   const [csvImportBusy, setCsvImportBusy] = useState(false);
+  const [excelFileName, setExcelFileName] = useState('');
+  const [excelPreviewCount, setExcelPreviewCount] = useState(0);
   const [minPriceFilter, setMinPriceFilter] = useState('');
   const [maxPriceFilter, setMaxPriceFilter] = useState('');
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
@@ -274,6 +278,26 @@ export default function App() {
         setFavoriteIds(ids=>[...ids,property.id]);
       }
     } catch (error) { Alert.alert('Favori kaydedilemedi',error instanceof Error?error.message:'Firebase 011 migration dosyasını ve yetkileri kontrol et.'); }
+  };
+
+  const pickPortfolioSpreadsheet = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-excel','text/csv','text/comma-separated-values'], copyToCacheDirectory: true, multiple: false });
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+      const response = await fetch(asset.uri);
+      const workbook = XLSX.read(await response.arrayBuffer(), { type: 'array', cellDates: false });
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) throw new Error('Dosyada okunabilir sayfa bulunamadı.');
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], { defval: '', raw: false });
+      if (!rows.length) throw new Error('Excel sayfasında başlık ve ilan satırları bulunamadı.');
+      const normalize = (value: unknown) => String(value ?? '').trim().toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/[^a-z0-9]/g,'');
+      const find = (row: Record<string, unknown>, aliases: string[]) => { const keys=Object.keys(row); const key=keys.find(k=>aliases.some(a=>normalize(k)===normalize(a))||aliases.some(a=>normalize(k).includes(normalize(a)))); return key?String(row[key]??'').trim():''; };
+      const mapped=rows.map(row=>({title:find(row,['ilan adi','ilan başlığı','portföy başlığı','başlık','title']),type:find(row,['gayrimenkul tipi','emlak tipi','tür','tip','property type']),listing:find(row,['ilan tipi','satılık kiralık','işlem tipi','listing type']),price:find(row,['fiyat','istenen fiyat','satış fiyatı','kira','price','bedel']),rooms:find(row,['oda','oda sayısı','rooms']),area:find(row,['m2','m²','metrekare','alan','net m2','brüt m2','area']),district:find(row,['ilçe','mahalle','semt','district']),city:find(row,['şehir','il','city']),address:find(row,['adres','açık adres','konum','address']),description:find(row,['açıklama','detay','description','notlar']),status:find(row,['durum','ilan durumu','status'])})).filter(row=>Object.values(row).some(v=>String(v).trim()));
+      if(!mapped.length)throw new Error('İlan satırı bulunamadı. İlk satır sütun başlıkları olmalı.');
+      const csv=['Portföy başlığı;Tür;İlan tipi;Fiyat;Oda;Alan;İlçe;Adres;Durum;Danışman;Açıklama',...mapped.map(r=>[r.title,r.type,r.listing,r.price,r.rooms,r.area,r.district,[r.address,r.city].filter(Boolean).join(', '),r.status,'',r.description].map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';'))].join('\n');
+      setCsvImportText(csv);setExcelFileName(asset.name);setExcelPreviewCount(mapped.length);Alert.alert('Excel okundu',mapped.length+' satır bulundu. Aktarmadan önce veriyi kontrol et.');
+    }catch(error){Alert.alert('Dosya okunamadı',error instanceof Error?error.message:'Excel dosyası okunurken hata oluştu.');}
   };
 
   const importPortfolioCsv = async () => {
@@ -1215,7 +1239,7 @@ export default function App() {
           {role === 'owner' && <Pressable style={styles.moreCard} onPress={()=>setTab('team')}><Ionicons name="people-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Ekip yönetimi</Text><Text style={styles.teamRole}>Danışmanları ve ofis üyelerini yönet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           <Pressable style={styles.moreCard} onPress={async()=>{setNotificationsOpen(true);await loadNotifications(officeId);}}><Ionicons name="notifications-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Bildirim merkezi {notifications.filter(n=>!n.read_at).length ? '('+notifications.filter(n=>!n.read_at).length+')' : ''}</Text><Text style={styles.teamRole}>Yeni eşleşmeler ve sistem bildirimleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={()=>{setTab('portfolio');setRecentOnly(true);setFavoritesOnly(false);void loadRecentViews();}}><Ionicons name="time-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Son görüntülenen portföyler</Text><Text style={styles.teamRole}>Son açtığın ilanları hızlıca bul.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
-          <Pressable style={styles.moreCard} onPress={()=>setCsvImportOpen(true)}><Ionicons name="cloud-upload-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>CSV ile portföy içe aktar</Text><Text style={styles.teamRole}>GAYIT CSV içeriğini yapıştırarak toplu kayıt oluştur.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
+          <Pressable style={styles.moreCard} onPress={()=>setCsvImportOpen(true)}><Ionicons name="cloud-upload-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Excel / CSV ile portföy içe aktar</Text><Text style={styles.teamRole}>GAYIT CSV içeriğini yapıştırarak toplu kayıt oluştur.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={exportPortfolioCsv}><Ionicons name="download-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Portföyü CSV olarak dışa aktar</Text><Text style={styles.teamRole}>Excel uyumlu tabloyu paylaş; yalnızca erişebildiğin portföyler eklenir.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           {role==='owner'&&<Pressable style={styles.moreCard} onPress={()=>{setTransactionPropertyId(properties[0]?.id||'');setTransactionModalOpen(true);}}><Ionicons name="cash-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Satış ve komisyon kaydı</Text><Text style={styles.teamRole}>Gerçekleşen işlemi, ofis ve danışman komisyonunu kaydet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           <Pressable style={styles.moreCard} onPress={()=>setTab('stats')}><Ionicons name="bar-chart-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>{role==='owner'?'Ofis istatistikleri':'Performansım'}</Text><Text style={styles.teamRole}>Portföy ve operasyon özetleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
@@ -1265,7 +1289,7 @@ export default function App() {
           <View style={styles.modalHeader}><Pressable disabled={csvImportBusy} onPress={()=>setCsvImportOpen(false)} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>CSV portföy aktarımı</Text><View style={{width:40}}/></View>
           <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
             <Text style={styles.pageSub}>GAYIT'ın dışa aktardığı CSV içeriğini başlık satırıyla birlikte yapıştır. Ayraç noktalı virgül (;) olmalı. Aktarım mevcut ilanları silmez.</Text>
-            <TextInput value={csvImportText} onChangeText={setCsvImportText} multiline textAlignVertical="top" autoCapitalize="none" placeholder={'Portföy başlığı;Tür;İlan tipi;Fiyat;Oda;Alan;İlçe;Adres;Durum;Danışman;Açıklama'} placeholderTextColor={palette.muted} style={[styles.input,{minHeight:230,marginTop:18}]}/>
+            <Pressable onPress={pickPortfolioSpreadsheet} style={[styles.moreCard,{marginTop:16,marginBottom:8,borderColor:palette.green,borderWidth:1}]}><Ionicons name="document-attach-outline" size={24} color={palette.green}/><View style={{flex:1}}><Text style={styles.teamName}>Excel / CSV dosyası seç</Text><Text style={styles.teamRole}>.xlsx, .xls veya .csv dosyasını telefondan seç; sütunlar otomatik eşleştirilir.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>{!!excelFileName && <View style={styles.notice}><Ionicons name="checkmark-circle" size={18} color={palette.green}/><Text style={styles.noticeText}>{excelFileName} · {excelPreviewCount} ilan satırı okundu.</Text></View>}<TextInput value={csvImportText} onChangeText={setCsvImportText} multiline textAlignVertical="top" autoCapitalize="none" placeholder={'Portföy başlığı;Tür;İlan tipi;Fiyat;Oda;Alan;İlçe;Adres;Durum;Danışman;Açıklama'} placeholderTextColor={palette.muted} style={[styles.input,{minHeight:230,marginTop:18}]}/>
             <Text style={styles.noticeText}>Her satır yeni portföy oluşturur. Bu sürüm CSV metnini yapıştırır; dosya seçimi ve mevcut kayıtları güncelleme desteklenmez.</Text>
             <Pressable disabled={csvImportBusy} onPress={importPortfolioCsv} style={[styles.saveButton,{marginTop:20,opacity:csvImportBusy?0.6:1}]}><Text style={styles.saveButtonText}>{csvImportBusy?'Aktarılıyor…':'Portföyleri içe aktar'}</Text></Pressable>
           </ScrollView>
