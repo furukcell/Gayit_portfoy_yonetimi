@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { changeInitialPassword, signInWithUsername } from './src/lib/usernameAuth';
 import {
-  Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar,
+  Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar, KeyboardAvoidingView, Platform,
   StyleSheet, Text, TextInput, View, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -979,7 +979,8 @@ export default function App() {
   if (!authenticated || mustChangePassword) {
     return <SafeAreaView style={styles.safe} edges={['top','left','right','bottom']}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.authPage} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
+      <ScrollView contentContainerStyle={styles.authPage} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <View style={styles.authBrandMark}><Ionicons name="business" size={32} color={palette.gold}/></View>
         <Text style={styles.authBrand}>GAYIT<Text style={styles.brandDot}>.</Text></Text>
         <Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text>
@@ -1001,6 +1002,7 @@ export default function App() {
         </>}
         {!!authError && <View style={styles.authError}><Ionicons name="alert-circle-outline" size={18} color={palette.red}/><Text style={styles.authErrorText}>{authError}</Text></View>}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>;
   }
 
@@ -1275,7 +1277,7 @@ function Feature({icon,label,value}:{icon:keyof typeof Ionicons.glyphMap;label:s
 }
 
 const styles = StyleSheet.create({
-  safe:{flex:1,backgroundColor:palette.bg}, authPage:{flexGrow:1,justifyContent:'center',paddingHorizontal:26,paddingVertical:36},authBrandMark:{width:64,height:64,borderRadius:20,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center',alignSelf:'center',marginBottom:14},authBrand:{fontSize:32,fontWeight:'900',letterSpacing:1.5,color:palette.navy,textAlign:'center'},authTitle:{fontSize:25,fontWeight:'900',color:palette.ink,marginTop:38},authSubtitle:{fontSize:13,lineHeight:20,color:palette.muted,marginTop:8,marginBottom:12},authSubmit:{backgroundColor:palette.navy,borderRadius:13,padding:16,alignItems:'center',marginTop:24},authSubmitText:{fontSize:14,fontWeight:'900',color:'#fff'},authHint:{fontSize:11,color:palette.muted,textAlign:'center',marginTop:15,lineHeight:17},authError:{flexDirection:'row',alignItems:'flex-start',gap:8,padding:12,borderRadius:12,backgroundColor:palette.redSoft,marginTop:16},authErrorText:{flex:1,fontSize:12,lineHeight:17,color:palette.red},signOutButton:{flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:11,paddingVertical:9,backgroundColor:'#E8ECF1',borderRadius:10},signOutText:{fontSize:11,fontWeight:'800',color:palette.navy}, topbar:{paddingHorizontal:20,paddingTop:8,paddingBottom:12,flexDirection:'row',justifyContent:'space-between',alignItems:'center'},
+  safe:{flex:1,backgroundColor:palette.bg}, authPage:{flexGrow:1,justifyContent:'flex-start',paddingHorizontal:26,paddingTop:28,paddingBottom:44},authBrandMark:{width:64,height:64,borderRadius:20,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center',alignSelf:'center',marginBottom:14},authBrand:{fontSize:32,fontWeight:'900',letterSpacing:1.5,color:palette.navy,textAlign:'center'},authTitle:{fontSize:25,fontWeight:'900',color:palette.ink,marginTop:38},authSubtitle:{fontSize:13,lineHeight:20,color:palette.muted,marginTop:8,marginBottom:12},authSubmit:{backgroundColor:palette.navy,borderRadius:13,padding:16,alignItems:'center',marginTop:24},authSubmitText:{fontSize:14,fontWeight:'900',color:'#fff'},authHint:{fontSize:11,color:palette.muted,textAlign:'center',marginTop:15,lineHeight:17},authError:{flexDirection:'row',alignItems:'flex-start',gap:8,padding:12,borderRadius:12,backgroundColor:palette.redSoft,marginTop:16},authErrorText:{flex:1,fontSize:12,lineHeight:17,color:palette.red},signOutButton:{flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:11,paddingVertical:9,backgroundColor:'#E8ECF1',borderRadius:10},signOutText:{fontSize:11,fontWeight:'800',color:palette.navy}, topbar:{paddingHorizontal:20,paddingTop:8,paddingBottom:12,flexDirection:'row',justifyContent:'space-between',alignItems:'center'},
   brand:{fontSize:25,fontWeight:'900',letterSpacing:1.1,color:palette.navy},brandDot:{color:palette.gold},brandSub:{fontSize:8,fontWeight:'900',letterSpacing:1.6,color:palette.muted,marginTop:1},
   roleSwitch:{flexDirection:'row',backgroundColor:'#E8ECF1',padding:3,borderRadius:12},roleButton:{paddingHorizontal:10,paddingVertical:8,borderRadius:9},roleActive:{backgroundColor:palette.navy},roleText:{fontSize:10,fontWeight:'700',color:palette.muted},roleTextActive:{color:'#fff'},
   body:{flex:1},page:{paddingHorizontal:20,paddingTop:14,paddingBottom:28},eyebrow:{fontSize:10,fontWeight:'900',letterSpacing:1.5,color:palette.gold},pageTitle:{fontSize:27,fontWeight:'900',letterSpacing:-.6,color:palette.ink,marginTop:7},pageSub:{fontSize:12,color:palette.muted,marginTop:5,lineHeight:18},
