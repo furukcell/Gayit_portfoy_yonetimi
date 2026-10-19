@@ -8,9 +8,9 @@ type Row = Record<string, any>;
 const err = (message: string) => ({ message });
 
 class CollectionQuery {
-  filters: any[] = []; orders: any[] = []; max?: number; op = 'select'; payload: any; one = false; optional = false; conflict: string[] = [];
+  filters: any[] = []; orders: any[] = []; max?: number; op = 'select'; payload: any; one = false; optional = false; conflict: string[] = []; selectedFields = '*';
   constructor(private table: string) {}
-  select(_fields = '*') { return this; }
+  select(_fields = '*') { this.selectedFields = _fields; return this; }
   eq(k: string, v: any) { this.filters.push(k === 'id' ? where(documentId(), '==', String(v)) : where(k, '==', v)); return this; }
   neq(k: string, v: any) { this.filters.push(k === 'id' ? where(documentId(), '!=', String(v)) : where(k, '!=', v)); return this; }
   in(k: string, v: any[]) { this.filters.push(v.length ? where(k === 'id' ? documentId() : k, 'in', v.slice(0, 30)) : where(documentId(), '==', '__empty__')); return this; }
@@ -39,7 +39,26 @@ class CollectionQuery {
         return {data:Array.isArray(this.payload)?out:out[0], error:null};
       }
       const snap = await getDocs(query(col, ...this.filters, ...this.orders, ...(this.max ? [take(this.max)] : [])));
-      const rows = snap.docs.map(d => ({id:d.id, ...d.data()} as Row));
+      let rows = snap.docs.map(d => ({id:d.id, ...d.data()} as Row));
+      if (this.table === 'office_members') {
+        rows = await Promise.all(rows.map(async row => {
+          const profileSnap = await getDoc(doc(db, 'profiles', row.id));
+          return { ...row, user_id: row.id, profiles: profileSnap.exists() ? { id: profileSnap.id, ...profileSnap.data() } : null };
+        }));
+      } else if (this.table === 'customers' && this.selectedFields.includes('customer_requirements')) {
+        rows = await Promise.all(rows.map(async row => {
+          const reqSnap = await getDocs(query(collection(db, 'customer_requirements'), where('customer_id', '==', row.id)));
+          return { ...row, customer_requirements: reqSnap.docs.map(d => ({ id: d.id, ...d.data() })) };
+        }));
+      } else if (this.table === 'matches' && this.selectedFields.includes('properties(')) {
+        rows = await Promise.all(rows.map(async row => {
+          const [propertySnap, customerSnap] = await Promise.all([
+            row.property_id ? getDoc(doc(db, 'properties', row.property_id)) : Promise.resolve(null),
+            row.customer_id ? getDoc(doc(db, 'customers', row.customer_id)) : Promise.resolve(null)
+          ]);
+          return { ...row, properties: propertySnap?.exists() ? { id: propertySnap.id, ...propertySnap.data() } : null, customers: customerSnap?.exists() ? { id: customerSnap.id, ...customerSnap.data() } : null };
+        }));
+      }
       if (this.op === 'update' || this.op === 'delete') {
         for (const row of rows) this.op === 'delete' ? await deleteDoc(doc(db,this.table,row.id)) : await updateDoc(doc(db,this.table,row.id),this.payload);
         return {data:null,error:null};
