@@ -482,44 +482,6 @@ export default function App() {
       Alert.alert('PDF oluşturulamadı', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
     }
   };
-  const createMultiPropertyPdf = async (items: Property[]) => {
-    if (!items.length) { Alert.alert('Portföy bulunamadı', 'PDF için en az bir ilan gerekli.'); return; }
-    try {
-      const firebaseClient = getFirebaseClient();
-      const cards = await Promise.all(items.slice(0, 5).map(async (p, index) => {
-        const { data: photoRows, error } = await firebaseClient.from('property_photos')
-          .select('storage_path,sort_order').eq('property_id', p.id).order('sort_order', { ascending: true }).limit(4);
-        if (error) throw new Error('İlan fotoğrafları alınamadı.');
-        const urls = await Promise.all((photoRows || []).map(async (photo: any) => {
-          const { data, error: signedError } = await firebaseClient.storage.from('property-photos')
-            .createSignedUrl(photo.storage_path, 60 * 60);
-          if (signedError) throw new Error('Bir ilan fotoğrafı açılamadı.');
-          return data.signedUrl as string;
-        }));
-        const gallery = urls.map(url => '<img src="' + url + '" />').join('');
-        return '<article class="listing"><div class="number">ÖNERİ ' + (index + 1) + '</div><h2>' + htmlEscape(p.title) + '</h2><div class="address">' + htmlEscape(p.address) + '</div>' +
-          (gallery ? '<div class="gallery">' + gallery + '</div>' : '') +
-          '<div class="price">' + money(p.price) + (p.kind === 'Kiralık' ? ' / ay' : '') + '</div>' +
-          '<div class="specs"><span>' + htmlEscape(p.kind) + '</span><span>' + htmlEscape(propertyTypeLabel(p.propertyType)) + '</span><span>' + htmlEscape(p.rooms || '—') + '</span><span>' + htmlEscape(p.area || '—') + '</span><span>' + htmlEscape(p.status) + '</span></div>' +
-          '<p>' + htmlEscape(p.description || 'Detaylı bilgi için danışmanınızla iletişime geçebilirsiniz.') + '</p><div class="code">Portföy kodu: ' + htmlEscape(p.id) + ' · Danışman: ' + htmlEscape(p.agent) + '</div></article>';
-      }));
-      const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><style>
-      @page{size:A4;margin:15mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#17283b;font-size:10pt;line-height:1.5;margin:0}
-      header{background:#10243a;color:#fff;padding:25px;border-radius:12px;border-bottom:5px solid #c99a4a}header small{color:#e8c98f;letter-spacing:2px;font-weight:bold}header h1{font-size:24pt;margin:10px 0 5px}header p{color:#e1e8ef;margin:0}
-      .intro{margin:18px 0 24px;color:#778597}.listing{page-break-inside:avoid;border:1px solid #e3e8ef;border-radius:12px;padding:17px;margin:0 0 18px}
-      .number{font-size:8pt;color:#9a6714;font-weight:bold;letter-spacing:1.5px}.listing h2{font-size:17pt;margin:6px 0}.address{color:#778597;font-size:9pt}
-      .gallery{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:12px 0}.gallery img{width:100%;height:125px;object-fit:cover;border-radius:7px}
-      .price{font-size:21pt;font-weight:bold;color:#10243a;margin:12px 0}.specs{display:flex;flex-wrap:wrap;gap:6px}.specs span{background:#f4f6f9;border:1px solid #e3e8ef;border-radius:6px;padding:5px 8px;font-size:8.5pt}
-      .code{border-top:1px solid #e3e8ef;padding-top:9px;margin-top:12px;color:#778597;font-size:8pt}
-      footer{border-top:1px solid #e3e8ef;padding-top:10px;color:#778597;font-size:8pt}
-      </style></head><body><header><small>GAYIT · KİŞİYE ÖZEL PORTFÖY</small><h1>Sizin için seçtiğimiz gayrimenkuller</h1><p>İhtiyaçlarınıza uygun portföy önerileri</p></header><p class="intro">Bu sunumda ${items.slice(0,5).length} gayrimenkul önerisi yer almaktadır. Fiyat ve uygunluk bilgileri değişebilir; güncel bilgi için danışmanınızla görüşün.</p>${cards.join('')}<footer>GAYIT · Portföy Yönetimi · Bu belge bilgilendirme amacıyla hazırlanmıştır.</footer></body></html>`;
-      const file = await Print.printToFileAsync({ html });
-      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', dialogTitle: 'Seçili portföy önerilerini paylaş' });
-      else Alert.alert('PDF hazır', 'PDF dosyası oluşturuldu: ' + file.uri);
-    } catch (error) {
-      Alert.alert('PDF oluşturulamadı', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
-    }
-  };
   const loadProperties = async (targetOfficeId: string) => {
     setPropertiesLoading(true);
     try {
@@ -1135,9 +1097,7 @@ export default function App() {
           <View style={styles.filters}>{(['Tümü','Aktif','Opsiyonlu','Satıldı','Kiralandı'] as const).map(status=><Pressable key={status} onPress={()=>setStatusFilter(status)} style={[styles.filter,statusFilter===status&&styles.filterOn]}><Text style={[styles.filterText,statusFilter===status&&styles.filterTextOn]}>{status}</Text></Pressable>)}</View>
           <Pressable onPress={()=>setShowArchived(v=>!v)} style={[styles.filter,{alignSelf:'flex-start',marginTop:10},showArchived&&styles.filterOn]}><Text style={[styles.filterText,showArchived&&styles.filterTextOn]}>{showArchived ? 'Arşivden çıkış · Aktif portföyleri göster' : 'Arşivlenmiş portföyleri göster'}</Text></Pressable>
           <Text style={styles.resultCount}>{propertiesLoading ? 'Portföyler yükleniyor…' : `${visibleProperties.length} portföy`}</Text>
-          <Pressable disabled={propertiesLoading || visibleProperties.length === 0} onPress={() => createMultiPropertyPdf(visibleProperties.slice(0, 5))} style={[styles.saveButton,{marginTop:10,marginBottom:14,opacity:visibleProperties.length===0?0.5:1}]}>
-            <Ionicons name="documents-outline" size={19} color="#fff"/><Text style={styles.saveButtonText}>İlk 5 ilanı müşteri PDF'si yap</Text>
-          </Pressable>
+
           {visibleProperties.map(p=><View key={p.id} style={{flexDirection:'row',alignItems:'center',gap:4}}><View style={{flex:1}}><PropertyRow property={p} onPress={()=>openProperty(p)} /></View><Pressable onPress={()=>toggleFavorite(p)} accessibilityLabel={favoriteIds.includes(p.id)?'Favorilerden çıkar':'Favorilere ekle'} style={{width:40,height:48,alignItems:'center',justifyContent:'center',backgroundColor:palette.white,borderRadius:12,borderWidth:1,borderColor:palette.line,marginBottom:11}}><Ionicons name={favoriteIds.includes(p.id)?'heart':'heart-outline'} size={20} color={favoriteIds.includes(p.id)?palette.red:palette.muted}/></Pressable></View>)}
           {!visibleProperties.length && <View style={styles.empty}><Ionicons name="file-tray-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Portföy bulunamadı</Text><Text style={styles.pageSub}>Aramanı değiştir veya yeni ilan ekle.</Text></View>}
         </ScrollView>}
