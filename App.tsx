@@ -10,8 +10,11 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
 import { getFirebaseClient } from './src/lib/firebaseClient';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getFirebaseApp, getFirebaseAuth } from './src/lib/firebase';
+import { signOut } from 'firebase/auth';
 
-type Role = 'owner' | 'agent';
+type Role = 'owner' | 'agent' | 'superadmin';
 type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
 type Customer = { id: string; fullName: string; phone: string; roles: string[]; assignedAgent: string; notes: string; active: boolean; requirementCount: number; nextFollowUpAt: string | null; assignedAgentId: string };
 type PropertyStatus = 'Aktif' | 'Opsiyonlu' | 'Satıldı' | 'Kiralandı' | 'Arşivde';
@@ -49,6 +52,12 @@ export default function App() {
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [officeId, setOfficeId] = useState('');
+  const [superOfficeName, setSuperOfficeName] = useState('');
+  const [superOwnerName, setSuperOwnerName] = useState('');
+  const [superOwnerUsername, setSuperOwnerUsername] = useState('');
+  const [superOwnerPassword, setSuperOwnerPassword] = useState('');
+  const [superCreateBusy, setSuperCreateBusy] = useState(false);
+  const [superResult, setSuperResult] = useState('');
   const [agentModalOpen, setAgentModalOpen] = useState(false);
   const [agentName, setAgentName] = useState('');
   const [agentUsername, setAgentUsername] = useState('');
@@ -744,6 +753,11 @@ export default function App() {
     try {
       const result = await signInWithUsername(loginUsername, loginPassword);
       setRole(result.role);
+      if (result.role === 'superadmin') {
+        setAuthenticated(true);
+        setLoginPassword('');
+        return;
+      }
       setOfficeId(result.officeId);
       await loadProperties(result.officeId);
       await loadCustomers(result.officeId);
@@ -914,6 +928,58 @@ export default function App() {
       setPropertyBusy(false);
     }
   };
+
+  const handleCreateOfficeAsSuperadmin = async () => {
+    if (!superOfficeName.trim() || !superOwnerName.trim() || !superOwnerUsername.trim() || superOwnerPassword.length < 10) {
+      setSuperResult('Tüm alanları doldur. Ofis sahibi şifresi en az 10 karakter olmalı.');
+      return;
+    }
+    setSuperCreateBusy(true); setSuperResult('');
+    try {
+      const functions = getFunctions(getFirebaseApp(), 'europe-west1');
+      const createOfficeCall = httpsCallable(functions, 'createOffice');
+      const response:any = await createOfficeCall({
+        officeName: superOfficeName.trim(),
+        ownerFullName: superOwnerName.trim(),
+        ownerUsername: superOwnerUsername.trim().toLowerCase(),
+        ownerPassword: superOwnerPassword
+      });
+      if (!response.data?.success) throw new Error('Ofis oluşturulamadı.');
+      setSuperResult('Ofis oluşturuldu: ' + response.data.office.name + ' · Ofis sahibi kullanıcı adı: ' + response.data.owner.username);
+      setSuperOfficeName(''); setSuperOwnerName(''); setSuperOwnerUsername(''); setSuperOwnerPassword('');
+    } catch (error) {
+      setSuperResult(error instanceof Error ? error.message : 'Ofis oluşturulamadı. Cloud Function dağıtımını kontrol et.');
+    } finally { setSuperCreateBusy(false); }
+  };
+
+  const handleSuperadminLogout = async () => {
+    try { await signOut(getFirebaseAuth()); } catch {}
+    setAuthenticated(false); setRole('owner'); setLoginUsername(''); setLoginPassword(''); setSuperResult('');
+  };
+
+  if (authenticated && role === 'superadmin') {
+    return <SafeAreaView style={styles.safe} edges={['top','left','right','bottom']}>
+      <StatusBar barStyle="light-content" backgroundColor={palette.navy}/>
+      <ScrollView contentContainerStyle={styles.authPage} keyboardShouldPersistTaps="handled">
+        <View style={[styles.authBrandMark,{backgroundColor:palette.navy}]}><Ionicons name="shield-checkmark" size={32} color={palette.gold}/></View>
+        <Text style={styles.authBrand}>GAYIT<Text style={styles.brandDot}>.</Text></Text>
+        <Text style={styles.brandSub}>SÜPERADMİN YÖNETİMİ</Text>
+        <Text style={styles.authTitle}>Ofis oluştur</Text>
+        <Text style={styles.authSubtitle}>Yeni emlak ofisini ve ofis yöneticisinin giriş bilgilerini buradan oluştur.</Text>
+        <Text style={styles.fieldLabel}>Ofis adı</Text>
+        <TextInput value={superOfficeName} onChangeText={setSuperOfficeName} style={styles.input} placeholder="Örn. Milas Gayrimenkul" placeholderTextColor={palette.muted}/>
+        <Text style={styles.fieldLabel}>Ofis sahibi adı soyadı</Text>
+        <TextInput value={superOwnerName} onChangeText={setSuperOwnerName} style={styles.input} placeholder="Ad soyad" placeholderTextColor={palette.muted}/>
+        <Text style={styles.fieldLabel}>Ofis sahibi kullanıcı adı</Text>
+        <TextInput value={superOwnerUsername} onChangeText={setSuperOwnerUsername} autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Örn. milasemlak" placeholderTextColor={palette.muted}/>
+        <Text style={styles.fieldLabel}>Geçici şifre (en az 10 karakter)</Text>
+        <TextInput value={superOwnerPassword} onChangeText={setSuperOwnerPassword} secureTextEntry autoCapitalize="none" style={styles.input} placeholder="İlk giriş şifresi" placeholderTextColor={palette.muted}/>
+        <Pressable disabled={superCreateBusy} onPress={handleCreateOfficeAsSuperadmin} style={[styles.authSubmit,superCreateBusy&&{opacity:0.6}]}><Text style={styles.authSubmitText}>{superCreateBusy?'Oluşturuluyor...':'Ofisi oluştur'}</Text></Pressable>
+        {!!superResult && <View style={styles.authError}><Text style={styles.authErrorText}>{superResult}</Text></View>}
+        <Pressable onPress={handleSuperadminLogout} style={{padding:16,alignItems:'center'}}><Text style={{color:palette.muted,fontWeight:'600'}}>Güvenli çıkış yap</Text></Pressable>
+      </ScrollView>
+    </SafeAreaView>;
+  }
 
   if (!authenticated || mustChangePassword) {
     return <SafeAreaView style={styles.safe} edges={['top','left','right','bottom']}>
