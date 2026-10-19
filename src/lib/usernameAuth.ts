@@ -1,5 +1,5 @@
 import { signInWithEmailAndPassword, signOut, updatePassword, type User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from './firebase';
 
 const INTERNAL_LOGIN_DOMAIN = 'accounts.gayit.invalid';
@@ -30,6 +30,6 @@ export async function changeInitialPassword(newPassword:string):Promise<void> {
   if(newPassword.length<10) throw new Error('Yeni şifre en az 10 karakter olmalıdır.');
   const user=getFirebaseAuth().currentUser;
   if(!user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
-  try { await updatePassword(user,newPassword); }
-  catch { throw new Error('Şifre değiştirilemedi. Yeniden giriş yapıp tekrar dene.'); }
+  try { await updatePassword(user,newPassword); await updateDoc(doc(getFirebaseDb(),'profiles',user.uid),{must_change_password:false,updated_at:new Date().toISOString()}); }
+  catch { throw new Error('Şifre değiştirildi veya güncelleme tamamlanamadı. Yeniden giriş yapıp tekrar dene.'); }
 }
