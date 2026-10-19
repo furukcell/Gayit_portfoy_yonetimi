@@ -542,7 +542,7 @@ export default function App() {
       const locationParts = (p.address || '').split(',').map((part: string) => part.trim()).filter(Boolean);
       const locationShort = locationParts.slice(-2).join(' / ');
       const code = htmlEscape(String(p.id || '').slice(0, 18).toUpperCase());
-      const agentAvatarHtml = agentAvatarUrl ? '<img class="agent-photo" src="' + agentAvatarUrl + '" alt="Danışman" />' : '<div class="agent-mark">' + htmlEscape(agentDisplayName.split(/\\s+/).map((part: string) => part[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')) + '</div>';
+      const agentAvatarHtml = agentAvatarUrl ? '<img class="agent-photo" src="' + agentAvatarUrl + '" alt="Danışman" />' : '<div class="agent-mark">' + htmlEscape(agentDisplayName.split(/\s+/).map((part: string) => part[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')) + '</div>';
       const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <style>
       @page{size:A4;margin:0}
@@ -1114,9 +1114,9 @@ export default function App() {
   const chooseProfileAvatar = async () => { const permission = await ImagePicker.requestMediaLibraryPermissionsAsync(); if (!permission.granted) { Alert.alert('Fotoğraf izni gerekli', 'Profil fotoğrafı seçmek için galeri izni vermelisin.'); return; } const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1,1], quality: 0.82 }); if (!result.canceled && result.assets[0]) setProfileAvatarUri(result.assets[0].uri); };
   const saveProfile = async () => {
     const uid = getFirebaseAuth().currentUser?.uid; if (!uid) { Alert.alert('Oturum bulunamadı', 'Lütfen yeniden giriş yap.'); return; }
-    if (profileEmail.trim() && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(profileEmail.trim())) { Alert.alert('E-posta hatalı', 'Geçerli bir e-posta adresi gir.'); return; }
+    if (profileEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileEmail.trim())) { Alert.alert('E-posta hatalı', 'Geçerli bir e-posta adresi gir.'); return; }
     setProfileBusy(true); try { const client = getFirebaseClient(); let avatarPath = profileAvatarPath;
-      if (profileAvatarUri) { const response = await fetch(profileAvatarUri); const blob = await response.blob(); const ext = profileAvatarUri.toLowerCase().split('?')[0].endsWith('.png') ? 'png' : 'jpg'; avatarPath = uid + '/profile-' + Date.now() + '.' + ext; const { error: uploadError } = await client.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false }); if (uploadError) throw new Error('Fotoğraf yüklenemedi. Firebase Storage kurallarını kontrol et.'); }
+      if (profileAvatarUri) { const response = await fetch(profileAvatarUri); const blob = await response.blob(); const ext = profileAvatarUri.toLowerCase().split('?')[0].endsWith('.png') ? 'png' : 'jpg'; avatarPath = (officeId || uid) + '/' + uid + '-profile-' + Date.now() + '.' + ext; const { error: uploadError } = await client.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false }); if (uploadError) throw new Error('Fotoğraf yüklenemedi. Firebase Storage kurallarını kontrol et.'); }
       const { error } = await client.from('profiles').update({ phone: profilePhone.trim(), email: profileEmail.trim(), avatar_path: avatarPath || null, updated_at: new Date().toISOString() }).eq('id', uid); if (error) throw new Error('Profil kaydedilemedi. Firestore profil güncelleme kurallarını kontrol et.');
       setProfileAvatarPath(avatarPath || null); setProfileAvatarUri(null); if (avatarPath) { const { data: signed } = await client.storage.from('avatars').createSignedUrl(avatarPath, 3600); setProfileAvatarUrl(signed?.signedUrl || null); }
       Alert.alert('Profil kaydedildi', 'Profil bilgilerin güncellendi ve PDF sunumlarında kullanılacak.'); setProfileModalOpen(false);
