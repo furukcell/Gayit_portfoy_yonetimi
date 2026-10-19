@@ -92,7 +92,7 @@ class CollectionQuery {
   }
 }
 let client: any;
-export function getSupabaseClient(): any {
+export function getFirebaseClient(): any {
   if (client) return client;
   const auth = getFirebaseAuth(), storage = getFirebaseStorage();
   client = {
