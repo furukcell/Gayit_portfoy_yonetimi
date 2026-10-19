@@ -154,6 +154,7 @@ export default function App() {
   const [kind, setKind] = useState<'Satılık' | 'Kiralık'>('Satılık');
   const [propertyType, setPropertyType] = useState('apartment');
   const [description, setDescription] = useState('');
+  const [pendingPhotoUris, setPendingPhotoUris] = useState<{ uri: string; mimeType?: string | null; fileName?: string | null }[]>([]);
 
   const roleProperties = useMemo(() => properties, [properties]);
   const visibleProperties = useMemo(() => properties.filter(p => {
@@ -886,6 +887,7 @@ export default function App() {
   };
 
   const openPropertyEditor = (p: Property) => {
+    setPendingPhotoUris([]);
     setEditingPropertyId(p.id);
     setTitle(p.title); setAddress(p.address); setPrice(String(p.price)); setArea(p.area.replace(/[^0-9.]/g, ''));
     setKind(p.kind); setRooms(p.rooms || '3+1'); setDescription(p.description || '');
@@ -906,6 +908,40 @@ export default function App() {
         } catch(error) { Alert.alert('Arşivlenemedi',error instanceof Error?error.message:'Tekrar deneyin.'); }
       }}
     ]);
+  };
+
+  const choosePropertyPhotos = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { Alert.alert('Galeri izni gerekli', 'İlan fotoğrafı seçmek için galeri izni vermelisin.'); return; }
+    const remaining = Math.max(0, 12 - pendingPhotoUris.length);
+    if (remaining === 0) { Alert.alert('Fotoğraf sınırı', 'Bir ilana en fazla 12 fotoğraf ekleyebilirsin.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: remaining, quality: 0.82 });
+    if (result.canceled) return;
+    setPendingPhotoUris(current => [...current, ...result.assets.map(asset => ({ uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName }))].slice(0, 12));
+  };
+
+  const uploadPendingPropertyPhotos = async (propertyId: string) => {
+    if (!pendingPhotoUris.length) return;
+    const firebaseClient = getFirebaseClient();
+    const { data: existing, error: listError } = await firebaseClient.from('property_photos').select('id').eq('property_id', propertyId);
+    if (listError) throw new Error('Mevcut ilan fotoğrafları kontrol edilemedi: ' + listError.message);
+    let sortOrder = (existing || []).length;
+    for (const photo of pendingPhotoUris) {
+      const response = await fetch(photo.uri);
+      const blob = await response.blob();
+      const isPng = photo.mimeType === 'image/png' || (photo.fileName || '').toLowerCase().endsWith('.png');
+      const ext = isPng ? 'png' : 'jpg';
+      const storagePath = officeId + '/' + propertyId + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+      const { error: uploadError } = await firebaseClient.storage.from('property-photos').upload(storagePath, blob, { contentType: isPng ? 'image/png' : 'image/jpeg', upsert: false });
+      if (uploadError) throw new Error('Fotoğraf depolamaya yüklenemedi: ' + uploadError.message);
+      const { error: rowError } = await firebaseClient.from('property_photos').insert({ property_id: propertyId, office_id: officeId, storage_path: storagePath, sort_order: sortOrder });
+      if (rowError) {
+        await firebaseClient.storage.from('property-photos').remove([storagePath]);
+        throw new Error('Fotoğraf kaydı oluşturulamadı: ' + rowError.message);
+      }
+      sortOrder += 1;
+    }
+    setPendingPhotoUris([]);
   };
 
   const saveProperty = async () => {
@@ -960,6 +996,10 @@ export default function App() {
         if(error || !inserted) throw new Error('Portföy kaydedilemedi. Ofis yetkilerini ve veritabanı kurulumunu kontrol et.');
         savedId=inserted.id;
       }
+      if (savedId && pendingPhotoUris.length) {
+        try { await uploadPendingPropertyPhotos(savedId); }
+        catch (photoError) { Alert.alert('İlan kaydedildi, fotoğraf yüklemesi tamamlanmadı', photoError instanceof Error ? photoError.message : 'Fotoğrafları ilan detayından tekrar ekleyebilirsin.'); }
+      }
       await loadProperties(officeId);
       if(savedId && !editingPropertyId) {
         const {error:matchingError}=await firebaseClient.functions.invoke('evaluate-matches',{body:{officeId,propertyId:savedId}});
@@ -967,7 +1007,7 @@ export default function App() {
         else Alert.alert('Eşleştirme beklemede','Portföy kaydedildi ancak eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
       }
       setAddOpen(false); setEditingPropertyId(null);
-      setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription(''); setPropertyType('apartment');
+      setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription(''); setPropertyType('apartment'); setPendingPhotoUris([]);
       Alert.alert(editingPropertyId?'Portföy güncellendi':'Portföy eklendi',editingPropertyId?'Değişiklikler kaydedildi.':'Yeni portföy kaydedildi.');
     } catch (error) {
       Alert.alert('Portföy kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
@@ -1303,6 +1343,7 @@ export default function App() {
             <Text style={styles.fieldLabel}>Oda sayısı</Text><View style={styles.kindRow}>{['1+1','2+1','3+1','4+1','5+1'].map(r=><Pressable key={r} onPress={()=>setRooms(r)} style={[styles.roomButton,rooms===r&&styles.kindButtonOn]}><Text style={[styles.kindText,rooms===r&&styles.kindTextOn]}>{r}</Text></Pressable>)}</View>
             <Text style={styles.fieldLabel}>Metrekare *</Text><TextInput value={area} onChangeText={setArea} keyboardType="numeric" placeholder="145" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Açıklama</Text><TextInput value={description} onChangeText={setDescription} placeholder="Gayrimenkul hakkında kısa bilgi" style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholderTextColor={palette.muted}/>
+            <View style={{marginTop:18,marginBottom:8}}><View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:8}}><Text style={styles.fieldLabel}>İlan fotoğrafları ({pendingPhotoUris.length}/12)</Text><Pressable onPress={choosePropertyPhotos} disabled={propertyBusy||pendingPhotoUris.length>=12} style={[styles.pdfButton,{flex:0,paddingHorizontal:12,paddingVertical:8,opacity:propertyBusy||pendingPhotoUris.length>=12?0.5:1}]}><Ionicons name="images-outline" size={18} color={palette.navy}/><Text style={styles.pdfButtonText}>Galeriden seç</Text></Pressable></View><Text style={styles.noticeText}>İlanı kaydetmeden önce birden fazla fotoğraf seçebilirsin. Fotoğraflar kaydetme sırasında yüklenir; mevcut ilan fotoğrafları detay ekranından da eklenebilir.</Text>{pendingPhotoUris.length>0&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:9,marginTop:10}}>{pendingPhotoUris.map((photo,index)=><View key={photo.uri+index} style={{width:'31%',height:116,borderRadius:10,overflow:'hidden',backgroundColor:palette.line}}><Image source={{uri:photo.uri}} style={{width:'100%',height:116}} resizeMode="cover"/><Pressable onPress={()=>setPendingPhotoUris(current=>current.filter((_,i)=>i!==index))} style={{position:'absolute',right:5,top:5,backgroundColor:'#fff',borderRadius:14,padding:4}}><Ionicons name="close" size={16} color={palette.red}/></Pressable></View>)}</View>}</View>
             <Pressable disabled={propertyBusy} onPress={saveProperty} style={[styles.saveButton,propertyBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{propertyBusy?'Kaydediliyor...':editingPropertyId ? 'Değişiklikleri kaydet' : 'Portföye kaydet'}</Text><Ionicons name={propertyBusy?"time-outline":"checkmark-circle-outline"} size={21} color="#fff"/></Pressable>
           </ScrollView>
         </SafeAreaView>
