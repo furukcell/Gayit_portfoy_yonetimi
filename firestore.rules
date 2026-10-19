@@ -49,23 +49,23 @@ service cloud.firestore {
     // Flat collections use office_id on each document. Queries must constrain
     // office_id so Firestore can prove the rule for every returned document.
     match /{collection}/{docId} {
-      allow read: if signedIn() && (
+      allow read: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (
         isSuperadmin() ||
         (resource.data.office_id is string && activeMembership(resource.data.office_id))
       );
-      allow create: if signedIn() && (
+      allow create: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (
         isSuperadmin() ||
         (request.resource.data.office_id is string
           && activeMembership(request.resource.data.office_id)
           && request.resource.data.office_id == get(/databases/$(database)/documents/office_members/$(request.auth.uid)).data.office_id)
       );
-      allow update: if signedIn() && (
+      allow update: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (
         isSuperadmin() ||
         (resource.data.office_id is string
           && activeMembership(resource.data.office_id)
           && request.resource.data.office_id == resource.data.office_id)
       );
-      allow delete: if signedIn() && (
+      allow delete: if collection != 'superadmins' && collection != 'profiles' && collection != 'office_members' && collection != 'offices' && signedIn() && (
         isSuperadmin() ||
         (resource.data.office_id is string && isOwner(resource.data.office_id))
       );
