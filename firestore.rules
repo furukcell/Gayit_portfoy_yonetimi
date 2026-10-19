@@ -4,7 +4,8 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function isSuperadmin() {
       return signedIn()
-        && exists(/databases/$(database)/documents/superadmins/$(request.auth.uid));
+        && exists(/databases/$(database)/documents/superadmins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/superadmins/$(request.auth.uid)).data.enabled == true;
     }
     function activeMembership(officeId) {
       return signedIn()
