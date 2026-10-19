@@ -482,6 +482,44 @@ export default function App() {
       Alert.alert('PDF oluşturulamadı', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
     }
   };
+  const createMultiPropertyPdf = async (items: Property[]) => {
+    if (!items.length) { Alert.alert('Portföy bulunamadı', 'PDF için en az bir ilan gerekli.'); return; }
+    try {
+      const firebaseClient = getFirebaseClient();
+      const cards = await Promise.all(items.slice(0, 5).map(async (p, index) => {
+        const { data: photoRows, error } = await firebaseClient.from('property_photos')
+          .select('storage_path,sort_order').eq('property_id', p.id).order('sort_order', { ascending: true }).limit(4);
+        if (error) throw new Error('İlan fotoğrafları alınamadı.');
+        const urls = await Promise.all((photoRows || []).map(async (photo: any) => {
+          const { data, error: signedError } = await firebaseClient.storage.from('property-photos')
+            .createSignedUrl(photo.storage_path, 60 * 60);
+          if (signedError) throw new Error('Bir ilan fotoğrafı açılamadı.');
+          return data.signedUrl as string;
+        }));
+        const gallery = urls.map(url => '<img src="' + url + '" />').join('');
+        return '<article class="listing"><div class="number">ÖNERİ ' + (index + 1) + '</div><h2>' + htmlEscape(p.title) + '</h2><div class="address">' + htmlEscape(p.address) + '</div>' +
+          (gallery ? '<div class="gallery">' + gallery + '</div>' : '') +
+          '<div class="price">' + money(p.price) + (p.kind === 'Kiralık' ? ' / ay' : '') + '</div>' +
+          '<div class="specs"><span>' + htmlEscape(p.kind) + '</span><span>' + htmlEscape(propertyTypeLabel(p.propertyType)) + '</span><span>' + htmlEscape(p.rooms || '—') + '</span><span>' + htmlEscape(p.area || '—') + '</span><span>' + htmlEscape(p.status) + '</span></div>' +
+          '<p>' + htmlEscape(p.description || 'Detaylı bilgi için danışmanınızla iletişime geçebilirsiniz.') + '</p><div class="code">Portföy kodu: ' + htmlEscape(p.id) + ' · Danışman: ' + htmlEscape(p.agent) + '</div></article>';
+      }));
+      const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><style>
+      @page{size:A4;margin:15mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#17283b;font-size:10pt;line-height:1.5;margin:0}
+      header{background:#10243a;color:#fff;padding:25px;border-radius:12px;border-bottom:5px solid #c99a4a}header small{color:#e8c98f;letter-spacing:2px;font-weight:bold}header h1{font-size:24pt;margin:10px 0 5px}header p{color:#e1e8ef;margin:0}
+      .intro{margin:18px 0 24px;color:#778597}.listing{page-break-inside:avoid;border:1px solid #e3e8ef;border-radius:12px;padding:17px;margin:0 0 18px}
+      .number{font-size:8pt;color:#9a6714;font-weight:bold;letter-spacing:1.5px}.listing h2{font-size:17pt;margin:6px 0}.address{color:#778597;font-size:9pt}
+      .gallery{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:12px 0}.gallery img{width:100%;height:125px;object-fit:cover;border-radius:7px}
+      .price{font-size:21pt;font-weight:bold;color:#10243a;margin:12px 0}.specs{display:flex;flex-wrap:wrap;gap:6px}.specs span{background:#f4f6f9;border:1px solid #e3e8ef;border-radius:6px;padding:5px 8px;font-size:8.5pt}
+      .code{border-top:1px solid #e3e8ef;padding-top:9px;margin-top:12px;color:#778597;font-size:8pt}
+      footer{border-top:1px solid #e3e8ef;padding-top:10px;color:#778597;font-size:8pt}
+      </style></head><body><header><small>GAYIT · KİŞİYE ÖZEL PORTFÖY</small><h1>Sizin için seçtiğimiz gayrimenkuller</h1><p>İhtiyaçlarınıza uygun portföy önerileri</p></header><p class="intro">Bu sunumda ${items.slice(0,5).length} gayrimenkul önerisi yer almaktadır. Fiyat ve uygunluk bilgileri değişebilir; güncel bilgi için danışmanınızla görüşün.</p>${cards.join('')}<footer>GAYIT · Portföy Yönetimi · Bu belge bilgilendirme amacıyla hazırlanmıştır.</footer></body></html>`;
+      const file = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', dialogTitle: 'Seçili portföy önerilerini paylaş' });
+      else Alert.alert('PDF hazır', 'PDF dosyası oluşturuldu: ' + file.uri);
+    } catch (error) {
+      Alert.alert('PDF oluşturulamadı', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
+    }
+  };
   const loadProperties = async (targetOfficeId: string) => {
     setPropertiesLoading(true);
     try {
@@ -1196,7 +1234,7 @@ export default function App() {
           <Text style={styles.sectionTitle}>Açıklama</Text><Text style={styles.description}>{selected.description || 'Açıklama eklenmemiş.'}</Text>
           <Text style={styles.sectionTitle}>Konum ve paylaşım</Text><Pressable style={styles.mapButton} onPress={()=>openMap(selected)}><Ionicons name="navigate-circle-outline" size={23} color="#fff"/><View style={{flex:1}}><Text style={styles.mapButtonTitle}>Google Maps'te yol tarifi</Text><Text style={styles.mapButtonSub}>Adresi haritada aç ve navigasyonu başlat</Text></View><Ionicons name="open-outline" size={18} color="#fff"/></Pressable>
           <View style={styles.shareRow}><Pressable style={styles.whatsappButton} onPress={()=>shareWhatsApp(selected)}><Ionicons name="logo-whatsapp" size={21} color="#fff"/><Text style={styles.actionButtonText}>WhatsApp</Text></Pressable><Pressable style={styles.pdfButton} onPress={()=>createPdf(selected)}><Ionicons name="document-text-outline" size={21} color={palette.navy}/><Text style={styles.pdfButtonText}>PDF sunumu</Text></Pressable></View>
-          <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>PDF sunumu, eklediğin ilan fotoğraflarını ve temel portföy bilgilerini içerir. Ofis logosu ve danışman iletişim bilgileri sonraki tasarım adımında eklenecek.</Text></View>
+          <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>PDF sunumu; ilan fotoğrafları, fiyat, temel özellikler ve danışman bilgisini içerir. Fotoğraflar ilan kaydından alınır.</Text></View>
         </ScrollView></SafeAreaView>}
       </Modal>
 
