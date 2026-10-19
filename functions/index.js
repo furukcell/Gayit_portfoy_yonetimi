@@ -57,17 +57,27 @@ exports.createOffice = onCall({ region: REGION, enforceAppCheck: false }, async 
 });
 exports.createAgent = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const uid = requireAuth(request);
-  const membership = await requireOwner(uid);
-  const { fullName, agentName, username: rawUsername, agentUsername, password, agentPassword, avatarPath } = request.data || {};
+  const { fullName, agentName, username: rawUsername, agentUsername, password, agentPassword, avatarPath, officeId: requestedOfficeId } = request.data || {};
+  const superadminSnap = await db.doc('superadmins/' + uid).get();
+  let officeId;
+  if (superadminSnap.exists && superadminSnap.data().enabled === true) {
+    if (typeof requestedOfficeId !== 'string' || !requestedOfficeId.trim()) throw new HttpsError('invalid-argument', 'Süperadmin işlemi için ofis seçilmelidir.');
+    const officeSnap = await db.doc('offices/' + requestedOfficeId).get();
+    if (!officeSnap.exists) throw new HttpsError('not-found', 'Seçilen ofis bulunamadı.');
+    officeId = requestedOfficeId;
+  } else {
+    const membership = await requireOwner(uid);
+    officeId = membership.office_id;
+  }
   const name = String(fullName || agentName || '').trim();
   if (name.length < 2) throw new HttpsError('invalid-argument', 'Danışman adı gerekli.');
   const username = validateUsername(rawUsername || agentUsername);
   const user = await createAccount(username, password || agentPassword, name);
   const batch = db.batch();
-  batch.set(db.doc('profiles/' + user.uid), { username, full_name: name, office_id: membership.office_id, avatar_path: avatarPath || null, account_status: 'active', must_change_password: true, created_at: new Date().toISOString() });
-  batch.set(db.doc('office_members/' + user.uid), { office_id: membership.office_id, role: 'agent', status: 'active', created_at: new Date().toISOString(), created_by: uid });
+  batch.set(db.doc('profiles/' + user.uid), { username, full_name: name, office_id: officeId, avatar_path: avatarPath || null, account_status: 'active', must_change_password: true, created_at: new Date().toISOString() });
+  batch.set(db.doc('office_members/' + user.uid), { office_id: officeId, role: 'agent', status: 'active', created_at: new Date().toISOString(), created_by: uid });
   await batch.commit();
-  return { success: true, agent: { id: user.uid, username, full_name: name } };
+  return { success: true, agent: { id: user.uid, username, full_name: name, office_id: officeId } };
 });
 exports.setAgentStatus = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const uid = requireAuth(request);
