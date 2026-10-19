@@ -52,8 +52,8 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
         getDocs(collection(db,'customers'))
       ]);
       const officeRows=officeSnap.docs.map(d=>({id:d.id,...d.data()} as Office));
-      const memberRows=membersSnap.docs.map(d=>({id:d.id,...d.data()}));
-      const profileRows=profilesSnap.docs.map(d=>({id:d.id,...d.data()}));
+      const memberRows:any[]=membersSnap.docs.map(d=>({id:d.id,...d.data()} as any));
+      const profileRows:any[]=profilesSnap.docs.map(d=>({id:d.id,...d.data()} as any));
       setOffices(officeRows);
       setPayments(paymentSnap.docs.map(d=>({id:d.id,...d.data()} as Payment)));
       setUsers(profileRows.map(p=>{const m=memberRows.find(x=>x.id===p.id);return {id:p.id,username:p.username,full_name:p.full_name,office_id:p.office_id||m?.office_id,role:m?.role||'user',status:m?.status||p.account_status||'active'} as AdminUser;}));
