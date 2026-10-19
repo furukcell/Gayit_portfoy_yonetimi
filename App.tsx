@@ -53,6 +53,7 @@ export default function App() {
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [officeId, setOfficeId] = useState('');
+  const [superadminOfficeMode, setSuperadminOfficeMode] = useState(false);
   const [superOfficeName, setSuperOfficeName] = useState('');
   const [superOwnerName, setSuperOwnerName] = useState('');
   const [superOwnerUsername, setSuperOwnerUsername] = useState('');
@@ -820,7 +821,7 @@ export default function App() {
   const handleSignOut = async () => {
     const { getFirebaseClient } = await import('./src/lib/firebaseClient');
     await getFirebaseClient().auth.signOut();
-    setAuthenticated(false); setMustChangePassword(false); setLoginPassword(''); setNewPassword(''); setConfirmPassword('');
+    setAuthenticated(false); setMustChangePassword(false); setLoginPassword(''); setNewPassword(''); setConfirmPassword(''); setSuperadminOfficeMode(false);
   };
 
   const updatePropertyStatus = async (nextStatus: PropertyStatus) => {
@@ -963,6 +964,7 @@ export default function App() {
       onLogout={handleSuperadminLogout}
       onEnterOffice={async (office) => {
         setOfficeId(office.id);
+        setSuperadminOfficeMode(true);
         setRole('owner');
         setTab('home');
         await loadProperties(office.id);
@@ -1072,6 +1074,7 @@ export default function App() {
 
         {tab === 'more' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>GAYIT · ARAÇLAR</Text><Text style={styles.pageTitle}>Daha Fazla</Text><Text style={styles.pageSub}>Daha seyrek kullandığın ofis ve çalışma araçları.</Text>
+          {superadminOfficeMode && <Pressable style={styles.moreCard} onPress={()=>{setSuperadminOfficeMode(false);setRole('superadmin');setTab('home');setOfficeId('');}}><Ionicons name="shield-checkmark-outline" size={23} color={palette.gold}/><View style={{flex:1}}><Text style={styles.teamName}>Süperadmin ana üsse dön</Text><Text style={styles.teamRole}>Ofis yönetiminden çıkıp tüm ofislerin kontrol merkezine dön.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           {role === 'owner' && <Pressable style={styles.moreCard} onPress={()=>setTab('team')}><Ionicons name="people-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Ekip yönetimi</Text><Text style={styles.teamRole}>Danışmanları ve ofis üyelerini yönet.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>}
           <Pressable style={styles.moreCard} onPress={async()=>{setNotificationsOpen(true);await loadNotifications(officeId);}}><Ionicons name="notifications-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Bildirim merkezi {notifications.filter(n=>!n.read_at).length ? '('+notifications.filter(n=>!n.read_at).length+')' : ''}</Text><Text style={styles.teamRole}>Yeni eşleşmeler ve sistem bildirimleri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
           <Pressable style={styles.moreCard} onPress={()=>{setTab('portfolio');setRecentOnly(true);setFavoritesOnly(false);void loadRecentViews();}}><Ionicons name="time-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Son görüntülenen portföyler</Text><Text style={styles.teamRole}>Son açtığın ilanları hızlıca bul.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
