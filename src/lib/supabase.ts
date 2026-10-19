@@ -69,7 +69,12 @@ class CollectionQuery {
         }));
       }
       if (this.op === 'update' || this.op === 'delete') {
-        for (const row of rows) this.op === 'delete' ? await deleteDoc(doc(db,this.table,row.id)) : await updateDoc(doc(db,this.table,row.id),this.payload);
+        for (const row of rows) {
+          if (this.table === 'office_members' && this.op === 'update' && typeof this.payload?.status === 'string') {
+            await httpsCallable(getFunctions(getFirebaseApp(), 'europe-west1'), 'setAgentStatus')({ userId: row.id, status: this.payload.status });
+          } else if (this.op === 'delete') await deleteDoc(doc(db,this.table,row.id));
+          else await updateDoc(doc(db,this.table,row.id),this.payload);
+        }
         return {data:null,error:null};
       }
       const data = this.one ? (rows[0] ?? null) : rows;
