@@ -3,7 +3,8 @@ import { Alert, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, V
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, doc, getDocs, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { getFirebaseApp, getFirebaseAuth, getFirebaseDb } from './lib/firebase';
 import { signOut } from 'firebase/auth';
 
@@ -13,6 +14,7 @@ type Payment = { id:string; office_id:string; office_name?:string; amount:number
 type AdminUser = { id:string; username?:string; full_name?:string; office_id?:string; role?:string; status?:string; account_status?:string };
 const fmt = (n:number) => '₺'+new Intl.NumberFormat('tr-TR',{maximumFractionDigits:0}).format(n||0);
 const dateLabel = (v?:string) => v ? new Date(v).toLocaleDateString('tr-TR') : 'Belirlenmedi';
+const getAuthForApp = (app:any) => getAuth(app);
 
 export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOffice:(office:Office)=>void; onLogout:()=>void }) {
   const [section,setSection] = useState<'overview'|'offices'|'users'|'payments'|'create'>('overview');
@@ -78,15 +80,47 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
     if(!officeName.trim()||!ownerName.trim()||!ownerUsername.trim()||ownerPassword.length<10){setMessage('Ofis ve yönetici bilgilerini doldur. Şifre en az 10 karakter olmalı.');return;}
     setSaving(true);setMessage('');
     try {
-      const fn=httpsCallable(getFunctions(getFirebaseApp(),'europe-west1'),'createOffice');
-      const res:any=await fn({
-        officeName:officeName.trim(),ownerFullName:ownerName.trim(),
-        ownerUsername:ownerUsername.trim().toLowerCase(),ownerPassword,
-        planName:plan,feeAmount:Number(fee)||0,billingCycle:cycle,nextDueDate:dueDate.trim()
+      const db=getFirebaseDb();
+      const adminUid=getFirebaseAuth().currentUser?.uid;
+      if(!adminUid) throw new Error('Oturum bulunamadı. Yeniden giriş yap.');
+      const username=ownerUsername.trim().toLowerCase();
+      if(!/^[a-z0-9._-]{3,32}$/.test(username)) throw new Error('Kullanıcı adı 3-32 karakter olmalı (a-z, 0-9, nokta, tire).');
+      const amount=Number(fee||0);
+      if(!Number.isFinite(amount)||amount<0) throw new Error('Abonelik ücreti geçersiz.');
+      const cycleDue=cycle==='yearly'?365:30;
+      const due= /^\d{4}-\d{2}-\d{2}$/.test(dueDate.trim()) ? dueDate.trim() : (()=>{const d=new Date();d.setDate(d.getDate()+cycleDue);return d.toISOString().slice(0,10);})();
+      const now=new Date().toISOString();
+      const officeRef=doc(collection(db,'offices'));
+      // Create the owner account on a secondary Firebase app so the superadmin session stays signed in.
+      const secondary=initializeApp(getFirebaseApp().options,'office-owner-'+Date.now());
+      let ownerUid='';
+      try {
+        const credential=await createUserWithEmailAndPassword(getAuthForApp(secondary),username+'@accounts.gayit.invalid',ownerPassword);
+        ownerUid=credential.user.uid;
+        await updateProfile(credential.user,{displayName:ownerName.trim()});
+      } finally {
+        await deleteApp(secondary);
+      }
+      await setDoc(officeRef,{
+        name:officeName.trim(),status:'active',created_at:now,created_by:adminUid,
+        plan_name:plan.trim().slice(0,80),fee_amount:amount,billing_cycle:cycle,
+        subscription_status:'active',subscription_start:now,next_due_date:due
       });
-      if(!res.data?.success) throw new Error('Ofis oluşturulamadı.');
+      try {
+        await setDoc(doc(db,'profiles',ownerUid),{
+          username,full_name:ownerName.trim(),office_id:officeRef.id,avatar_path:null,
+          account_status:'active',must_change_password:true,created_at:now
+        });
+        await setDoc(doc(db,'office_members',ownerUid),{
+          office_id:officeRef.id,role:'owner',status:'active',created_at:now,created_by:adminUid
+        });
+      } catch(error) {
+        // Don't leave an unowned office if profile/membership writes are denied.
+        await setDoc(doc(db,'offices',officeRef.id),{status:'setup_incomplete',setup_error:'owner_membership_write_failed'},{merge:true});
+        throw error;
+      }
       setOfficeName('');setOwnerName('');setOwnerUsername('');setOwnerPassword('');
-      setMessage('Ofis oluşturuldu. Yönetici kullanıcı adı: '+res.data.owner.username);
+      setMessage('Ofis oluşturuldu. Yönetici kullanıcı adı: '+username);
       setSection('offices');await refresh();
     } catch(e:any){setMessage(e?.message||'Ofis oluşturulamadı. Cloud Function dağıtımını kontrol et.');}
     finally{setSaving(false);}
