@@ -2,8 +2,6 @@ name: Firebase migration checks
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [feature/firebase-migration]
 jobs:
   app-check:
     runs-on: ubuntu-latest
