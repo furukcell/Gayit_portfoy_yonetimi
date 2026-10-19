@@ -180,7 +180,7 @@ export default function App() {
     try {
       const { data, error } = await getFirebaseClient().from('property_recent_views').select('property_id,viewed_at').eq('office_id',officeId).order('viewed_at',{ascending:false}).limit(50);
       if (error) throw error;
-      setRecentPropertyIds([...new Set((data||[]).map((row:any)=>row.property_id))]);
+      setRecentPropertyIds([...new Set<string>((data||[]).map((row:any)=>String(row.property_id)))]);
     } catch {
       // The rest of the portfolio remains usable before migration 011 is applied.
     }
