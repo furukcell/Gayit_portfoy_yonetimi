@@ -152,6 +152,8 @@ export default function App() {
   const [kind, setKind] = useState<'Satılık' | 'Kiralık'>('Satılık');
   const [propertyType, setPropertyType] = useState('apartment');
   const [description, setDescription] = useState('');
+  const [ownerContactName, setOwnerContactName] = useState('');
+  const [ownerContactPhone, setOwnerContactPhone] = useState('');
   const [pendingPhotoUris, setPendingPhotoUris] = useState<{ uri: string; mimeType?: string | null; fileName?: string | null }[]>([]);
 
   const roleProperties = useMemo(() => properties, [properties]);
@@ -445,7 +447,7 @@ export default function App() {
       <style>
       @page{size:A4;margin:16mm 15mm 18mm}
       *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#17283b;margin:0;font-size:11pt;line-height:1.55}
-      .topline{height:6px;background:#c99a4a;margin-bottom:22px}
+      .page-frame{border:1.5px solid #10243a;padding:10px;min-height:265mm;position:relative}.topline{height:6px;background:#c99a4a;margin-bottom:22px}
       .brand{background:#10243a;color:#fff;padding:26px 28px;border-radius:14px;page-break-inside:avoid}
       .brand small{color:#e8c98f;letter-spacing:2px;font-size:9pt;font-weight:bold}
       .brand h1{font-size:25pt;line-height:1.18;margin:13px 0 10px}
@@ -465,7 +467,7 @@ export default function App() {
       .contact{background:#f4f6f9;border:1px solid #e3e8ef;border-left:4px solid #c99a4a;border-radius:10px;padding:16px 18px;margin-top:24px;page-break-inside:avoid}
       .contact strong{font-size:12pt;color:#10243a}.muted{color:#778597;font-size:9pt}
       .footer{border-top:1px solid #e3e8ef;margin-top:24px;padding-top:10px;color:#778597;font-size:8pt;display:flex;justify-content:space-between}
-      </style></head><body><div class="topline"></div>
+      </style></head><body><div class="page-frame"><div class="topline"></div>
       <div class="brand"><small>GAYIT · GAYRİMENKUL SUNUMU</small><h1>${htmlEscape(p.title)}</h1><div class="address">${htmlEscape(p.address)}</div></div>
       ${photoHtml ? '<div class="eyebrow">Gayrimenkul fotoğrafları</div><div class="gallery">' + photoHtml + '</div>' : ''}
       <div class="price-row"><div><div class="eyebrow" style="margin:0 0 5px">İstenen fiyat</div><div class="price">${money(p.price)}</div><div class="rent">${p.kind === 'Kiralık' ? 'Aylık kira bedeli' : 'Satış fiyatı'}</div></div><div class="status">${htmlEscape(p.status)}</div></div>
@@ -473,7 +475,7 @@ export default function App() {
       <div class="section"><h2>Gayrimenkul hakkında</h2><div class="description">${htmlEscape(p.description || 'Detaylı bilgi ve gösterim için danışmanımızla iletişime geçebilirsiniz.')}</div></div>
       <div class="section"><h2>Konum</h2><div>${htmlEscape(p.address)}</div><div class="muted" style="margin-top:5px">Harita bağlantısı için danışmanınızdan bilgi alabilirsiniz.</div></div>
       <div class="contact"><strong>Gayrimenkul hakkında detaylı bilgi</strong><div style="margin-top:5px">Danışman: ${htmlEscape(p.agent || 'GAYIT danışman ekibi')}</div><div class="muted" style="margin-top:5px">Gösterim ve güncel bilgiler için lütfen danışmanınızla iletişime geçin.</div></div>
-      <div class="footer"><span>Portföy kodu: ${htmlEscape(p.id)}</span><span>GAYIT · Portföy Yönetimi</span></div></body></html>`;
+      <div class="footer"><span>Portföy kodu: ${htmlEscape(p.id)}</span><span>GAYIT · Portföy Yönetimi</span></div></div></body></html>`;
       const file = await Print.printToFileAsync({ html });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', dialogTitle: 'Gayrimenkul sunumunu paylaş' });
       else Alert.alert('PDF hazır', 'PDF dosyası oluşturuldu: ' + file.uri);
@@ -889,6 +891,13 @@ export default function App() {
     setEditingPropertyId(p.id);
     setTitle(p.title); setAddress(p.address); setPrice(String(p.price)); setArea(p.area.replace(/[^0-9.]/g, ''));
     setKind(p.kind); setRooms(p.rooms || '3+1'); setDescription(p.description || '');
+    // Contact fields are loaded separately from the private property record.
+    void (async () => {
+      const client = getFirebaseClient();
+      const { data } = await client.from('properties').select('owner_contact_name,owner_contact_phone').eq('id', p.id).maybeSingle();
+      setOwnerContactName(data?.owner_contact_name || '');
+      setOwnerContactPhone(data?.owner_contact_phone || '');
+    })();
     setPropertyType(p.propertyType || 'apartment'); setSelected(null); setAddOpen(true);
   };
 
@@ -982,6 +991,8 @@ export default function App() {
         city: parts.length > 0 ? parts[parts.length - 1] : '',
         price: numericPrice, rooms, property_type: propertyType, area_m2: numericArea,
         listing_type: kind === 'Kiralık' ? 'rent' : 'sale', description: description.trim(),
+        owner_contact_name: ownerContactName.trim() || null,
+        owner_contact_phone: ownerContactPhone.trim() || null,
       };
       let savedId = editingPropertyId;
       if (editingPropertyId) {
@@ -1005,7 +1016,7 @@ export default function App() {
         else Alert.alert('Eşleştirme beklemede','Portföy kaydedildi ancak eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
       }
       setAddOpen(false); setEditingPropertyId(null);
-      setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription(''); setPropertyType('apartment'); setPendingPhotoUris([]);
+      setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription(''); setPropertyType('apartment'); setPendingPhotoUris([]); setOwnerContactName(''); setOwnerContactPhone('');
       Alert.alert(editingPropertyId?'Portföy güncellendi':'Portföy eklendi',editingPropertyId?'Değişiklikler kaydedildi.':'Yeni portföy kaydedildi.');
     } catch (error) {
       Alert.alert('Portföy kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
@@ -1341,6 +1352,7 @@ export default function App() {
             <Text style={styles.fieldLabel}>Oda sayısı</Text><View style={styles.kindRow}>{['1+1','2+1','3+1','4+1','5+1'].map(r=><Pressable key={r} onPress={()=>setRooms(r)} style={[styles.roomButton,rooms===r&&styles.kindButtonOn]}><Text style={[styles.kindText,rooms===r&&styles.kindTextOn]}>{r}</Text></Pressable>)}</View>
             <Text style={styles.fieldLabel}>Metrekare *</Text><TextInput value={area} onChangeText={setArea} keyboardType="numeric" placeholder="145" style={styles.input} placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>Açıklama</Text><TextInput value={description} onChangeText={setDescription} placeholder="Gayrimenkul hakkında kısa bilgi" style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholderTextColor={palette.muted}/>
+            <View style={{marginTop:18,padding:14,borderRadius:12,borderWidth:1,borderColor:palette.line,backgroundColor:'#FFFDF8'}}><Text style={[styles.fieldLabel,{marginBottom:4}]}>Ev sahibi bilgileri · Özel</Text><Text style={styles.noticeText}>Bu bilgiler müşteri PDF sunumuna eklenmez.</Text><Text style={styles.fieldLabel}>Ev sahibinin adı</Text><TextInput value={ownerContactName} onChangeText={setOwnerContactName} placeholder="Ad soyad" style={styles.input} placeholderTextColor={palette.muted}/><Text style={styles.fieldLabel}>Ev sahibinin telefonu</Text><TextInput value={ownerContactPhone} onChangeText={setOwnerContactPhone} placeholder="05xx xxx xx xx" keyboardType="phone-pad" style={styles.input} placeholderTextColor={palette.muted}/></View>
             <View style={{marginTop:18,marginBottom:8}}><View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:8}}><Text style={styles.fieldLabel}>İlan fotoğrafları ({pendingPhotoUris.length}/12)</Text><Pressable onPress={choosePropertyPhotos} disabled={propertyBusy||pendingPhotoUris.length>=12} style={[styles.pdfButton,{flex:0,paddingHorizontal:12,paddingVertical:8,opacity:propertyBusy||pendingPhotoUris.length>=12?0.5:1}]}><Ionicons name="images-outline" size={18} color={palette.navy}/><Text style={styles.pdfButtonText}>Galeriden seç</Text></Pressable></View><Text style={styles.noticeText}>İlanı kaydetmeden önce birden fazla fotoğraf seçebilirsin. Fotoğraflar kaydetme sırasında yüklenir; mevcut ilan fotoğrafları detay ekranından da eklenebilir.</Text>{pendingPhotoUris.length>0&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:9,marginTop:10}}>{pendingPhotoUris.map((photo,index)=><View key={photo.uri+index} style={{width:'31%',height:116,borderRadius:10,overflow:'hidden',backgroundColor:palette.line}}><Image source={{uri:photo.uri}} style={{width:'100%',height:116}} resizeMode="cover"/><Pressable onPress={()=>setPendingPhotoUris(current=>current.filter((_,i)=>i!==index))} style={{position:'absolute',right:5,top:5,backgroundColor:'#fff',borderRadius:14,padding:4}}><Ionicons name="close" size={16} color={palette.red}/></Pressable></View>)}</View>}</View>
             <Pressable disabled={propertyBusy} onPress={saveProperty} style={[styles.saveButton,propertyBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{propertyBusy?'Kaydediliyor...':editingPropertyId ? 'Değişiklikleri kaydet' : 'Portföye kaydet'}</Text><Ionicons name={propertyBusy?"time-outline":"checkmark-circle-outline"} size={21} color="#fff"/></Pressable>
           </ScrollView>
