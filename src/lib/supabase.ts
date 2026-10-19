@@ -38,7 +38,7 @@ class CollectionQuery {
         }
         return {data:Array.isArray(this.payload)?out:out[0], error:null};
       }
-      if (this.table === 'profiles' && !this.hasOfficeFilter) {
+      if (!['superadmins', 'offices'].includes(this.table) && !this.hasOfficeFilter) {
         const currentUser = getFirebaseAuth().currentUser;
         if (currentUser && !this.selectedFields.includes('superadmin')) {
           const membership = await getDoc(doc(db, 'office_members', currentUser.uid));
@@ -56,7 +56,7 @@ class CollectionQuery {
         }));
       } else if (this.table === 'customers' && this.selectedFields.includes('customer_requirements')) {
         rows = await Promise.all(rows.map(async row => {
-          const reqSnap = await getDocs(query(collection(db, 'customer_requirements'), where('customer_id', '==', row.id)));
+          const reqSnap = await getDocs(query(collection(db, 'customer_requirements'), where('office_id', '==', row.office_id), where('customer_id', '==', row.id)));
           return { ...row, customer_requirements: reqSnap.docs.map(d => ({ id: d.id, ...d.data() })) };
         }));
       } else if (this.table === 'matches' && this.selectedFields.includes('properties(')) {
