@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, SafeAreaView, View, Pressable, ScrollView, Text } from 'react-native';
+import { Modal, SafeAreaView, View, Pressable, ScrollView, Text, StatusBar, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { palette, styles } from '../theme/appStyles';
 
@@ -8,9 +8,9 @@ type Props = { notificationsOpen: any; setNotificationsOpen: any; notificationsL
 export default function NotificationsModal(props: Props) {
   const { notificationsOpen, setNotificationsOpen, notificationsLoading, notifications, markNotificationRead } = props;
   return (
-          <Modal visible={notificationsOpen} animationType="slide" onRequestClose={()=>setNotificationsOpen(false)}>
-            <SafeAreaView style={styles.modalSafe}>
-              <View style={styles.modalHeader}><Pressable onPress={()=>setNotificationsOpen(false)} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Bildirim merkezi</Text><View style={{width:40}}/></View>
+          <Modal visible={notificationsOpen} animationType="slide" statusBarTranslucent={false} onRequestClose={()=>setNotificationsOpen(false)}>
+            <SafeAreaView style={[styles.modalSafe, { flex: 1, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0 }]}>
+              <View style={[styles.modalHeader, { minHeight: 56, paddingTop: 8, paddingBottom: 8, alignItems: 'center' }]}><Pressable onPress={()=>setNotificationsOpen(false)} hitSlop={12} style={[styles.roundButton, { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }]}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Bildirim merkezi</Text><View style={{width:44,height:44}}/></View>
               <ScrollView contentContainerStyle={styles.formPage}>
                 <Text style={styles.pageTitle}>Bildirimler</Text><Text style={styles.pageSub}>Eşleşme ve operasyon bildirimlerini buradan takip et.</Text>
                 {notificationsLoading && <Text style={styles.pageSub}>Bildirimler yükleniyor…</Text>}
