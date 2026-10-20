@@ -269,6 +269,17 @@ const rebuildCustomerMatches = async (officeId: string, customerId: string) => {
     if (error) throw error;
   }
 };
+export const rebuildAllOfficeMatches = async (officeId: string) => {
+  const db = getFirebaseClient();
+  const { data, error } = await db.from('customer_requirements')
+    .select('customer_id').eq('office_id', officeId).eq('is_active', true);
+  if (error) throw error;
+  const customerIds = [...new Set((data || []).map((row: any) => row.customer_id).filter(Boolean))];
+  for (const customerId of customerIds) {
+    await rebuildCustomerMatches(officeId, customerId);
+  }
+};
+
 export const addRequirementForSelectedCustomer = async (deps: any) => {
     const { selectedCustomer, requirementMaxPrice, requirementDistrict, requirementCity, requirementRooms, setCustomerEditBusy, officeId, requirementIntent, requirementType, setCustomerRequirements, loadMatches, loadCustomers, setRequirementIntent, setRequirementType, setRequirementCity, setRequirementDistrict, setRequirementMaxPrice, setRequirementRooms } = deps;
     if (!selectedCustomer) return;
