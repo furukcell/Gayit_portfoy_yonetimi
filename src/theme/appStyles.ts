@@ -8,8 +8,8 @@ export const palette = {
 }
 
 export const styles = StyleSheet.create({
-  splashScreen:{flex:1,backgroundColor:'#06172B',alignItems:'center',justifyContent:'flex-end'},
-  splashLoading:{alignItems:'center',justifyContent:'center',marginBottom:'28%',gap:12},
+  splashScreen:{flex:1,backgroundColor:'#06172B',alignItems:'center',justifyContent:'center'},
+  splashLoading:{alignItems:'center',justifyContent:'center',gap:12},
   splashSpinner:{width:42,height:42,borderRadius:21,borderWidth:4,borderColor:'rgba(201,154,74,0.28)',borderTopColor:'#D9AD62',borderRightColor:'#D9AD62'},
   splashLoadingText:{fontSize:10,fontWeight:'800',letterSpacing:3,color:'#F4EBDD'},
   safe:{flex:1,backgroundColor:palette.bg}, authPage:{flexGrow:1,justifyContent:'flex-start',paddingHorizontal:26,paddingTop:28,paddingBottom:44},authBrandMark:{width:64,height:64,borderRadius:20,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center',alignSelf:'center',marginBottom:14},authBrand:{fontSize:32,fontWeight:'900',letterSpacing:1.5,color:palette.navy,textAlign:'center'},authTitle:{fontSize:25,fontWeight:'900',color:palette.ink,marginTop:38},authSubtitle:{fontSize:13,lineHeight:20,color:palette.muted,marginTop:8,marginBottom:12},authSubmit:{backgroundColor:palette.navy,borderRadius:13,padding:16,alignItems:'center',marginTop:24},authSubmitText:{fontSize:14,fontWeight:'900',color:'#fff'},authHint:{fontSize:11,color:palette.muted,textAlign:'center',marginTop:15,lineHeight:17},authError:{flexDirection:'row',alignItems:'flex-start',gap:8,padding:12,borderRadius:12,backgroundColor:palette.redSoft,marginTop:16},authErrorText:{flex:1,fontSize:12,lineHeight:17,color:palette.red},signOutButton:{flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:11,paddingVertical:9,backgroundColor:'#E8ECF1',borderRadius:10},signOutText:{fontSize:11,fontWeight:'800',color:palette.navy}, topbar:{paddingHorizontal:20,paddingTop:8,paddingBottom:12,flexDirection:'row',justifyContent:'space-between',alignItems:'center'},
