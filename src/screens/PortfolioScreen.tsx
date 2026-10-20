@@ -56,7 +56,7 @@ export default function PortfolioScreen(props: any) {
                 {[
                   ...(quickTypeFilter!=='Tümü'?[quickTypeFilter]:[]), ...(quickCityFilter!=='Tümü'?[quickCityFilter]:[]),
                   ...(quickDistrictFilter!=='Tümü'?[quickDistrictFilter]:[]), ...(filter!=='Tümü'?[filter]:[]),
-                  ...(statusFilter!=='Tümü'?[statusFilter]:[]), ...(minPriceFilter?[\u0027Min ₺\u0027]:[]), ...(maxPriceFilter?[\u0027Maks ₺\u0027]:[]),
+                  ...(statusFilter!=='Tümü'?[statusFilter]:[]), ...(minPriceFilter?['Min ₺']:[]), ...(maxPriceFilter?['Maks ₺']:[]),
                   ...(recentOnly?['Son görüntülenenler']:[]), ...(favoritesOnly?['Favoriler']:[]), ...(showArchived?['Arşiv']:[])
                 ].map((label:string,index:number)=><View key={label+index} style={{paddingVertical:6,paddingHorizontal:10,borderRadius:16,backgroundColor:palette.goldSoft,marginRight:6}}><Text style={{fontSize:11,color:palette.green,fontWeight:'600'}}>{label}</Text></View>)}
                 {activeFilterCount>0&&<Pressable onPress={()=>{setQuickTypeFilter('Tümü');setQuickCityFilter('Tümü');setQuickDistrictFilter('Tümü');setFilter('Tümü');setSortBy('newest');setRecentOnly(false);setFavoritesOnly(false);setMinPriceFilter('');setMaxPriceFilter('');setStatusFilter('Tümü');setShowArchived(false);}}><Text style={{fontSize:12,color:palette.green,fontWeight:'700'}}>Temizle</Text></Pressable>}
