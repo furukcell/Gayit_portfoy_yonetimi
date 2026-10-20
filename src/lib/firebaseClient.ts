@@ -151,7 +151,6 @@ export function getFirebaseClient(): any {
       try {
         if (name === 'evaluate-matches') {
           const officeId = String(options?.body?.officeId || '');
-          const customerId = String(options?.body?.customerId || '');
           if (!officeId) throw new Error('Ofis bilgisi eksik.');
           const db = getFirebaseDb();
           const [propertySnap, requirementSnap, existingSnap] = await Promise.all([
