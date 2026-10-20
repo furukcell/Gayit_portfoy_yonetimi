@@ -1,13 +1,14 @@
 import React from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import BrandMark from './BrandMark';
 
 export default function AuthForm(props: any) {
   const { styles, palette, mustChangePassword, newPassword, setNewPassword, confirmPassword, setConfirmPassword, authBusy, handleInitialPasswordChange, loginUsername, setLoginUsername, loginPassword, setLoginPassword, handleLogin, authError } = props;
   return (
     <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
     <ScrollView contentContainerStyle={styles.authPage} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-      <View style={styles.authBrandMark}><Ionicons name="business" size={32} color={palette.gold}/></View>
+      <View style={styles.authBrandMark}><BrandMark size={56}/></View>
       <Text style={styles.authBrand}>GAYIT<Text style={styles.brandDot}>.</Text></Text>
       <Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text>
       <Text style={styles.authTitle}>{mustChangePassword ? 'Yeni şifreni belirle' : 'Tekrar hoş geldin'}</Text>
