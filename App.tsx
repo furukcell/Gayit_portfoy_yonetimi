@@ -4,6 +4,7 @@ import AnimatedSplash from './src/components/AnimatedSplash';
 import { Stat, Feature } from './src/components/DashboardPrimitives';
 import type { Role, Tab, Customer, PropertyStatus, PropertyPhoto, Property } from './src/types/property';
 import { initialProperties } from './src/data/initialProperties';
+import { findImportColumn as find, normalizeImportHeader as normalize } from './src/utils/importHelpers';
 import PropertyRow from './src/components/PropertyRow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
@@ -344,8 +345,8 @@ export default function App() {
       if (!sheetName) throw new Error('Dosyada okunabilir sayfa bulunamadı.');
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], { defval: '', raw: false });
       if (!rows.length) throw new Error('Excel sayfasında başlık ve ilan satırları bulunamadı.');
-      const normalize = (value: unknown) => String(value ?? '').trim().toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/[^a-z0-9]/g,'');
-      const find = (row: Record<string, unknown>, aliases: string[]) => { const keys=Object.keys(row); const key=keys.find(k=>aliases.some(a=>normalize(k)===normalize(a))||aliases.some(a=>normalize(k).includes(normalize(a)))); return key?String(row[key]??'').trim():''; };
+      
+      
       const mapped=rows.map(row=>({title:find(row,['ilan adi','ilan başlığı','portföy başlığı','başlık','title']),type:find(row,['gayrimenkul tipi','emlak tipi','tür','tip','property type']),listing:find(row,['ilan tipi','satılık kiralık','işlem tipi','listing type']),price:find(row,['fiyat','istenen fiyat','satış fiyatı','kira','price','bedel']),rooms:find(row,['oda','oda sayısı','rooms']),area:find(row,['m2','m²','metrekare','alan','net m2','brüt m2','area']),district:find(row,['ilçe','mahalle','semt','district']),city:find(row,['şehir','il','city']),address:find(row,['adres','açık adres','konum','address']),description:find(row,['açıklama','detay','description','notlar']),status:find(row,['durum','ilan durumu','status'])})).filter(row=>Object.values(row).some(v=>String(v).trim()));
       if(!mapped.length)throw new Error('İlan satırı bulunamadı. İlk satır sütun başlıkları olmalı.');
       const csv=['Portföy başlığı;Tür;İlan tipi;Fiyat;Oda;Alan;İlçe;Adres;Durum;Danışman;Açıklama',...mapped.map(r=>[r.title,r.type,r.listing,r.price,r.rooms,r.area,r.district,[r.address,r.city].filter(Boolean).join(', '),r.status,'',r.description].map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';'))].join('\n');
