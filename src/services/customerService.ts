@@ -157,7 +157,7 @@ const rebuildCustomerMatches = async (officeId: string, customerId: string) => {
   const db = getFirebaseClient();
   const [{ data: requirements, error: reqError }, { data: properties, error: propError }] = await Promise.all([
     db.from('customer_requirements').select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,is_active').eq('office_id', officeId).eq('customer_id', customerId).eq('is_active', true),
-    db.from('properties').select('id,title,price,listing_type,status,property_type,district,address,rooms,office_id').eq('office_id', officeId).in('status', ['active','optioned'])
+    db.from('properties').select('id,title,price,listing_type,status,property_type,city,district,neighborhood,address,rooms,office_id').eq('office_id', officeId).in('status', ['active','optioned'])
   ]);
   if (reqError) throw reqError;
   if (propError) throw propError;
