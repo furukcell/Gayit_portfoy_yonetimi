@@ -2,6 +2,7 @@ import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { changeInitialPassword, changePasswordWithCurrent, signInWithUsername } from '../lib/usernameAuth';
 import { getFirebaseClient } from '../lib/firebaseClient';
+import { uploadMediaFromUri } from '../lib/mediaStorage';
 import { getFirebaseApp, getFirebaseAuth } from '../lib/firebase';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -76,7 +77,7 @@ export const saveProfile = async (deps: any) => {
     const uid = getFirebaseAuth().currentUser?.uid; if (!uid) { Alert.alert('Oturum bulunamadı', 'Lütfen yeniden giriş yap.'); return; }
     if (profileEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileEmail.trim())) { Alert.alert('E-posta hatalı', 'Geçerli bir e-posta adresi gir.'); return; }
     setProfileBusy(true); try { const client = getFirebaseClient(); let avatarPath = profileAvatarPath;
-      if (profileAvatarUri) { const response = await fetch(profileAvatarUri); const blob = await response.blob(); const ext = profileAvatarUri.toLowerCase().split('?')[0].endsWith('.png') ? 'png' : 'jpg'; avatarPath = (officeId || uid) + '/' + uid + '-profile-' + Date.now() + '.' + ext; const { error: uploadError } = await client.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false }); if (uploadError) throw new Error('Fotoğraf yüklenemedi. Firebase Storage kurallarını kontrol et.'); }
+      if (profileAvatarUri) { const uploaded = await uploadMediaFromUri(profileAvatarUri, { folder: `gayit/${officeId || uid}/avatars`, fileName: `${uid}-profile-${Date.now()}.jpg` }); avatarPath = uploaded.url; }
       const { error } = await client.from('profiles').update({ phone: profilePhone.trim(), email: profileEmail.trim(), avatar_path: avatarPath || null, updated_at: new Date().toISOString() }).eq('id', uid); if (error) throw new Error('Profil kaydedilemedi. Firestore profil güncelleme kurallarını kontrol et.');
       setProfileAvatarPath(avatarPath || null); setProfileAvatarUri(null); if (avatarPath) { const { data: signed } = await client.storage.from('avatars').createSignedUrl(avatarPath, 3600); setProfileAvatarUrl(signed?.signedUrl || null); }
       Alert.alert('Profil kaydedildi', 'Profil bilgilerin güncellendi ve PDF sunumlarında kullanılacak.'); setProfileModalOpen(false);
@@ -100,12 +101,8 @@ export const createAgent = async (deps: any) => {
       const firebaseClient = getFirebaseClient();
       let avatarPath: string | null = null;
       if (agentAvatarUri) {
-        const response = await fetch(agentAvatarUri);
-        const blob = await response.blob();
-        const ext = agentAvatarUri.toLowerCase().includes('.png') ? 'png' : 'jpg';
-        avatarPath = officeId + '/agent-' + Date.now() + '.' + ext;
-        const { error: uploadError } = await firebaseClient.storage.from('avatars').upload(avatarPath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
-        if (uploadError) throw new Error('Fotoğraf yüklenemedi. Firebase Storage hizmetinin etkin olduğunu ve kuralların yayınlandığını kontrol edin.');
+        const uploaded = await uploadMediaFromUri(agentAvatarUri, { folder: `gayit/${officeId}/avatars`, fileName: `agent-${Date.now()}.jpg` });
+        avatarPath = uploaded.url;
       }
       // Create the agent with a secondary Firebase app so the current owner/superadmin
       // session is not replaced. This path works without paid Cloud Functions.
