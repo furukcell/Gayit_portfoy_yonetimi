@@ -151,7 +151,6 @@ export const createAgent = async (deps: any) => {
 
 export const handleSignOut = async (deps: any) => {
     const { setAuthenticated, setMustChangePassword, setLoginPassword, setNewPassword, setConfirmPassword, setSuperadminOfficeMode } = deps;
-    const { getFirebaseClient } = await import('./src/lib/firebaseClient');
     await getFirebaseClient().auth.signOut();
     setAuthenticated(false); setMustChangePassword(false); setLoginPassword(''); setNewPassword(''); setConfirmPassword(''); setSuperadminOfficeMode(false);
   };
