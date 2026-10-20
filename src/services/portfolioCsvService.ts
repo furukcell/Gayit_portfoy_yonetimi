@@ -26,7 +26,7 @@ type CsvDependencies = {
 };
 
 export const pickPortfolioSpreadsheet = async (deps: CsvDependencies) => {
-  const { Alert, DocumentPicker, XLSX, find, setCsvImportText, setExcelFileName, setExcelPreviewCount } = deps;
+  const { Alert, find, setCsvImportText, setExcelFileName, setExcelPreviewCount } = deps;
     try {
       const result = await DocumentPicker.getDocumentAsync({ type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-excel','text/csv','text/comma-separated-values'], copyToCacheDirectory: true, multiple: false });
       if (result.canceled || !result.assets?.length) return;
@@ -47,7 +47,7 @@ export const pickPortfolioSpreadsheet = async (deps: CsvDependencies) => {
   };
 
 export const importPortfolioCsv = async (deps: CsvDependencies) => {
-  const { Alert, csvImportBusy, csvImportText, parseLine, officeId, setCsvImportBusy, getFirebaseClient, loadProperties, setCsvImportOpen, setCsvImportText } = deps;
+  const { Alert, csvImportBusy, csvImportText, parseLine, officeId, setCsvImportBusy, loadProperties, setCsvImportOpen, setCsvImportText } = deps;
     if (csvImportBusy) return;
     const source = csvImportText.trim();
     if (!source) { Alert.alert('CSV verisi gerekli','CSV içeriğini buraya yapıştır.'); return; }
