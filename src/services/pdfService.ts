@@ -1,19 +1,14 @@
 import type { Property } from '../types/property';
-import type { Alert as NativeAlert } from 'react-native';
-import type * as PrintModule from 'expo-print';
-import type * as SharingModule from 'expo-sharing';
-import { getFirebaseClient as firebaseClientDefault } from '../lib/firebaseClient';
-import { getFirebaseAuth as firebaseAuthDefault } from '../lib/firebase';
+import { Alert } from 'react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { getFirebaseClient } from '../lib/firebaseClient';
+import { getFirebaseAuth } from '../lib/firebase';
 
 type PdfDependencies = {
-  Alert: typeof NativeAlert;
-  getFirebaseClient: typeof firebaseClientDefault;
-  getFirebaseAuth: typeof firebaseAuthDefault;
   htmlEscape: (value: any) => string;
   propertyTypeLabel: (value: any) => string;
   money: (value: any) => string;
-  Print: typeof PrintModule;
-  Sharing: typeof SharingModule;
   properties: Property[];
   selectedPresentationIds: string[];
   setPortfolioPresentationMode: (value: boolean) => void;
@@ -21,7 +16,7 @@ type PdfDependencies = {
 };
 
 export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
-  const { Alert, getFirebaseClient, getFirebaseAuth, htmlEscape, propertyTypeLabel, money, Print, Sharing } = deps;
+  const { htmlEscape, propertyTypeLabel, money } = deps;
     try {
       const firebaseClient = getFirebaseClient();
       const uid = getFirebaseAuth().currentUser?.uid;
@@ -135,7 +130,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
   };
 
 export const createMultiPropertyPdf = async (deps: PdfDependencies) => {
-  const { Alert, getFirebaseClient, htmlEscape, propertyTypeLabel, money, Print, Sharing, properties, selectedPresentationIds, setPortfolioPresentationMode, setSelectedPresentationIds } = deps;
+  const { htmlEscape, propertyTypeLabel, money, properties, selectedPresentationIds, setPortfolioPresentationMode, setSelectedPresentationIds } = deps;
     const selectedProperties = properties.filter(p => selectedPresentationIds.includes(p.id));
     if (selectedProperties.length < 2) {
       Alert.alert('Portföy seç', 'Müşteriye sunmak için en az iki portföy seç.');
