@@ -6,8 +6,6 @@ import { getFirebaseClient } from '../lib/firebaseClient';
 type CsvDependencies = {
   Alert: typeof Alert;
   Share: typeof Share;
-  DocumentPicker: typeof DocumentPicker;
-  XLSX: typeof XLSX;
   find: (row: Record<string, unknown>, candidates: string[]) => string;
   parseLine: (line: string) => string[];
   escapeCsv: (value: unknown) => string;
