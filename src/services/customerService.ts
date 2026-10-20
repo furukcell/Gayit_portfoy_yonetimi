@@ -274,7 +274,7 @@ export const rebuildAllOfficeMatches = async (officeId: string) => {
   const { data, error } = await db.from('customer_requirements')
     .select('customer_id').eq('office_id', officeId).eq('is_active', true);
   if (error) throw error;
-  const customerIds = [...new Set((data || []).map((row: any) => row.customer_id).filter(Boolean))];
+  const customerIds: string[] = [...new Set<string>((data || []).map((row: any) => String(row.customer_id || '')).filter((id: string) => Boolean(id)))];
   for (const customerId of customerIds) {
     await rebuildCustomerMatches(officeId, customerId);
   }
