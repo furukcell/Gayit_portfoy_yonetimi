@@ -16,6 +16,7 @@ import AuthForm from './src/components/AuthForm';
 import WorkspaceScreens from './src/screens/WorkspaceScreens';
 import WorkspaceBottomNavigation from './src/components/WorkspaceBottomNavigation';
 import useLegalAcceptance from './src/hooks/useLegalAcceptance';
+import useRestoreSession from './src/hooks/useRestoreSession';
 import PortfolioScreen from './src/screens/PortfolioScreen';
 import PropertyFormModal from './src/components/PropertyFormModal';
 import PortfolioOperationModals from './src/components/PortfolioOperationModals';
@@ -36,7 +37,6 @@ import { handleLogin as handleLoginService, handleInitialPasswordChange as handl
 import { updatePropertyStatus as updatePropertyStatusService, openPropertyEditor as openPropertyEditorService, archiveProperty as archivePropertyService, choosePropertyPhotos as choosePropertyPhotosService, uploadPendingPropertyPhotos as uploadPendingPropertyPhotosService, saveProperty as savePropertyService } from './src/services/propertyActionsService';
 import { saveTransaction as saveTransactionService, loadRecentViews as loadRecentViewsService, openProperty as openPropertyService, loadFavorites as loadFavoritesService, toggleFavorite as toggleFavoriteService } from './src/services/portfolioActionsService';
 import { toggleAgentStatus as toggleAgentStatusService, handleCreateOfficeAsSuperadmin as createOfficeService, handleSuperadminLogout as superadminLogoutService } from './src/services/officeAdminService';
-import { restoreUsernameSession } from './src/lib/usernameAuth';
 import {
   Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar, KeyboardAvoidingView, Platform,
   Text, TextInput, View, Image, ImageBackground
@@ -197,36 +197,10 @@ export default function App() {
   const updateCustomer = async () => updateCustomerService(customerActionDependencies);
   const saveCustomer = async () => saveCustomerService(customerActionDependencies);
 
-  useEffect(() => {
-    let cancelled = false;
-    const restoreSession = async () => {
-      setAuthBusy(true);
-      try {
-        const result = await restoreUsernameSession();
-        if (!result || cancelled) return;
-        setRole(result.role);
-        if (result.role !== 'superadmin') {
-          setOfficeId(result.officeId);
-          await Promise.all([
-            loadProperties(result.officeId),
-            loadCustomers(result.officeId),
-            loadMatches(result.officeId),
-            loadNotifications(result.officeId),
-            ...(result.role === 'owner' ? [loadTeamMembers(result.officeId)] : []),
-          ]);
-          if (cancelled) return;
-          setMustChangePassword(result.mustChangePassword);
-        }
-        if (!cancelled) setAuthenticated(true);
-      } catch (error) {
-        if (!cancelled) setAuthError('Oturum kontrol edilemedi. İnternet bağlantısını kontrol edip tekrar deneyin.');
-      } finally {
-        if (!cancelled) setAuthBusy(false);
-      }
-    };
-    void restoreSession();
-    return () => { cancelled = true; };
-  }, []);
+  useRestoreSession({
+    setAuthBusy, setAuthError, setRole, setOfficeId, loadProperties, loadCustomers,
+    loadMatches, loadNotifications, loadTeamMembers, setMustChangePassword, setAuthenticated,
+  });
 
   const accountActionDependencies = {
     setAuthBusy, setAuthError, loginUsername, loginPassword, setRole, setAuthenticated, setLoginPassword, setOfficeId,
