@@ -18,6 +18,7 @@ import WorkspaceBottomNavigation from './src/components/WorkspaceBottomNavigatio
 import useLegalAcceptance from './src/hooks/useLegalAcceptance';
 import useRestoreSession from './src/hooks/useRestoreSession';
 import useSelectedOwnerContact from './src/hooks/useSelectedOwnerContact';
+import useVisibleProperties from './src/hooks/useVisibleProperties';
 import PortfolioScreen from './src/screens/PortfolioScreen';
 import PropertyFormModal from './src/components/PropertyFormModal';
 import PortfolioOperationModals from './src/components/PortfolioOperationModals';
@@ -91,21 +92,12 @@ export default function App() {
     setLegalReady, setLegalAccepted, setLegalGateBusy, setLegalDocument,
   });
 
-  const roleProperties = useMemo(() => properties, [properties]);
-  const visibleProperties = useMemo(() => properties.filter(p => {
-    const searchMatch = `${p.title} ${p.address} ${p.id}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR'));
-    const minPrice = minPriceFilter.trim() ? Number(minPriceFilter.replace(/[^0-9]/g, '')) : null;
-    const maxPrice = maxPriceFilter.trim() ? Number(maxPriceFilter.replace(/[^0-9]/g, '')) : null;
-    const statusMatch = statusFilter === 'Tümü' || p.status === statusFilter;
-    const city = (p.address.split(',').map(part => part.trim()).filter(Boolean).slice(-1)[0] || '').toLocaleLowerCase('tr-TR');
-    const district = (p.district || p.address.split(',').map(part => part.trim()).filter(Boolean).slice(-2)[0] || '').toLocaleLowerCase('tr-TR');
-    const typeMatch = quickTypeFilter === 'Tümü' || propertyTypeLabel(p.propertyType) === quickTypeFilter;
-    const cityMatch = quickCityFilter === 'Tümü' || city === quickCityFilter.toLocaleLowerCase('tr-TR');
-    const districtMatch = quickDistrictFilter === 'Tümü' || district === quickDistrictFilter.toLocaleLowerCase('tr-TR');
-    const minMatch = minPrice === null || p.price >= minPrice;
-    const maxMatch = maxPrice === null || p.price <= maxPrice;
-    return searchMatch && (showArchived ? p.status === 'Arşivde' : p.status !== 'Arşivde') && (filter === 'Tümü' || p.kind === filter) && typeMatch && cityMatch && districtMatch && statusMatch && minMatch && maxMatch && (!favoritesOnly || favoriteIds.includes(p.id)) && (!recentOnly || recentPropertyIds.includes(p.id));
-  }).sort((a,b) => sortBy === 'priceAsc' ? a.price-b.price : sortBy === 'priceDesc' ? b.price-a.price : sortBy === 'newest' ? 0 : 0), [properties, role, search, filter, quickTypeFilter, quickCityFilter, quickDistrictFilter, sortBy, showArchived, statusFilter, minPriceFilter, maxPriceFilter, favoritesOnly, favoriteIds, recentOnly, recentPropertyIds]);
+  const roleProperties = properties;
+  const visibleProperties = useVisibleProperties({
+    properties, search, minPriceFilter, maxPriceFilter, statusFilter, quickTypeFilter,
+    quickCityFilter, quickDistrictFilter, showArchived, filter, favoritesOnly, favoriteIds,
+    recentOnly, recentPropertyIds, sortBy, propertyTypeLabel,
+  });
 
   const portfolioActionDependencies = {
     transactionBusy, transactionFinalPrice, transactionOfficeCommission, transactionAgentCommission, transactionPropertyId,
