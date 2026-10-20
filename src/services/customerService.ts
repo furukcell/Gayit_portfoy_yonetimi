@@ -57,7 +57,7 @@ export const updateOfferStatus = async (offer: any, status: 'pending'|'countered
     try {
       const { error } = await getFirebaseClient().from('property_offers').update({ status, updated_at: new Date().toISOString() }).eq('id', offer.id).eq('office_id', officeId);
       if (error) throw error;
-      setCustomerOffers(current => current.map(item => item.id === offer.id ? { ...item, status, updated_at: new Date().toISOString() } : item));
+      setCustomerOffers((current: any[]) => current.map((item: any) => item.id === offer.id ? { ...item, status, updated_at: new Date().toISOString() } : item));
     } catch (error) {
       Alert.alert('Teklif güncellenemedi', error instanceof Error ? error.message : 'Teklif durumu güncellenemedi.');
     } finally { setOfferStatusBusyId(null); }
@@ -119,7 +119,7 @@ export const addCustomerAppointment = async (deps: any) => {
         notes: appointmentNotes.trim(), status: 'scheduled',
       }).select('id,title,starts_at,ends_at,location,notes,status').single();
       if (error) throw error;
-      setCustomerAppointments(current => [...current, data].sort((a,b)=>new Date(a.starts_at).getTime()-new Date(b.starts_at).getTime()));
+      setCustomerAppointments((current: any[]) => [...current, data].sort((a,b)=>new Date(a.starts_at).getTime()-new Date(b.starts_at).getTime()));
       setAppointmentStartsAt(''); setAppointmentNotes('');
       Alert.alert('Randevu oluşturuldu', 'Randevu müşteri detayına kaydedildi.');
     } catch (error) {
@@ -143,7 +143,7 @@ export const addCustomerActivity = async (deps: any) => {
         activity_type: activityType, summary: activitySummary.trim(), occurred_at: new Date().toISOString(),
       }).select('id,activity_type,summary,occurred_at,created_by').single();
       if (error) throw error;
-      setCustomerActivities(current => [data, ...current]);
+      setCustomerActivities((current: any[]) => [data, ...current]);
       setActivitySummary('');
       Alert.alert('Kayıt eklendi', 'Müşteri görüşme geçmişine eklendi.');
     } catch (error) {
@@ -169,7 +169,7 @@ export const addRequirementForSelectedCustomer = async (deps: any) => {
         rooms: requirementRooms.trim() ? [requirementRooms.trim()] : [], is_active: true,
       }).select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,must_have,notes,is_active,created_at').single();
       if (error) throw error;
-      setCustomerRequirements(current => [data, ...current]);
+      setCustomerRequirements((current: any[]) => [data, ...current]);
       const { error: matchingError } = await firebaseClient.functions.invoke('evaluate-matches', { body: { officeId, customerId: selectedCustomer.id } });
       await loadMatches(officeId);
       await loadCustomers(officeId);
