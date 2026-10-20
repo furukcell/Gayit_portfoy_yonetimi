@@ -4,7 +4,7 @@ import AnimatedSplash from './src/components/AnimatedSplash';
 import { Stat, Feature } from './src/components/DashboardPrimitives';
 import type { Role, Tab, Customer, PropertyStatus, PropertyPhoto, Property } from './src/types/property';
 import { initialProperties } from './src/data/initialProperties';
-import { findImportColumn as find, parseSemicolonCsvLine as parseLine } from './src/utils/importHelpers';
+import { escapeCsvCell as escapeCsv, findImportColumn as find, parseSemicolonCsvLine as parseLine } from './src/utils/importHelpers';
 import PropertyRow from './src/components/PropertyRow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
@@ -381,7 +381,7 @@ export default function App() {
   };
 
   const exportPortfolioCsv = async () => {
-    const escapeCsv = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+
     const headers = ['Portföy başlığı','Tür','İlan tipi','Fiyat','Oda','Alan','İlçe','Adres','Durum','Danışman','Açıklama'];
     const rows = roleProperties.map(p => [
       p.title, p.propertyType ? propertyTypeLabel(p.propertyType) : '',
