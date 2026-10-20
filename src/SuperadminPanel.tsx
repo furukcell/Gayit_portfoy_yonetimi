@@ -9,7 +9,7 @@ import { getFirebaseApp, getFirebaseAuth, getFirebaseDb } from './lib/firebase';
 
 const C = { navy:'#10243A', navy2:'#1A3652', gold:'#C99A4A', goldSoft:'#F6EBDD', bg:'#F4F6F9', white:'#FFFFFF', ink:'#17283B', muted:'#778597', line:'#E3E8EF', green:'#16805D', greenSoft:'#E5F5ED', red:'#B54747', redSoft:'#FCEBEC', amber:'#9A6714', amberSoft:'#FFF3D9' };
 type Office = { id:string; name:string; status?:string; created_at?:string; subscription_status?:string; billing_cycle?:string; plan_name?:string; fee_amount?:number; subscription_start?:string; next_due_date?:string; owner_name?:string; [key:string]:any };
-type Payment = { id:string; office_id:string; office_name?:string; amount:number; paid_at?:string; period?:string; note?:string; method?:string };
+type Payment = { id:string; office_id:string; office_name?:string; amount:number; paid_at?:string; period?:string; billing_period?:string; note?:string; method?:string };
 type AdminUser = { id:string; username?:string; full_name?:string; office_id?:string; role?:string; status?:string; account_status?:string };
 const fmt = (n:number) => '₺'+new Intl.NumberFormat('tr-TR',{maximumFractionDigits:0}).format(n||0);
 const dateLabel = (v?:string) => v ? new Date(v).toLocaleDateString('tr-TR') : 'Belirlenmedi';
