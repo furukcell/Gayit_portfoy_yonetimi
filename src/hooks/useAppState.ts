@@ -116,6 +116,7 @@ export default function useAppState() {
   const [csvImportText, setCsvImportText] = useState('');
   const [csvImportBusy, setCsvImportBusy] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [officeBrandingOpen, setOfficeBrandingOpen] = useState(false);
   const [profilePhone, setProfilePhone] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [profileAvatarPath, setProfileAvatarPath] = useState<string | null>(null);
@@ -178,7 +179,7 @@ export default function useAppState() {
     favoritesOnly, setFavoritesOnly, recentOnly, setRecentOnly, recentPropertyIds, setRecentPropertyIds, portfolioPresentationMode, setPortfolioPresentationMode, selectedPresentationIds, setSelectedPresentationIds,
     transactionModalOpen, setTransactionModalOpen, transactionPropertyId, setTransactionPropertyId, transactionFinalPrice, setTransactionFinalPrice, transactionOfficeCommission, setTransactionOfficeCommission, transactionAgentCommission, setTransactionAgentCommission,
     transactionDate, setTransactionDate, transactionNotes, setTransactionNotes, transactionBusy, setTransactionBusy, csvImportOpen, setCsvImportOpen, csvImportText, setCsvImportText,
-    csvImportBusy, setCsvImportBusy, profileModalOpen, setProfileModalOpen, profilePhone, setProfilePhone, profileEmail, setProfileEmail, profileAvatarPath, setProfileAvatarPath,
+    csvImportBusy, setCsvImportBusy, profileModalOpen, setProfileModalOpen, officeBrandingOpen, setOfficeBrandingOpen, profilePhone, setProfilePhone, profileEmail, setProfileEmail, profileAvatarPath, setProfileAvatarPath,
     profileAvatarUrl, setProfileAvatarUrl, profileAvatarUri, setProfileAvatarUri, profileBusy, setProfileBusy, currentPassword, setCurrentPassword, profileNewPassword, setProfileNewPassword,
     profileConfirmPassword, setProfileConfirmPassword, passwordBusy, setPasswordBusy, excelFileName, setExcelFileName, excelPreviewCount, setExcelPreviewCount, minPriceFilter, setMinPriceFilter,
     maxPriceFilter, setMaxPriceFilter, propertyPhotos, setPropertyPhotos, photosBusy, setPhotosBusy, title, setTitle, address, setAddress,
