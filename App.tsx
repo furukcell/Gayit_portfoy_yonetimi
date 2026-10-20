@@ -15,6 +15,7 @@ import MoreScreen from './src/screens/MoreScreen';
 import AuthForm from './src/components/AuthForm';
 import WorkspaceScreens from './src/screens/WorkspaceScreens';
 import WorkspaceBottomNavigation from './src/components/WorkspaceBottomNavigation';
+import useLegalAcceptance from './src/hooks/useLegalAcceptance';
 import PortfolioScreen from './src/screens/PortfolioScreen';
 import PropertyFormModal from './src/components/PropertyFormModal';
 import PortfolioOperationModals from './src/components/PortfolioOperationModals';
@@ -35,8 +36,6 @@ import { handleLogin as handleLoginService, handleInitialPasswordChange as handl
 import { updatePropertyStatus as updatePropertyStatusService, openPropertyEditor as openPropertyEditorService, archiveProperty as archivePropertyService, choosePropertyPhotos as choosePropertyPhotosService, uploadPendingPropertyPhotos as uploadPendingPropertyPhotosService, saveProperty as savePropertyService } from './src/services/propertyActionsService';
 import { saveTransaction as saveTransactionService, loadRecentViews as loadRecentViewsService, openProperty as openPropertyService, loadFavorites as loadFavoritesService, toggleFavorite as toggleFavoriteService } from './src/services/portfolioActionsService';
 import { toggleAgentStatus as toggleAgentStatusService, handleCreateOfficeAsSuperadmin as createOfficeService, handleSuperadminLogout as superadminLogoutService } from './src/services/officeAdminService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
 import { restoreUsernameSession } from './src/lib/usernameAuth';
 import {
   Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar, KeyboardAvoidingView, Platform,
@@ -46,7 +45,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as NavigationBar from 'expo-navigation-bar';
 import { getFirebaseClient } from './src/lib/firebaseClient';
-import { getFirebaseAuth } from './src/lib/firebase';
 import SuperadminPanel from './src/SuperadminPanel';
 
 
@@ -98,34 +96,10 @@ export default function App() {
     return () => { cancelled = true; };
   }, [selected?.id]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const checkLegalAcceptance = async () => {
-      if (!authenticated) { setLegalReady(false); setLegalAccepted(false); return; }
-      const uid = getFirebaseAuth().currentUser?.uid;
-      if (!uid) { setLegalReady(true); setLegalAccepted(false); return; }
-      setLegalReady(false);
-      try {
-        const stored = await AsyncStorage.getItem('gayit_legal_acceptance_' + uid);
-        if (!cancelled) setLegalAccepted(stored === LEGAL_VERSION);
-      } catch { if (!cancelled) setLegalAccepted(false); }
-      finally { if (!cancelled) setLegalReady(true); }
-    };
-    void checkLegalAcceptance();
-    return () => { cancelled = true; };
-  }, [authenticated]);
-
-  const confirmLegalAcceptance = async () => {
-    if (!legalReadPrivacy || !legalAcceptTerms || legalGateBusy) return;
-    const uid = getFirebaseAuth().currentUser?.uid;
-    if (!uid) { Alert.alert('Oturum bulunamadı', 'Devam etmek için yeniden giriş yap.'); return; }
-    setLegalGateBusy(true);
-    try {
-      await AsyncStorage.setItem('gayit_legal_acceptance_' + uid, LEGAL_VERSION);
-      setLegalAccepted(true); setLegalDocument(null);
-    } catch { Alert.alert('Kaydedilemedi', 'Kabul kaydı bu cihazda saklanamadı. Lütfen tekrar dene.'); }
-    finally { setLegalGateBusy(false); }
-  };
+  const { confirmLegalAcceptance } = useLegalAcceptance({
+    authenticated, legalReadPrivacy, legalAcceptTerms, legalGateBusy,
+    setLegalReady, setLegalAccepted, setLegalGateBusy, setLegalDocument,
+  });
 
   const roleProperties = useMemo(() => properties, [properties]);
   const visibleProperties = useMemo(() => properties.filter(p => {
