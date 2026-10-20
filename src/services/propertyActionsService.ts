@@ -25,12 +25,12 @@ export const updatePropertyStatus = async (nextStatus: PropertyStatus, deps: any
   };
 
 export const openPropertyEditor = (p: Property, deps: any) => {
-    const { role, setPendingPhotoUris, setEditingPropertyId, setTitle, setAddress, setPrice, setArea, setKind, setRooms, setDescription, setBathrooms, setBalcony, setParking, setHeating, setCooling, setOccupancyPermit, setElevator, setNearbyAmenities, setBuildingAge, setFloorNumber, setTotalFloors, setOwnerContactName, setOwnerContactPhone, setPropertyType, setSelected, setAddOpen } = deps;
+    const { role, setPendingPhotoUris, setEditingPropertyId, setTitle, setAddress, setPropertyCity, setPropertyDistrict, setPropertyNeighborhood, setPropertyLatitude, setPropertyLongitude, setPrice, setArea, setKind, setRooms, setDescription, setBathrooms, setBalcony, setParking, setHeating, setCooling, setOccupancyPermit, setElevator, setNearbyAmenities, setBuildingAge, setFloorNumber, setTotalFloors, setOwnerContactName, setOwnerContactPhone, setPropertyType, setSelected, setAddOpen } = deps;
     const currentUid = getFirebaseAuth().currentUser?.uid;
     if (role === 'agent' && p.ownerAgentId !== currentUid) { Alert.alert('Düzenleme yetkisi yok', 'Ofis ilanlarını görebilirsin ancak yalnızca kendi eklediğin ilanları düzenleyebilirsin.'); return; }
     setPendingPhotoUris([]);
     setEditingPropertyId(p.id);
-    setTitle(p.title); setAddress(p.address); setPrice(String(p.price)); setArea(p.area.replace(/[^0-9.]/g, ''));
+    setTitle(p.title); setAddress(p.address); setPropertyCity((p as any).city || 'Muğla'); setPropertyDistrict((p as any).district || ''); setPropertyNeighborhood((p as any).neighborhood || ''); setPropertyLatitude((p as any).latitude == null ? '' : String((p as any).latitude)); setPropertyLongitude((p as any).longitude == null ? '' : String((p as any).longitude)); setPrice(String(p.price)); setArea(p.area.replace(/[^0-9.]/g, ''));
     setKind(p.kind); setRooms(p.rooms || '3+1'); setDescription(p.description || '');
     setBathrooms(p.bathrooms || ''); setBalcony(p.balcony || 'Belirtilmedi');
     setParking(p.parking || 'Belirtilmedi'); setHeating(p.heating || 'Belirtilmedi');
@@ -142,17 +142,22 @@ export const uploadPendingPropertyPhotos = async (propertyId: string, deps: any)
   };
 
 export const saveProperty = async (deps: any) => {
-    const { propertyBusy, editingPropertyId, properties, role, title, address, price, area, rooms, propertyType, kind, description, bathrooms, balcony, parking, heating, cooling, occupancyPermit, elevator, nearbyAmenities, buildingAge, floorNumber, totalFloors, ownerContactName, ownerContactPhone, setPropertyBusy, officeId, pendingPhotoUris, loadProperties, loadMatches, setAddOpen, setEditingPropertyId, setTitle, setAddress, setPrice, setArea, setDescription, setPropertyType, setPendingPhotoUris, setOwnerContactName, setOwnerContactPhone } = deps;
+    const { propertyBusy, editingPropertyId, properties, role, title, address, propertyCity, propertyDistrict, propertyNeighborhood, propertyLatitude, propertyLongitude, price, area, rooms, propertyType, kind, description, bathrooms, balcony, parking, heating, cooling, occupancyPermit, elevator, nearbyAmenities, buildingAge, floorNumber, totalFloors, ownerContactName, ownerContactPhone, setPropertyBusy, officeId, pendingPhotoUris, loadProperties, loadMatches, setAddOpen, setEditingPropertyId, setTitle, setAddress, setPrice, setArea, setDescription, setPropertyType, setPendingPhotoUris, setOwnerContactName, setOwnerContactPhone } = deps;
     if (propertyBusy) return;
     if (editingPropertyId) { const existing = properties.find((p: Property) => p.id === editingPropertyId); if (role === 'agent' && existing?.ownerAgentId !== getFirebaseAuth().currentUser?.uid) { Alert.alert('Düzenleme yetkisi yok', 'Yalnızca kendi ilanlarını düzenleyebilirsin.'); return; } }
     const cleanTitle = title.trim();
-    const cleanAddress = address.trim();
+    const cleanAddress = String(address ?? '').trim();
+    const cleanCity = String(propertyCity ?? '').trim();
+    const cleanDistrict = String(propertyDistrict ?? '').trim();
+    const cleanNeighborhood = String(propertyNeighborhood ?? '').trim();
+    const latitude = propertyLatitude === '' || propertyLatitude == null ? null : Number(String(propertyLatitude).replace(',', '.'));
+    const longitude = propertyLongitude === '' || propertyLongitude == null ? null : Number(String(propertyLongitude).replace(',', '.'));
     const priceDigits = price.replace(/[^0-9]/g, '');
     const numericPrice = Number(priceDigits);
     const normalizedArea = area.trim().replace(',', '.');
     const numericArea = Number(normalizedArea);
-    if (!cleanTitle || !cleanAddress || !price.trim() || !area.trim()) {
-      Alert.alert('Eksik bilgi', 'İlan başlığı, açık adres, fiyat ve metrekare zorunludur.');
+    if (!cleanTitle || !cleanAddress || !cleanCity || !cleanDistrict || !cleanNeighborhood || !price.trim() || !area.trim()) {
+      Alert.alert('Eksik bilgi', 'İlan başlığı, il, ilçe, mahalle, açık adres, fiyat ve metrekare zorunludur.');
       return;
     }
     if (cleanTitle.length < 4 || cleanTitle.length > 120) {
@@ -176,7 +181,7 @@ export const saveProperty = async (deps: any) => {
       const firebaseClient = getFirebaseClient();
       const { data: userResult, error: userError } = await firebaseClient.auth.getUser();
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
-      const parts = address.split(',').map((part: string) => part.trim());
+      if ((latitude !== null && !Number.isFinite(latitude)) || (longitude !== null && !Number.isFinite(longitude)) || ((latitude === null) !== (longitude === null))) { Alert.alert('Konumu kontrol et', 'Enlem ve boylam birlikte girilmeli ve sayısal olmalı.'); setPropertyBusy(false); return; }
       const payload = {
         title: cleanTitle, address: cleanAddress,
         district: parts.length > 1 ? parts[parts.length - 2] : '',
@@ -216,7 +221,7 @@ export const saveProperty = async (deps: any) => {
         }
       }
       setAddOpen(false); setEditingPropertyId(null);
-      setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription(''); setPropertyType('apartment'); setPendingPhotoUris([]); setOwnerContactName(''); setOwnerContactPhone('');
+      setTitle(''); setAddress(''); setPropertyCity('Muğla'); setPropertyDistrict(''); setPropertyNeighborhood(''); setPropertyLatitude(''); setPropertyLongitude(''); setPrice(''); setArea(''); setDescription(''); setPropertyType('apartment'); setPendingPhotoUris([]); setOwnerContactName(''); setOwnerContactPhone('');
       Alert.alert(editingPropertyId?'Portföy güncellendi':'Portföy eklendi',editingPropertyId?'Değişiklikler kaydedildi.':'Yeni portföy kaydedildi.');
     } catch (error) {
       Alert.alert('Portföy kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
