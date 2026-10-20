@@ -41,8 +41,8 @@ export const addCustomerOffer = async (deps: any) => {
         created_by: getFirebaseAuth().currentUser?.uid || null, created_at: now, updated_at: now
       }).select('*').single();
       if (error) throw error;
-      setCustomerOffers(current => [data, ...current]);
-      await addCustomerActivityForOffer('Teklif kaydedildi: ' + (properties.find(p => p.id === offerPropertyId)?.title || 'Portföy') + ' · ' + money(amount) + ' · ' + offerStatus, deps);
+      setCustomerOffers((current: any[]) => [data, ...current]);
+      await addCustomerActivityForOffer('Teklif kaydedildi: ' + (properties.find((p: any) => p.id === offerPropertyId)?.title || 'Portföy') + ' · ' + money(amount) + ' · ' + offerStatus, deps);
       setOfferAmount(''); setOfferNotes(''); setOfferStatus('pending');
       Alert.alert('Teklif kaydedildi', 'Teklif müşteri geçmişine eklendi.');
     } catch (error) {
