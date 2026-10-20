@@ -102,13 +102,13 @@ export const openCustomerDetail = async (customer: Customer, deps: any) => {
 export const addCustomerAppointment = async (deps: any) => {
     const { selectedCustomer, appointmentStartsAt, setAppointmentBusy, officeId, appointmentTitle, appointmentNotes, setCustomerAppointments, setAppointmentStartsAt, setAppointmentNotes } = deps;
     if (!selectedCustomer || !appointmentStartsAt.trim()) {
-      Alert.alert('Tarih eksik', 'Randevu tarih ve saatini YYYY-MM-DD SS:DD biçiminde gir.');
-      return;
+      Alert.alert('Tarih eksik', 'Takvimden randevu tarihi ve saatini seç.');
+      return false;
     }
     const parsedDate = new Date(appointmentStartsAt.trim().replace(' ', 'T') + (appointmentStartsAt.trim().length === 16 ? ':00' : ''));
     if (Number.isNaN(parsedDate.getTime())) {
-      Alert.alert('Tarih hatalı', 'Randevu tarih ve saatini YYYY-MM-DD SS:DD biçiminde gir.');
-      return;
+      Alert.alert('Tarih hatalı', 'Takvimden geçerli bir randevu tarihi ve saati seç.');
+      return false;
     }
     setAppointmentBusy(true);
     try {
@@ -122,8 +122,10 @@ export const addCustomerAppointment = async (deps: any) => {
       setCustomerAppointments((current: any[]) => [...current, data].sort((a,b)=>new Date(a.starts_at).getTime()-new Date(b.starts_at).getTime()));
       setAppointmentStartsAt(''); setAppointmentNotes('');
       Alert.alert('Randevu oluşturuldu', 'Randevu müşteri detayına kaydedildi.');
+      return true;
     } catch (error) {
       Alert.alert('Randevu oluşturulamadı', error instanceof Error ? error.message : 'Randevu kaydedilemedi.');
+      return false;
     } finally { setAppointmentBusy(false); }
   };
 
