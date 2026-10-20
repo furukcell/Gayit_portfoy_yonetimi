@@ -7,6 +7,7 @@ type PhotoDependencies = {
   selected: Property | null;
   officeId: string;
   propertyPhotos: PropertyPhoto[];
+  photosBusy: boolean;
   setPhotosBusy: (value: boolean) => void;
   setPropertyPhotos: (value: PropertyPhoto[] | ((current: PropertyPhoto[]) => PropertyPhoto[])) => void;
 };
@@ -55,7 +56,7 @@ export const addPropertyPhoto = async (deps: PhotoDependencies) => {
   };
 
 export const movePropertyPhoto = async (photo: PropertyPhoto, direction: -1 | 1, deps: PhotoDependencies) => {
-    const { selected, propertyPhotos, setPhotosBusy, setPropertyPhotos } = deps;
+    const { selected, propertyPhotos, photosBusy, setPhotosBusy, setPropertyPhotos } = deps;
     if (!selected || photosBusy) return;
     const current = [...propertyPhotos].sort((a, b) => a.sortOrder - b.sortOrder);
     const index = current.findIndex(item => item.id === photo.id);
@@ -82,7 +83,7 @@ export const movePropertyPhoto = async (photo: PropertyPhoto, direction: -1 | 1,
   };
 
 export const removePropertyPhoto = async (photo: PropertyPhoto, deps: PhotoDependencies) => {
-    const { selected, setPhotosBusy, setPropertyPhotos } = deps;
+    const { selected, photosBusy, setPhotosBusy, setPropertyPhotos } = deps;
     if (!selected || photosBusy) return;
     const propertyId = selected.id;
     Alert.alert('Fotoğrafı sil', 'Bu fotoğraf ilandan kaldırılacak.', [
@@ -103,7 +104,7 @@ export const removePropertyPhoto = async (photo: PropertyPhoto, deps: PhotoDepen
           const { error: rowError } = await firebaseClient.from('property_photos')
             .delete().eq('id', photo.id).eq('property_id', propertyId);
           if (rowError) {
-            await loadPropertyPhotos(propertyId);
+            await loadPropertyPhotos(propertyId, deps);
             Alert.alert('Fotoğraf dosyası silindi', 'Depolama dosyası silindi ancak fotoğraf kaydı kaldı. Galeriyi yenileyip tekrar deneyebilirsin.');
             return;
           }
