@@ -6,6 +6,7 @@ import type { Role, Tab, Customer, PropertyStatus, PropertyPhoto, Property } fro
 import { initialProperties } from './src/data/initialProperties';
 import { escapeCsvCell as escapeCsv, findImportColumn as find, parseSemicolonCsvLine as parseLine } from './src/utils/importHelpers';
 import PropertyRow from './src/components/PropertyRow';
+import CustomersScreen from './src/screens/CustomersScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
 import { changeInitialPassword, changePasswordWithCurrent, restoreUsernameSession, signInWithUsername } from './src/lib/usernameAuth';
