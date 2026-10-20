@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { palette, styles } from './src/theme/appStyles';
 import useAppState from './src/hooks/useAppState';
 import AnimatedSplash from './src/components/AnimatedSplash';
@@ -61,6 +61,7 @@ export default function App() {
     // Use only APIs supported by the installed expo-navigation-bar version.
     void NavigationBar.setVisibilityAsync('hidden').catch(() => {});
   }, []);
+  const tabHistoryRef = useRef<Tab[]>([]);
   const {
     role, setRole, authenticated, setAuthenticated, legalAccepted, setLegalAccepted, legalReady, setLegalReady, legalReadPrivacy, setLegalReadPrivacy, legalAcceptTerms, setLegalAcceptTerms,
     legalDocument, setLegalDocument, legalGateBusy, setLegalGateBusy, authBusy, setAuthBusy, loginUsername, setLoginUsername, loginPassword, setLoginPassword, newPassword, setNewPassword,
@@ -89,6 +90,34 @@ export default function App() {
     buildingAge, setBuildingAge, floorNumber, setFloorNumber, totalFloors, setTotalFloors, ownerContactName, setOwnerContactName, ownerContactPhone, setOwnerContactPhone, selectedOwnerContact, setSelectedOwnerContact,
     pendingPhotoUris, setPendingPhotoUris
   } = useAppState();
+
+
+  const navigateTab = (nextTab: Tab) => {
+    if (nextTab !== tab) {
+      tabHistoryRef.current.push(tab);
+      setTab(nextTab);
+    }
+  };
+
+  const handleBack = () => {
+    if (legalDocument) { setLegalDocument(null); return; }
+    if (profileModalOpen) { setProfileModalOpen(false); return; }
+    if (notificationsOpen) { setNotificationsOpen(false); return; }
+    if (csvImportOpen) { setCsvImportOpen(false); return; }
+    if (transactionModalOpen) { setTransactionModalOpen(false); return; }
+    if (agentModalOpen) { setAgentModalOpen(false); return; }
+    if (customerDetailOpen) { setCustomerDetailOpen(false); return; }
+    if (customerModalOpen) { setCustomerModalOpen(false); return; }
+    if (addOpen) { setAddOpen(false); return; }
+    if (selected) { setSelected(null); return; }
+    if (tabHistoryRef.current.length) {
+      setTab(tabHistoryRef.current.pop() as Tab);
+      return;
+    }
+    if (tab !== 'home') { setTab('home'); return; }
+  };
+
+  const showBackButton = tab !== 'home' || Boolean(legalDocument || profileModalOpen || notificationsOpen || csvImportOpen || transactionModalOpen || agentModalOpen || customerDetailOpen || customerModalOpen || addOpen || selected);
 
   useSelectedOwnerContact(selected?.id, setSelectedOwnerContact);
 
@@ -276,15 +305,18 @@ export default function App() {
       <StatusBar barStyle="dark-content" />
       <LegalDocumentModal legalDocument={legalDocument} setLegalDocument={setLegalDocument} styles={styles} palette={palette} />
       <View style={styles.topbar}>
-        <View><Text style={styles.brand}>GAYIT<Text style={styles.brandDot}>.</Text></Text><Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text></View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+          {showBackButton && <Pressable accessibilityRole="button" accessibilityLabel="Geri" onPress={handleBack} hitSlop={10} style={{ width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F4F8' }}><Ionicons name="arrow-back" size={22} color={palette.navy} /></Pressable>}
+          <View><Text style={styles.brand}>GAYIT<Text style={styles.brandDot}>.</Text></Text><Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text></View>
+        </View>
         <Pressable onPress={handleSignOut} style={styles.signOutButton}><Ionicons name="log-out-outline" size={17} color={palette.navy}/><Text style={styles.signOutText}>Çıkış</Text></Pressable>
       </View>
 
       <WorkspaceScreens {...{
-        tab, styles, palette, role, setTab, customers, openCustomerDetail, properties, roleProperties, teamMembers, money, openProperty, portfolioPresentationMode, setPortfolioPresentationMode, setSelectedPresentationIds, selectedPresentationIds, setAddOpen, search, setSearch, quickTypeFilter, quickCityFilter, quickDistrictFilter, setQuickDropdown, quickDropdown, setQuickTypeFilter, setQuickCityFilter, setQuickDistrictFilter, filter, setFilter, sortBy, setSortBy, recentOnly, setRecentOnly, favoritesOnly, setFavoritesOnly, minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, statusFilter, setStatusFilter, showArchived, setShowArchived, createMultiPropertyPdf, propertiesLoading, visibleProperties, toggleFavorite, favoriteIds, customersLoading, customerSearch, setCustomerSearch, setCustomerModalOpen, matches, matchesLoading, setLegalDocument, superadminOfficeMode, setSuperadminOfficeMode, setRole, setOfficeId, setNotificationsOpen, notifications, loadNotifications, officeId, loadRecentViews, setCsvImportOpen, openProfile, exportPortfolioCsv, setTransactionPropertyId, setTransactionModalOpen, handleSignOut, teamStatusBusyId, setAgentModalOpen, toggleAgentStatus, sharePortfolioReport
+        tab, styles, palette, role, setTab: navigateTab, customers, openCustomerDetail, properties, roleProperties, teamMembers, money, openProperty, portfolioPresentationMode, setPortfolioPresentationMode, setSelectedPresentationIds, selectedPresentationIds, setAddOpen, search, setSearch, quickTypeFilter, quickCityFilter, quickDistrictFilter, setQuickDropdown, quickDropdown, setQuickTypeFilter, setQuickCityFilter, setQuickDistrictFilter, filter, setFilter, sortBy, setSortBy, recentOnly, setRecentOnly, favoritesOnly, setFavoritesOnly, minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, statusFilter, setStatusFilter, showArchived, setShowArchived, createMultiPropertyPdf, propertiesLoading, visibleProperties, toggleFavorite, favoriteIds, customersLoading, customerSearch, setCustomerSearch, setCustomerModalOpen, matches, matchesLoading, setLegalDocument, superadminOfficeMode, setSuperadminOfficeMode, setRole, setOfficeId, setNotificationsOpen, notifications, loadNotifications, officeId, loadRecentViews, setCsvImportOpen, openProfile, exportPortfolioCsv, setTransactionPropertyId, setTransactionModalOpen, handleSignOut, teamStatusBusyId, setAgentModalOpen, toggleAgentStatus, sharePortfolioReport
       }} />
 
-      <WorkspaceBottomNavigation styles={styles} palette={palette} tab={tab} setTab={setTab} loadFavorites={loadFavorites} loadRecentViews={loadRecentViews} />
+      <WorkspaceBottomNavigation styles={styles} palette={palette} tab={tab} setTab={navigateTab} loadFavorites={loadFavorites} loadRecentViews={loadRecentViews} />
 
       <PortfolioOperationModals transactionModalOpen={transactionModalOpen} setTransactionModalOpen={setTransactionModalOpen} transactionBusy={transactionBusy} setTransactionPropertyId={setTransactionPropertyId} transactionPropertyId={transactionPropertyId} properties={properties} setTransactionFinalPrice={setTransactionFinalPrice} transactionFinalPrice={transactionFinalPrice} money={money} transactionOfficeCommission={transactionOfficeCommission} setTransactionOfficeCommission={setTransactionOfficeCommission} transactionAgentCommission={transactionAgentCommission} setTransactionAgentCommission={setTransactionAgentCommission} transactionDate={transactionDate} setTransactionDate={setTransactionDate} transactionNotes={transactionNotes} setTransactionNotes={setTransactionNotes} saveTransaction={saveTransaction} csvImportOpen={csvImportOpen} setCsvImportOpen={setCsvImportOpen} csvImportBusy={csvImportBusy} pickPortfolioSpreadsheet={pickPortfolioSpreadsheet} excelFileName={excelFileName} excelPreviewCount={excelPreviewCount} csvImportText={csvImportText} setCsvImportText={setCsvImportText} importPortfolioCsv={importPortfolioCsv} />
 
