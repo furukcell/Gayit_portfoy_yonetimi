@@ -14,7 +14,7 @@ export const updatePropertyStatus = async (nextStatus: PropertyStatus, deps: any
       const firebaseClient = getFirebaseClient();
       const { error } = await firebaseClient.from('properties').update({ status: statusMap[nextStatus] }).eq('id', selected.id).eq('office_id', officeId);
       if (error) throw error;
-      setProperties(current => current.map(p => p.id === selected.id ? {...p, status: nextStatus} : p));
+      setProperties((current: Property[]) => current.map((p: Property) => p.id === selected.id ? {...p, status: nextStatus} : p));
       setSelected((current: Property | null) => current && current.id === selected.id ? {...current, status: nextStatus} : current);
       Alert.alert('Durum güncellendi', 'İlan durumu: ' + nextStatus);
       await loadProperties(officeId);
@@ -75,7 +75,7 @@ export const choosePropertyPhotos = async (deps: any) => {
     if (remaining === 0) { Alert.alert('Fotoğraf sınırı', 'Bir ilana en fazla 12 fotoğraf ekleyebilirsin.'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: remaining, quality: 0.82 });
     if (result.canceled) return;
-    setPendingPhotoUris(current => [...current, ...result.assets.map(asset => ({ uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName }))].slice(0, 12));
+    setPendingPhotoUris((current: any[]) => [...current, ...result.assets.map(asset => ({ uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName }))].slice(0, 12));
   };
 
 export const uploadPendingPropertyPhotos = async (propertyId: string, deps: any) => {
@@ -106,7 +106,7 @@ export const uploadPendingPropertyPhotos = async (propertyId: string, deps: any)
 export const saveProperty = async (deps: any) => {
     const { propertyBusy, editingPropertyId, properties, role, title, address, price, area, rooms, propertyType, kind, description, bathrooms, balcony, parking, heating, cooling, occupancyPermit, elevator, nearbyAmenities, buildingAge, floorNumber, totalFloors, ownerContactName, ownerContactPhone, setPropertyBusy, officeId, pendingPhotoUris, loadProperties, loadMatches, setAddOpen, setEditingPropertyId, setTitle, setAddress, setPrice, setArea, setDescription, setPropertyType, setPendingPhotoUris, setOwnerContactName, setOwnerContactPhone } = deps;
     if (propertyBusy) return;
-    if (editingPropertyId) { const existing = properties.find(p => p.id === editingPropertyId); if (role === 'agent' && existing?.ownerAgentId !== getFirebaseAuth().currentUser?.uid) { Alert.alert('Düzenleme yetkisi yok', 'Yalnızca kendi ilanlarını düzenleyebilirsin.'); return; } }
+    if (editingPropertyId) { const existing = properties.find((p: Property) => p.id === editingPropertyId); if (role === 'agent' && existing?.ownerAgentId !== getFirebaseAuth().currentUser?.uid) { Alert.alert('Düzenleme yetkisi yok', 'Yalnızca kendi ilanlarını düzenleyebilirsin.'); return; } }
     const cleanTitle = title.trim();
     const cleanAddress = address.trim();
     const priceDigits = price.replace(/[^0-9]/g, '');
@@ -138,7 +138,7 @@ export const saveProperty = async (deps: any) => {
       const firebaseClient = getFirebaseClient();
       const { data: userResult, error: userError } = await firebaseClient.auth.getUser();
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
-      const parts = address.split(',').map((part) => part.trim());
+      const parts = address.split(',').map((part: string) => part.trim());
       const payload = {
         title: cleanTitle, address: cleanAddress,
         district: parts.length > 1 ? parts[parts.length - 2] : '',
