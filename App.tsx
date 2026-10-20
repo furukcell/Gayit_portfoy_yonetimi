@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { palette, styles } from './src/theme/appStyles';
+import AnimatedSplash from './src/components/AnimatedSplash';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
 import { changeInitialPassword, changePasswordWithCurrent, restoreUsernameSession, signInWithUsername } from './src/lib/usernameAuth';
 import {
   Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar, KeyboardAvoidingView, Platform,
-  Text, TextInput, View, Image, ImageBackground, Animated, Easing
+  Text, TextInput, View, Image, ImageBackground
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,25 +50,6 @@ const propertyTypeLabel = (type?: string) => ({ apartment: 'Daire', villa: 'Vill
 const shareText = (p: Property) => `GAYIT | ${p.title}\n${p.address}\n${p.rooms} · ${p.area}\n${p.kind}: ${money(p.price)}${p.kind === 'Kiralık' ? '/ay' : ''}\n\nDetaylı bilgi için bizimle iletişime geçin.`;
 const htmlEscape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function AnimatedSplash() {
-  const spin = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const animation = Animated.loop(Animated.timing(spin, {
-      toValue: 1, duration: 1100, easing: Easing.linear, useNativeDriver: true,
-    }));
-    animation.start();
-    return () => animation.stop();
-  }, [spin]);
-  const rotation = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  return (
-    <ImageBackground source={require('./assets/images/splash.png')} resizeMode="cover" style={styles.splashScreen}>
-      <View style={styles.splashLoading}>
-        <Animated.View style={[styles.splashSpinner, { transform: [{ rotate: rotation }] }]} />
-        <Text style={styles.splashLoadingText}>YÜKLENİYOR</Text>
-      </View>
-    </ImageBackground>
-  );
-}
 
 export default function App() {
   useEffect(() => {
