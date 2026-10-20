@@ -1568,13 +1568,15 @@ export default function App() {
           {!visibleProperties.length && <View style={styles.empty}><Ionicons name="file-tray-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Portföy bulunamadı</Text><Text style={styles.pageSub}>Aramanı değiştir veya yeni ilan ekle.</Text></View>}
         </ScrollView>}
 
-        {tab === 'customers' && <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
-          <Text style={styles.eyebrow}>GAYIT · MÜŞTERİLER</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Müşteriler</Text><Text style={styles.pageSub}>{role === 'owner' ? 'Ofis müşterileri ve talepleri' : 'Sana atanmış müşteriler ve talepleri'}</Text></View><Pressable onPress={()=>setCustomerModalOpen(true)} style={styles.addButton}><Ionicons name="person-add-outline" size={22} color="#fff"/></Pressable></View>
-          <View style={styles.search}><Ionicons name="search-outline" size={19} color={palette.muted}/><TextInput value={customerSearch} onChangeText={setCustomerSearch} placeholder="Müşteri adı veya telefon ara" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
-          <Text style={styles.resultCount}>{customersLoading ? 'Müşteriler yükleniyor…' : `${customers.length} müşteri`}</Text>
-          {customers.filter(c => `${c.fullName} ${c.phone}`.toLocaleLowerCase('tr-TR').includes(customerSearch.toLocaleLowerCase('tr-TR'))).map(c=><Pressable key={c.id} onPress={()=>openCustomerDetail(c)} style={styles.customerCard}><View style={styles.customerAvatar}><Ionicons name="person-outline" size={22} color={palette.navy}/></View><View style={{flex:1}}><Text style={styles.teamName}>{c.fullName}</Text><Text style={styles.teamMeta}>{c.phone || 'Telefon eklenmemiş'}</Text><Text style={styles.customerRoles}>{c.roles.map(r=>({buyer:'Alıcı',seller:'Satıcı',tenant:'Kiracı',landlord:'Ev sahibi',investor:'Yatırımcı'} as Record<string,string>)[r] || r).join(' · ')}</Text><Text style={styles.teamRole}>{c.requirementCount} arama talebi · {c.assignedAgent}</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>)}
-          {!customersLoading && !customers.length && <View style={styles.empty}><Ionicons name="people-outline" size={32} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz müşteri yok</Text><Text style={styles.pageSub}>İlk müşterini ekle; ister aynı anda arama kriterlerini de kaydet.</Text><Pressable style={styles.saveButton} onPress={()=>setCustomerModalOpen(true)}><Text style={styles.saveButtonText}>İlk müşteriyi ekle</Text></Pressable></View>}
-        </ScrollView>}
+        <CustomersScreen
+          role={role}
+          customers={customers}
+          customersLoading={customersLoading}
+          customerSearch={customerSearch}
+          setCustomerSearch={setCustomerSearch}
+          openCustomerDetail={openCustomerDetail}
+          openAddCustomer={() => setCustomerModalOpen(true)}
+        />
 
         {tab === 'matches' && <ScrollView contentContainerStyle={styles.page}>
           <Text style={styles.eyebrow}>GAYIT · AKILLI EŞLEŞME</Text><Text style={styles.pageTitle}>Eşleşmeler</Text><Text style={styles.pageSub}>Tam eşleşmeleri ve esnek alternatifleri ayrı takip et.</Text>
