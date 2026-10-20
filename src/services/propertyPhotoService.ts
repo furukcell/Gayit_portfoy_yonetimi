@@ -75,7 +75,7 @@ export const movePropertyPhoto = async (photo: PropertyPhoto, direction: -1 | 1,
       }
       setPropertyPhotos(reordered.map((item, i) => ({ ...item, sortOrder: i })));
     } catch (error) {
-      await loadPropertyPhotos(selected.id);
+      await loadPropertyPhotos(selected.id, deps);
       Alert.alert('Sıralama kaydedilemedi', error instanceof Error ? error.message : 'Fotoğraf sırası güncellenemedi.');
     } finally {
       setPhotosBusy(false);
@@ -109,7 +109,7 @@ export const removePropertyPhoto = async (photo: PropertyPhoto, deps: PhotoDepen
             return;
           }
           setPropertyPhotos(current => current.filter(item => item.id !== photo.id));
-          await loadPropertyPhotos(propertyId);
+          await loadPropertyPhotos(propertyId, deps);
         } catch (error) {
           Alert.alert('Fotoğraf silinemedi', error instanceof Error ? error.message : 'Silme işlemi tamamlanamadı. Tekrar deneyin.');
         } finally {
