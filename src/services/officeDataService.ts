@@ -64,7 +64,7 @@ export const loadMatches = async (targetOfficeId: string, deps: any) => {
     setMatchesLoading(true);
     try {
       const firebaseClient = getFirebaseClient();
-      const { data, error } = await firebaseClient.from('matches').select('id,status,match_kind,match_score,match_reasons,created_at,properties(id,title,price,listing_type,district,rooms),customers(id,full_name,phone)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
+      const { data, error } = await firebaseClient.from('matches').select('id,status,match_kind,match_score,match_reasons,created_at,properties(id,title,price,listing_type,city,district,neighborhood,rooms),customers(id,full_name,phone)').eq('office_id', targetOfficeId).order('created_at', { ascending: false });
       if (error) throw new Error('Eşleşmeler yüklenemedi. Migration 003 uygulanmış olmalı.');
       setMatches(data || []);
     } finally { setMatchesLoading(false); }
