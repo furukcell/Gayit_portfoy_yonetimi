@@ -67,6 +67,41 @@ export const archiveProperty = async (deps: any) => {
     ]);
   };
 
+
+export const deleteProperty = async (deps: any) => {
+  const { selected, role, officeId, setArchiveBusy, archiveBusy, setSelected, setPropertyPhotos, loadProperties, loadMatches } = deps;
+  if (!selected || archiveBusy) return;
+  if (role === 'agent' && selected.ownerAgentId !== getFirebaseAuth().currentUser?.uid) {
+    Alert.alert('İşlem yetkisi yok', 'Yalnızca kendi ilanlarını silebilirsin.');
+    return;
+  }
+  Alert.alert('İlanı kalıcı olarak sil', '"' + selected.title + '" ilanı, fotoğraf kayıtları ve eşleştirmeleriyle birlikte silinecek. Bu işlem geri alınamaz.', [
+    { text: 'Vazgeç', style: 'cancel' },
+    { text: 'İlanı sil', style: 'destructive', onPress: async () => {
+      setArchiveBusy(true);
+      try {
+        const db = getFirebaseClient();
+        const propertyId = selected.id;
+        const { error: matchError } = await db.from('matches').delete().eq('office_id', officeId).eq('property_id', propertyId);
+        if (matchError) throw new Error('İlan eşleştirmeleri silinemedi: ' + matchError.message);
+        const { error: offerError } = await db.from('property_offers').delete().eq('office_id', officeId).eq('property_id', propertyId);
+        if (offerError) throw new Error('İlan teklifleri silinemedi: ' + offerError.message);
+        const { error: photoError } = await db.from('property_photos').delete().eq('office_id', officeId).eq('property_id', propertyId);
+        if (photoError) throw new Error('Fotoğraf kayıtları silinemedi: ' + photoError.message);
+        const { error } = await db.from('properties').delete().eq('id', propertyId).eq('office_id', officeId);
+        if (error) throw error;
+        setSelected(null);
+        setPropertyPhotos([]);
+        await loadProperties(officeId);
+        await loadMatches(officeId);
+        Alert.alert('İlan silindi', 'İlan ve bağlı kayıtları silindi.');
+      } catch (error) {
+        Alert.alert('İlan silinemedi', error instanceof Error ? error.message : 'İlan silinemedi. Veritabanı izinlerini kontrol et.');
+      } finally { setArchiveBusy(false); }
+    }}
+  ]);
+};
+
 export const choosePropertyPhotos = async (deps: any) => {
     const { pendingPhotoUris, setPendingPhotoUris } = deps;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
