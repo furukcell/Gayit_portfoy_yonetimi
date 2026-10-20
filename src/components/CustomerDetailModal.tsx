@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, SafeAreaView, View, Pressable, ScrollView, Text, TextInput } from 'react-native';
+import { Linking, Modal, SafeAreaView, View, Pressable, ScrollView, Text, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { palette, styles } from '../theme/appStyles';
 
@@ -36,22 +36,28 @@ export default function CustomerDetailModal(props: Props) {
                       <Text style={styles.pageSub}>{selectedCustomer?.customerType || selectedCustomer?.type || selectedCustomer?.role || 'Alıcı / Satıcı'}</Text>
                     </View>
                   </View>
-                  <View style={{marginTop:16,gap:8}}>
+                  <View style={{marginTop:14,marginBottom:4,gap:9}}>
+                    <View style={{flexDirection:'row',gap:10}}>
+                      <Pressable disabled={!selectedCustomer?.phone} onPress={()=>Linking.openURL('tel:'+String(selectedCustomer.phone).replace(/[^+0-9]/g,''))} style={{flex:1,minHeight:44,borderRadius:12,backgroundColor:'#1677D2',alignItems:'center',justifyContent:'center',flexDirection:'row',gap:7,opacity:selectedCustomer?.phone?1:0.5}}><Ionicons name="call" size={18} color="#fff"/><Text style={{color:'#fff',fontSize:13,fontWeight:'800'}}>Ara</Text></Pressable>
+                      <Pressable disabled={!selectedCustomer?.phone} onPress={()=>{const phone=String(selectedCustomer.phone).replace(/[^0-9]/g,'');Linking.openURL('https://wa.me/'+(phone.startsWith('0')?'90'+phone.slice(1):phone.startsWith('90')?phone:phone));}} style={{flex:1,minHeight:44,borderRadius:12,backgroundColor:'#25D366',alignItems:'center',justifyContent:'center',flexDirection:'row',gap:7,opacity:selectedCustomer?.phone?1:0.5}}><Ionicons name="logo-whatsapp" size={19} color="#fff"/><Text style={{color:'#fff',fontSize:13,fontWeight:'800'}}>WhatsApp</Text></Pressable>
+                    </View>
+                  </View>
+                  <View style={{marginTop:10,gap:8}}>
                     <View style={{flexDirection:'row',alignItems:'center',gap:9}}><Ionicons name="call-outline" size={17} color={palette.muted}/><Text style={styles.teamRole}>{selectedCustomer?.phone || 'Telefon eklenmemiş'}</Text></View>
                     {!!selectedCustomer?.email && <View style={{flexDirection:'row',alignItems:'center',gap:9}}><Ionicons name="mail-outline" size={17} color={palette.muted}/><Text style={styles.teamRole}>{selectedCustomer.email}</Text></View>}
                     {!!selectedCustomer?.notes && <View style={{flexDirection:'row',alignItems:'flex-start',gap:9}}><Ionicons name="document-text-outline" size={17} color={palette.muted}/><Text style={[styles.teamRole,{flex:1}]}>{selectedCustomer.notes}</Text></View>}
                     {!!selectedCustomer?.nextFollowUpAt && <View style={{flexDirection:'row',alignItems:'center',gap:9}}><Ionicons name="time-outline" size={17} color={palette.muted}/><Text style={styles.teamRole}>Takip: {new Date(selectedCustomer.nextFollowUpAt).toLocaleString('tr-TR')}</Text></View>}
                   </View>
                 </View>
-                <View style={{flexDirection:'row',flexWrap:'wrap',gap:10,marginBottom:20}}>
+                <View style={{flexDirection:'row',flexWrap:'wrap',gap:7,marginBottom:18}}>
                   {[
                     {key:'edit',label:'Düzenle',icon:'create-outline'},
-                    {key:'appointment',label:'Randevu oluştur',icon:'calendar-outline'},
-                    {key:'activities',label:'Görüşme / takip geçmişi',icon:'time-outline'},
-                    {key:'offers',label:'Teklif takibi',icon:'pricetag-outline'},
+                    {key:'appointment',label:'Randevu',icon:'calendar-outline'},
+                    {key:'activities',label:'Görüşmeler',icon:'time-outline'},
+                    {key:'offers',label:'Teklifler',icon:'pricetag-outline'},
                     {key:'requirements',label:'Arama talepleri',icon:'search-outline'},
-                  ].map(item=><Pressable key={item.key} onPress={()=>{ if(item.key==='appointment'){setAppointmentModalOpen(true);setCalendarMonth(new Date(chosenDate.getFullYear(),chosenDate.getMonth(),1));syncAppointmentDateTime(chosenDate);} else setActivePanel(item.key); }} style={{width:'48%',minHeight:94,backgroundColor:palette.white,borderRadius:16,borderWidth:1,borderColor:palette.line,padding:13,justifyContent:'center',gap:8}}>
-                    <Ionicons name={item.icon as any} size={23} color={palette.navy}/><Text style={{color:palette.ink,fontWeight:'800',fontSize:12}}>{item.label}</Text>
+                  ].map(item=><Pressable key={item.key} onPress={()=>{ if(item.key==='appointment'){setAppointmentModalOpen(true);setCalendarMonth(new Date(chosenDate.getFullYear(),chosenDate.getMonth(),1));syncAppointmentDateTime(chosenDate);} else setActivePanel(item.key); }} style={{minHeight:38,paddingHorizontal:11,borderRadius:10,backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,flexDirection:'row',alignItems:'center',gap:6}}>
+                    <Ionicons name={item.icon as any} size={16} color={palette.navy}/><Text style={{color:palette.ink,fontWeight:'700',fontSize:11}}>{item.label}</Text>
                   </Pressable>)}
                 </View>
                 {activePanel === 'edit' && <Modal visible transparent animationType="slide" onRequestClose={() => setActivePanel(null)}><View style={{flex:1,justifyContent:'flex-end',backgroundColor:'#0006'}}><View style={{backgroundColor:palette.bg,borderTopLeftRadius:24,borderTopRightRadius:24,maxHeight:'92%',padding:20}}><View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12}}><Text style={styles.modalHeaderTitle}>Müşteri bilgilerini düzenle</Text><Pressable onPress={() => setActivePanel(null)} hitSlop={12} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable></View><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingBottom:24}}><View style={{gap:8}}>
