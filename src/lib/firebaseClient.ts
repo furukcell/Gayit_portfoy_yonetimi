@@ -105,10 +105,47 @@ export function getFirebaseClient(): any {
       }
     },
     from: (table:string) => new CollectionQuery(table),
+    // Media provider: Cloudinary for now. Firebase Storage imports above and
+    // getFirebaseStorage() remain intact so the provider can be switched back later.
     storage: {from:(bucket:string)=>({
-      upload:async(path:string,body:Blob,options?:any)=>{try{await uploadBytes(ref(storage,path),body,options);return {data:{path},error:null};}catch(e:any){return {data:null,error:err(e.message)};}},
-      createSignedUrl:async(path:string)=>{try{return {data:{signedUrl:await getDownloadURL(ref(storage,path))},error:null};}catch(e:any){return {data:null,error:err(e.message)};}},
-      remove:async(paths:string[])=>{try{await Promise.all(paths.map(p=>deleteObject(ref(storage,p))));return {data:paths.map(name=>({name})),error:null};}catch(e:any){return {data:null,error:err(e.message)};}}
+      upload:async(path:string,body:Blob,options?:any)=>{
+        try {
+          const cloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
+          const uploadPreset = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+          if (!cloudName || !uploadPreset) throw new Error('Cloudinary ayarları eksik. EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ve EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET değişkenlerini kontrol edin.');
+          const form = new FormData();
+          form.append('file', body as any);
+          form.append('upload_preset', uploadPreset);
+          // Keep Firebase-style path organization as a Cloudinary folder/public ID.
+          const cleanPath = path.replace(/^\\/+|\\/+$/g, '').replace(/\\.[^/.]+$/, '');
+          if (cleanPath) {
+            const parts = cleanPath.split('/');
+            const fileName = parts.pop();
+            if (parts.length) form.append('folder', parts.join('/'));
+            if (fileName) form.append('public_id', fileName);
+          }
+          const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, { method:'POST', body:form });
+          const result:any = await response.json();
+          if (!response.ok || !result.secure_url) throw new Error(result?.error?.message || 'Cloudinary medya yüklemesi başarısız.');
+          return {data:{path:result.secure_url, fullPath:result.public_id, url:result.secure_url, publicId:result.public_id, resourceType:result.resource_type},error:null};
+        } catch(e:any) { return {data:null,error:err(e?.message || 'Cloudinary medya yüklemesi başarısız.')}; }
+      },
+      createSignedUrl:async(path:string)=>{
+        try {
+          // New Cloudinary records store secure_url directly; old Firebase paths
+          // can still be resolved by Firebase Storage for a future migration.
+          if (/^https?:\\/\\//i.test(path)) return {data:{signedUrl:path},error:null};
+          return {data:{signedUrl:await getDownloadURL(ref(getFirebaseStorage(),path))},error:null};
+        } catch(e:any) { return {data:null,error:err(e.message)}; }
+      },
+      remove:async(paths:string[])=>{
+        try {
+          const firebasePaths = paths.filter(p => !/^https?:\\/\\//i.test(p));
+          await Promise.all(firebasePaths.map(p=>deleteObject(ref(getFirebaseStorage(),p))));
+          if (paths.some(p => /^https?:\\/\\//i.test(p))) throw new Error('Cloudinary dosyaları istemciden güvenli biçimde silinemez; imzalı sunucu işlemi gerekir.');
+          return {data:paths.map(name=>({name})),error:null};
+        } catch(e:any) { return {data:null,error:err(e.message)}; }
+      }
     })},
     functions:{invoke:async(name:string, options?:{body?:any})=>{try{const fn=getFunctions(getFirebaseApp(),'europe-west1');const callableName=({ 'create-agent':'createAgent', 'create-office':'createOffice', 'evaluate-matches':'evaluateMatches' } as Record<string,string>)[name];if(!callableName)return {data:null,error:err(`Firebase sunucu işlemi '${name}' tanımlı değil.`)};const result=await httpsCallable(fn,callableName)(options?.body||{});return {data:result.data,error:null};}catch(e:any){return {data:null,error:err(e?.message||'Firebase sunucu işlemi başarısız.')}}}}
   };
