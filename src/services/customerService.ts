@@ -26,7 +26,7 @@ export const addCustomerActivityForOffer = async (summary: string, deps: any) =>
   };
 
 export const addCustomerOffer = async (deps: any) => {
-    const { selectedCustomer, offerAmount, offerPropertyId, offerStatus, offerNotes, setOfferBusy, setCustomerOffers, properties, money, setOfferAmount, setOfferNotes, setOfferStatus } = deps;
+    const { selectedCustomer, offerAmount, offerPropertyId, offerStatus, offerNotes, setOfferBusy, setCustomerOffers, properties, money, setOfferAmount, setOfferNotes, setOfferStatus, officeId } = deps;
     const amount = Number(offerAmount.replace(/[^0-9.,]/g, '').replace(',', '.'));
     if (!selectedCustomer || !offerPropertyId || !offerAmount.trim() || !Number.isFinite(amount) || amount <= 0) {
       Alert.alert('Eksik bilgi', 'Portföy seç ve geçerli teklif tutarı gir.');
