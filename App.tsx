@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
+import * as Updates from 'expo-updates';
 import { palette, styles } from './src/theme/appStyles';
 import useAppState from './src/hooks/useAppState';
 import AnimatedSplash from './src/components/AnimatedSplash';
@@ -57,6 +58,48 @@ const htmlEscape = (value: unknown) => String(value ?? '').replace(/&/g, '&amp;'
 const shareText = (p: Property) => `🏡 ${p.title}\n${p.address}\n${money(p.price)}\n${p.kind} · ${propertyTypeLabel(p.propertyType)}\n\nGAYIT Portföy Yönetimi`;
 
 export default function App() {
+  const otaPromptShownRef = useRef(false);
+
+  useEffect(() => {
+    // In installed builds, check the preview/production update channel at startup.
+    // Silently skip in development or when the update service is unavailable.
+    if (__DEV__ || !Updates.isEnabled || otaPromptShownRef.current) return;
+    otaPromptShownRef.current = true;
+    let cancelled = false;
+
+    const checkForOtaUpdate = async () => {
+      try {
+        const result = await Updates.checkForUpdateAsync();
+        if (cancelled || !result.isAvailable) return;
+        Alert.alert(
+          'Yeni güncelleme hazır',
+          'GAYIT için yeni bir güncelleme var. Şimdi uygulamak ister misin?',
+          [
+            { text: 'Daha sonra', style: 'cancel' },
+            {
+              text: 'Şimdi güncelle',
+              onPress: async () => {
+                try {
+                  const fetched = await Updates.fetchUpdateAsync();
+                  if (fetched.isNew) await Updates.reloadAsync();
+                  else Alert.alert('Güncelleme bulunamadı', 'Uygulama zaten güncel görünüyor.');
+                } catch {
+                  Alert.alert('Güncelleme yapılamadı', 'İnternet bağlantını kontrol edip uygulamayı yeniden aç.');
+                }
+              },
+            },
+          ],
+          { cancelable: true },
+        );
+      } catch {
+        // No update or temporary network issue: keep the app usable without a popup.
+      }
+    };
+
+    void checkForOtaUpdate();
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     // Immersive sticky: hide Android system navigation controls and let a swipe reveal them temporarily.
