@@ -184,8 +184,11 @@ export const saveProperty = async (deps: any) => {
       if ((latitude !== null && !Number.isFinite(latitude)) || (longitude !== null && !Number.isFinite(longitude)) || ((latitude === null) !== (longitude === null))) { Alert.alert('Konumu kontrol et', 'Enlem ve boylam birlikte girilmeli ve sayısal olmalı.'); setPropertyBusy(false); return; }
       const payload = {
         title: cleanTitle, address: cleanAddress,
-        district: parts.length > 1 ? parts[parts.length - 2] : '',
-        city: parts.length > 0 ? parts[parts.length - 1] : '',
+        district: cleanDistrict,
+        city: cleanCity,
+         neighborhood: cleanNeighborhood,
+         latitude,
+         longitude,
         price: numericPrice, rooms, property_type: propertyType, area_m2: numericArea,
         listing_type: kind === 'Kiralık' ? 'rent' : 'sale', description: description.trim(),
         bathrooms: bathrooms.trim() ? Number(bathrooms) : null, balcony, parking, heating, cooling,
