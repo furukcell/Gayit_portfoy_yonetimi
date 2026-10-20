@@ -21,9 +21,14 @@ export const loadPropertyPhotos = async (propertyId: string, deps: PhotoDependen
       const { data, error } = await firebaseClient.from('property_photos').select('id,storage_path,sort_order').eq('property_id', propertyId).order('sort_order', { ascending: true });
       if (error) throw error;
       const photos: PropertyPhoto[] = await Promise.all((data || []).map(async (row: any) => {
-        const { data: signed, error: signError } = await firebaseClient.storage.from('property-photos').createSignedUrl(row.storage_path, 60 * 60);
+        const storedPath = String(row.storage_path || '');
+        // Cloudinary assets are stored as HTTPS URLs; only legacy Firebase paths need signed URLs.
+        if (/^https?:\/\//i.test(storedPath)) {
+          return { id: row.id, storagePath: storedPath, url: storedPath, sortOrder: row.sort_order || 0 };
+        }
+        const { data: signed, error: signError } = await firebaseClient.storage.from('property-photos').createSignedUrl(storedPath, 60 * 60);
         if (signError) throw signError;
-        return { id: row.id, storagePath: row.storage_path, url: signed.signedUrl, sortOrder: row.sort_order || 0 };
+        return { id: row.id, storagePath: storedPath, url: signed.signedUrl, sortOrder: row.sort_order || 0 };
       }));
       setPropertyPhotos(photos);
     } catch (error: any) {
@@ -95,13 +100,15 @@ export const removePropertyPhoto = async (photo: PropertyPhoto, deps: PhotoDepen
         setPhotosBusy(true);
         try {
           const firebaseClient = getFirebaseClient();
-          // Delete the object first. If Storage rejects the operation, keep its
-          // metadata row so the user can retry from the gallery.
-          const { error: storageError } = await firebaseClient.storage.from('property-photos').remove([photo.storagePath]);
-          if (storageError) {
-            await loadPropertyPhotos(propertyId, deps);
-            Alert.alert('Fotoğraf silinemedi', 'Dosya depolamadan silinemedi; kayıt galeride bırakıldı, böylece tekrar deneyebilirsin. Firebase Storage izinlerini kontrol et.');
-            return;
+          // Cloudinary URLs cannot be deleted securely from a mobile client without a server-side signature.
+          // Remove only the database row for Cloudinary assets; legacy Firebase objects are removed from Storage.
+          if (!/^https?:\/\//i.test(photo.storagePath)) {
+            const { error: storageError } = await firebaseClient.storage.from('property-photos').remove([photo.storagePath]);
+            if (storageError) {
+              await loadPropertyPhotos(propertyId, deps);
+              Alert.alert('Fotoğraf silinemedi', 'Dosya depolamadan silinemedi; kayıt galeride bırakıldı. Firebase Storage izinlerini kontrol et.');
+              return;
+            }
           }
           const { error: rowError } = await firebaseClient.from('property_photos')
             .delete().eq('id', photo.id).eq('property_id', propertyId);
