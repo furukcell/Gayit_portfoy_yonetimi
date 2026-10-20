@@ -272,7 +272,8 @@ const rebuildCustomerMatches = async (officeId: string, customerId: string) => {
 export const addRequirementForSelectedCustomer = async (deps: any) => {
     const { selectedCustomer, requirementMaxPrice, requirementDistrict, requirementCity, requirementRooms, setCustomerEditBusy, officeId, requirementIntent, requirementType, setCustomerRequirements, loadMatches, loadCustomers, setRequirementIntent, setRequirementType, setRequirementCity, setRequirementDistrict, setRequirementMaxPrice, setRequirementRooms } = deps;
     if (!selectedCustomer) return;
-    const maxPrice = Number(requirementMaxPrice.replace(/[^0-9]/g, ''));
+    const safeMaxPrice = String(requirementMaxPrice ?? '');
+      const maxPrice = Number(safeMaxPrice.replace(/[^0-9]/g, ''));
     if (!requirementDistrict.trim() && !requirementCity.trim() && !requirementMaxPrice.trim() && !requirementRooms.trim()) {
       Alert.alert('Arama kriteri eksik', 'En azından konum, bütçe veya oda kriterlerinden birini gir.');
       return;
@@ -329,10 +330,39 @@ export const updateCustomer = async (deps: any) => {
     }
   };
 
+
+export const deleteCustomer = async (deps: any) => {
+  const { selectedCustomer, officeId, setCustomerEditBusy, setCustomerDetailOpen, setSelectedCustomer, loadCustomers, loadMatches } = deps;
+  if (!selectedCustomer) return;
+  Alert.alert('Müşteriyi sil', '"' + (selectedCustomer.fullName || 'Bu müşteri') + '" ve bağlı talep, teklif, randevu ve görüşme kayıtları kalıcı olarak silinecek. Bu işlem geri alınamaz.', [
+    { text: 'Vazgeç', style: 'cancel' },
+    { text: 'Müşteriyi sil', style: 'destructive', onPress: async () => {
+      setCustomerEditBusy(true);
+      try {
+        const db = getFirebaseClient();
+        const customerId = selectedCustomer.id;
+        for (const table of ['matches', 'property_offers', 'customer_activities', 'appointments', 'customer_requirements']) {
+          const { error } = await db.from(table).delete().eq('office_id', officeId).eq('customer_id', customerId);
+          if (error) throw new Error(table + ': ' + error.message);
+        }
+        const { error } = await db.from('customers').delete().eq('id', customerId).eq('office_id', officeId);
+        if (error) throw error;
+        setCustomerDetailOpen(false);
+        setSelectedCustomer(null);
+        await loadCustomers(officeId);
+        await loadMatches(officeId);
+        Alert.alert('Müşteri silindi', 'Müşteri ve bağlı kayıtları silindi.');
+      } catch (error) {
+        Alert.alert('Müşteri silinemedi', error instanceof Error ? error.message : 'Kayıtlar silinemedi. Veritabanı izinlerini kontrol et.');
+      } finally { setCustomerEditBusy(false); }
+    }}
+  ]);
+};
+
 export const saveCustomer = async (deps: any) => {
     const { customerName, customerRoles, setCustomerBusy, officeId, customerPhone, customerNotes, requirementMaxPrice, requirementIntent, requirementDistrict, requirementRooms, requirementType, requirementCity, loadCustomers, loadMatches, setCustomerModalOpen, setCustomerName, setCustomerPhone, setCustomerRoles, setCustomerNotes, setRequirementIntent, setRequirementType, setRequirementCity, setRequirementDistrict, setRequirementMaxPrice, setRequirementRooms } = deps;
-    if (!customerName.trim()) { Alert.alert('Eksik bilgi', 'Müşterinin adını gir.'); return; }
-    if (customerRoles.length === 0) { Alert.alert('Müşteri türü', 'En az bir müşteri rolü seç.'); return; }
+    if (!customerName?.trim()) { Alert.alert('Eksik bilgi', 'Müşterinin adını gir.'); return; }
+    if (!Array.isArray(customerRoles) || customerRoles.length === 0) { Alert.alert('Müşteri türü', 'En az bir müşteri rolü seç.'); return; }
     setCustomerBusy(true);
     try {
       const firebaseClient = getFirebaseClient();
@@ -343,8 +373,18 @@ export const saveCustomer = async (deps: any) => {
       const maxPrice = Number(requirementMaxPrice.replace(/[^0-9]/g, ''));
       const hasRequirement = !!(requirementIntent !== 'sale' || requirementDistrict.trim() || requirementMaxPrice.trim() || requirementRooms.trim() || requirementType !== 'apartment' || requirementCity.trim() !== 'Muğla');
       if (hasRequirement) {
+        const hasActualSearchCriteria = !!(String(requirementDistrict ?? '').trim() || safeMaxPrice.trim() || String(requirementRooms ?? '').trim() || String(requirementCity ?? '').trim());
+        if (!hasActualSearchCriteria) {
+          await loadCustomers(officeId);
+          setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementMaxPrice(''); setRequirementRooms('');
+          Alert.alert('Müşteri kaydedildi', 'Müşteri kaydedildi. Arama talebi için konum, bütçe veya oda kriterlerinden en az birini girmen yeterli.');
+          return;
+        }
         const { error: requirementError } = await firebaseClient.from('customer_requirements').insert({ office_id: officeId, customer_id: customer.id, intent: requirementIntent, property_type: requirementType, city: requirementCity.trim(), district: requirementDistrict.trim(), max_price: maxPrice > 0 ? maxPrice : null, rooms: requirementRooms.trim() ? [requirementRooms.trim()] : [], is_active: true });
-        if (requirementError) throw new Error('Müşteri kaydedildi ancak arama talebi kaydedilemedi: ' + requirementError.message);
+        if (requirementError) {
+          await firebaseClient.from('customers').delete().eq('id', customer.id).eq('office_id', officeId);
+          throw new Error('Arama kriterleri kaydedilemediği için müşteri kaydı tamamlanmadı: ' + requirementError.message);
+        }
       }
       await loadCustomers(officeId);
       let matchWarning = '';
