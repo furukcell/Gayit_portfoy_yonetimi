@@ -38,11 +38,15 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       const heroPhoto = photosForPdf[0];
       const galleryPhotos = photosForPdf.slice(1, 5);
       const heroHtml = heroPhoto
-        ? '<img class="hero-photo" src="' + heroPhoto + '" alt="Gayrimenkul fotoğrafı" />'
-        : '<div class="hero-placeholder"><span>GAYIT</span><small>GAYRİMENKUL PORTFÖYÜ</small></div>';
+        ? '<img class="photo-featured" src="' + heroPhoto + '" alt="Gayrimenkul fotoğrafı" />'
+        : '<div class="photo-placeholder"><span>GAYIT</span><small>GAYRİMENKUL PORTFÖYÜ</small></div>';
       const galleryHtml = galleryPhotos.map((url, index) =>
         '<div class="thumb"><img src="' + url + '" alt="İlan fotoğrafı ' + (index + 2) + '" /></div>'
       ).join('');
+      const photoLayoutHtml = '<section class="photo-layout"><div class="photo-main">' + heroHtml + '</div>' +
+        (galleryPhotos.length ? '<div class="photo-thumbs">' + galleryHtml + '</div>' : '') +
+        (photosForPdf.length > 5 ? '<div class="photo-count">+' + (photosForPdf.length - 5) + ' fotoğraf daha</div>' : '') +
+        '</section>';
       const locationParts = (p.address || '').split(',').map((part: string) => part.trim()).filter(Boolean);
       const locationShort = locationParts.slice(-2).join(' / ');
       const code = htmlEscape(String(p.id || '').slice(0, 18).toUpperCase());
@@ -63,13 +67,23 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       .codebox{border-left:1px solid #cdd5de;padding-left:4mm;margin-left:4mm;text-align:right;min-width:31mm}
       .codebox small{display:block;color:#8190a0;font-size:7pt;margin-bottom:1mm}
       .codebox strong{font-size:8pt;overflow-wrap:anywhere}
-      .hero-row{display:grid;grid-template-columns:1.65fr 1fr;gap:2mm;height:88mm}
+      .hero-row{display:grid;grid-template-columns:1.12fr 1fr;gap:3mm;min-height:88mm}
       .hero-visual{position:relative;border-radius:3mm;overflow:hidden;background:#e9eef2;min-width:0}
-      .hero-photo{width:100%;height:100%;object-fit:cover;display:block}
-      .hero-placeholder{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#dce5eb,#f5f7f8);color:#10283f}
-      .hero-placeholder span{font-size:25pt;font-weight:800;letter-spacing:2px}.hero-placeholder small{letter-spacing:2px;color:#78899a}
-      .hero-chip{position:absolute;left:4mm;top:4mm;border-radius:20px;background:#10283f;color:#fff;padding:2mm 4mm;font-size:8pt;font-weight:bold}
-      .hero-location{position:absolute;bottom:0;left:0;right:0;padding:4mm;background:linear-gradient(transparent,rgba(4,17,27,.9));color:#fff;font-size:8pt;font-weight:bold}
+      .photo-featured{width:100%;height:100%;object-fit:cover;display:block}
+      .photo-placeholder{height:100%;min-height:65mm;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#dce5eb,#f5f7f8);color:#10283f}
+      .photo-placeholder span{font-size:25pt;font-weight:800;letter-spacing:2px}.photo-placeholder small{letter-spacing:2px;color:#78899a}
+      .featured-panel{border-radius:3mm;background:#f3f6f9;padding:4mm;min-width:0}
+      .featured-title{font-size:11pt;font-weight:800;color:#10283f;margin:0 0 3mm}
+      .featured-items{display:grid;grid-template-columns:1fr 1fr;gap:2mm}
+      .featured-item{background:#fff;border-left:1mm solid #d9b16a;border-radius:1.5mm;padding:2.5mm;font-size:8pt;min-width:0}
+      .featured-item span{display:block;color:#718195;font-size:7pt;margin-bottom:1mm}
+      .featured-item b{display:block;color:#10283f;font-size:9pt;overflow-wrap:anywhere}
+      .photo-layout{display:grid;grid-template-columns:1.6fr 1fr;gap:2.5mm;margin-top:4mm;position:relative;break-inside:avoid;page-break-inside:avoid}
+      .photo-main{height:67mm;overflow:hidden;border-radius:3mm;background:#e9eef2}
+      .photo-thumbs{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,1fr);gap:2mm;min-width:0}
+      .thumb{overflow:hidden;border-radius:2mm;background:#e8edf1;min-height:0}
+      .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+      .photo-count{position:absolute;right:2mm;bottom:2mm;background:rgba(12,35,54,.88);color:#fff;padding:1.5mm 2.5mm;border-radius:2mm;font-size:7pt}
       .hero-info{background:#0c2336;color:#fff;border-radius:3mm;padding:5mm 4.5mm;display:flex;flex-direction:column;min-width:0;overflow:hidden}
       .status{align-self:flex-end;background:#d9b16a;color:#10283f;padding:1.5mm 3.5mm;border-radius:20px;font-size:7.5pt;font-weight:bold}
       .hero-info h1{font-size:19pt;line-height:1.12;margin:3mm 0 2mm;overflow-wrap:anywhere}
@@ -82,10 +96,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       .mini-spec{border:1px solid #315065;border-radius:2.5mm;padding:2.5mm 2mm;min-width:0}
       .mini-spec b{display:block;font-size:10pt;color:#fff}
       .mini-spec small{display:block;color:#bdcbd5;font-size:7pt;margin-top:1mm}
-      .thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:2mm;margin-top:2.5mm;height:28mm}
-      .thumb{overflow:hidden;border-radius:2mm;background:#e8edf1}
-      .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-      .more-photos{display:flex;align-items:center;justify-content:center;text-align:center;color:#10283f;background:#eef2f5;font-size:9pt;font-weight:bold}
+      
       .content-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:3.5mm;margin-top:4mm}
       .left-col,.right-col{display:flex;flex-direction:column;gap:3mm;min-width:0}
       .panel{background:#f3f6f9;border-radius:2.5mm;padding:4mm;page-break-inside:avoid;break-inside:avoid}
@@ -112,9 +123,20 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       @media print{.sheet{margin:0}.panel,.contact,.hero-row,.thumbs{break-inside:avoid}}
       </style></head><body><main class="sheet">
       <header class="masthead"><div class="brand"><div class="logo">⌂</div><div><div class="brand-name">GAYIT</div><div class="brand-sub">GAYRİMENKUL SUNUMU</div></div></div><div class="motto">Doğru portföy,<br/>doğru müşteri.</div><div class="codebox"><small>PORTFÖY KODU</small><strong>${code}</strong></div></header>
-      <section class="hero-row"><div class="hero-visual">${heroHtml}<div class="hero-chip">${htmlEscape(p.kind)}</div><div class="hero-location">${htmlEscape(p.address)}</div></div>
+      <section class="hero-row"><div class="featured-panel"><div class="featured-title">✦ ÖNE ÇIKAN ÖZELLİKLER</div><div class="featured-items">
+      <div class="featured-item"><span>Gayrimenkul tipi</span><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b></div>
+      <div class="featured-item"><span>İşlem türü</span><b>${htmlEscape(p.kind)}</b></div>
+      <div class="featured-item"><span>Oda sayısı</span><b>${htmlEscape(p.rooms || 'Belirtilmedi')}</b></div>
+      <div class="featured-item"><span>Alan</span><b>${htmlEscape(p.area || 'Belirtilmedi')}</b></div>
+      <div class="featured-item"><span>Bina yaşı</span><b>${htmlEscape(p.buildingAge ? p.buildingAge + ' yıl' : 'Belirtilmedi')}</b></div>
+      <div class="featured-item"><span>Bulunduğu kat</span><b>${htmlEscape(p.floorNumber || 'Belirtilmedi')}</b></div>
+      <div class="featured-item"><span>Banyo</span><b>${htmlEscape(p.bathrooms || 'Belirtilmedi')}</b></div>
+      <div class="featured-item"><span>Balkon</span><b>${htmlEscape(p.balcony || 'Belirtilmedi')}</b></div>
+      <div class="featured-item"><span>Otopark</span><b>${htmlEscape(p.parking || 'Belirtilmedi')}</b></div>
+      <div class="featured-item"><span>Isıtma</span><b>${htmlEscape(p.heating || 'Belirtilmedi')}</b></div>
+      </div></div>
       <div class="hero-info"><span class="status">${htmlEscape(p.status)}</span><h1>${htmlEscape(p.title)}</h1><div class="subtitle">${htmlEscape((p.description || '').split(/[.!?]/)[0] || propertyTypeLabel(p.propertyType))}</div><div class="gold-line"></div><div class="rent-label">${p.kind === 'Kiralık' ? 'AYLIK KİRA BEDELİ' : 'İSTENEN SATIŞ FİYATI'}</div><div class="price">${money(p.price)}</div><div class="price-caption">İlan fiyatı</div><div class="mini-specs"><div class="mini-spec"><b>${htmlEscape(p.rooms || '—')}</b><small>Oda sayısı</small></div><div class="mini-spec"><b>${htmlEscape(p.area || '—')}</b><small>Alan</small></div><div class="mini-spec"><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b><small>Emlak tipi</small></div><div class="mini-spec"><b>${htmlEscape(p.kind)}</b><small>İşlem türü</small></div></div></div></section>
-      ${galleryHtml ? '<section class="thumbs">' + galleryHtml + (photosForPdf.length > 5 ? '<div class="thumb more-photos">+' + (photosForPdf.length - 5) + '<br/>fotoğraf</div>' : '') + '</section>' : ''}
+      ${photoLayoutHtml}
       <section class="content-grid"><div class="left-col"><article class="panel"><h2><span class="symbol">▤</span> Gayrimenkul hakkında</h2><div class="description">${htmlEscape(p.description || 'Detaylı bilgi ve gösterim için danışmanımızla iletişime geçebilirsiniz.')}</div></article>
       <article class="panel"><h2><span class="symbol">✦</span> Öne çıkan özellikler</h2><div class="feature-list"><div class="feature"><span>Alan</span><b>${htmlEscape(p.area || 'Belirtilmedi')}</b></div><div class="feature"><span>Oda sayısı</span><b>${htmlEscape(p.rooms || 'Belirtilmedi')}</b></div><div class="feature"><span>Emlak tipi</span><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b></div><div class="feature"><span>İşlem türü</span><b>${htmlEscape(p.kind)}</b></div><div class="feature"><span>Durum</span><b>${htmlEscape(p.status)}</b></div><div class="feature"><span>Bölge</span><b>${htmlEscape(p.district || locationShort || 'Belirtilmedi')}</b></div><div class="feature"><span>Bina yaşı</span><b>${htmlEscape(p.buildingAge ? p.buildingAge + ' yıl' : 'Belirtilmedi')}</b></div><div class="feature"><span>Bulunduğu kat</span><b>${htmlEscape(p.floorNumber || 'Belirtilmedi')}</b></div><div class="feature"><span>Toplam kat</span><b>${htmlEscape(p.totalFloors || 'Belirtilmedi')}</b></div><div class="feature"><span>Banyo</span><b>${htmlEscape(p.bathrooms || 'Belirtilmedi')}</b></div><div class="feature"><span>Balkon</span><b>${htmlEscape(p.balcony || 'Belirtilmedi')}</b></div><div class="feature"><span>Otopark</span><b>${htmlEscape(p.parking || 'Belirtilmedi')}</b></div><div class="feature"><span>Isıtma</span><b>${htmlEscape(p.heating || 'Belirtilmedi')}</b></div><div class="feature"><span>Soğutma</span><b>${htmlEscape(p.cooling || 'Belirtilmedi')}</b></div><div class="feature"><span>İskan</span><b>${htmlEscape(p.occupancyPermit || 'Belirtilmedi')}</b></div><div class="feature"><span>Asansör</span><b>${htmlEscape(p.elevator || 'Belirtilmedi')}</b></div></div></article><article class="panel"><h2><span class="symbol">⌖</span> Yakın çevre</h2><div class="description">${htmlEscape(p.nearbyAmenities || 'Yakın çevre bilgisi belirtilmedi.')}</div></article></div>
       <div class="right-col"><article class="panel"><h2><span class="symbol">●</span> Konum</h2><div class="address-text">${htmlEscape(p.address)}</div><div class="map-placeholder"><div class="map-lines"></div><div class="map-label"><div class="map-pin">●</div>${htmlEscape(locationShort || 'Konum bilgisi')}</div></div><div class="muted" style="font-size:7pt;margin-top:2mm">Kesin konum için danışmanınızdan bilgi alabilirsiniz.</div></article></div></section>
