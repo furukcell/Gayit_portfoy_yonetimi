@@ -4,7 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme';
 import BrandMark from '../components/BrandMark';
 
-export function CustomersScreen(_props: any) {
+export function CustomersScreen(props: any) {
+  if (!props.visible) return null;
+
   return (
     <View style={styles.container}>
       <View style={styles.icon}><BrandMark size={58} /></View>
