@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { getFirebaseClient } from '../lib/firebaseClient';
+import { uploadMediaFromUri } from '../lib/mediaStorage';
 import type { Property, PropertyPhoto } from '../types/property';
 
 type PhotoDependencies = {
@@ -42,15 +43,10 @@ export const addPropertyPhoto = async (deps: PhotoDependencies) => {
     setPhotosBusy(true);
     try {
       const asset = result.assets[0];
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
-      const ext = asset.mimeType === 'image/png' ? 'png' : 'jpg';
-      const storagePath = officeId + '/' + selected.id + '/' + Date.now() + '.' + ext;
+      const uploaded = await uploadMediaFromUri(asset.uri, { folder: `gayit/${officeId}/properties/${selected.id}`, fileName: `photo-${Date.now()}.jpg`, mimeType: asset.mimeType || undefined });
       const firebaseClient = getFirebaseClient();
-      const { data: uploaded, error: uploadError } = await firebaseClient.storage.from('property-photos').upload(storagePath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
-      if (uploadError) throw new Error(uploadError.message || 'Medya sağlayıcısı fotoğrafı kabul etmedi.');
-      // The active provider is Cloudinary: persist its HTTPS URL, not the virtual Firebase-style path.
-      const persistedPath = uploaded?.url || uploaded?.path || storagePath;
+      // Store the Cloudinary secure URL; all photo features use the same provider.
+      const persistedPath = uploaded.url;
       const { error: rowError } = await firebaseClient.from('property_photos').insert({ property_id: selected.id, office_id: officeId, storage_path: persistedPath, sort_order: propertyPhotos.length });
       if (rowError) {
         if (!/^https?:\/\//i.test(persistedPath)) await firebaseClient.storage.from('property-photos').remove([persistedPath]);
