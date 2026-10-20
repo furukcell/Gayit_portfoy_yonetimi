@@ -3,6 +3,7 @@ import { palette, styles } from './src/theme/appStyles';
 import AnimatedSplash from './src/components/AnimatedSplash';
 import { Stat, Feature } from './src/components/DashboardPrimitives';
 import type { Role, Tab, Customer, PropertyStatus, PropertyPhoto, Property } from './src/types/property';
+import PropertyRow from './src/components/PropertyRow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
 import { changeInitialPassword, changePasswordWithCurrent, restoreUsernameSession, signInWithUsername } from './src/lib/usernameAuth';
@@ -1834,9 +1835,3 @@ export default function App() {
     </SafeAreaView>
   );
 }
-
-function PropertyRow({property,onPress}:{property:Property;onPress:()=>void}) {
-  const active = property.status === 'Aktif';
-  return <Pressable onPress={onPress} style={styles.propertyCard}><View style={styles.propertyThumb}><Ionicons name="home-outline" size={36} color={palette.navy2}/><Text style={styles.thumbCode}>{property.id}</Text></View><View style={styles.propertyInfo}><View style={styles.propertyTitleLine}><Text numberOfLines={1} style={styles.propertyTitle}>{property.title}</Text><View style={[styles.miniStatus,active?styles.activeStatus:styles.optionStatus]}><Text style={[styles.miniStatusText,{color:active?palette.green:palette.amber}]}>{property.status}</Text></View></View><Text numberOfLines={1} style={styles.propertyAddress}><Ionicons name="location-outline" size={12}/> {property.address}</Text><Text style={styles.propertyPrice}>{money(property.price)}{property.kind==='Kiralık'?<Text style={styles.rentSuffix}> / ay</Text>:null}</Text><Text style={styles.propertyMeta}>{property.rooms}  ·  {property.area}  ·  {property.kind}</Text></View><Ionicons name="chevron-forward" size={17} color={palette.muted}/></Pressable>;
-}
-
