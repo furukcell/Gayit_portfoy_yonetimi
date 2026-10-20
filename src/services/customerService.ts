@@ -407,9 +407,12 @@ export const saveCustomer = async (deps: any) => {
       await loadCustomers(officeId);
       let matchWarning = '';
       if (hasRequirement) {
-        const { error: matchingError } = await firebaseClient.functions.invoke('evaluate-matches', { body: { officeId, customerId: customer.id } });
-        if (matchingError) matchWarning = ' Eşleştirme şu an çalışmadı; Edge Function ve migration kurulumu kontrol edilmeli.';
-        else await loadMatches(officeId);
+        try {
+          await rebuildCustomerMatches(officeId, customer.id);
+          await loadMatches(officeId);
+        } catch (matchingError) {
+          matchWarning = ' Eşleştirme yenilenemedi: ' + (matchingError instanceof Error ? matchingError.message : 'bilinmeyen hata');
+        }
       }
       setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementMaxPrice(''); setRequirementRooms('');
       Alert.alert('Müşteri kaydedildi', hasRequirement ? 'Müşteri ve arama talebi kaydedildi.' + matchWarning : 'Müşteri kaydedildi. İstersen daha sonra arama talebi ekleyebilirsin.');
