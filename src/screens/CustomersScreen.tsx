@@ -12,8 +12,12 @@ export function CustomersScreen(props: any) {
   const filtered = customers.filter((customer: any) => {
     const query = customerSearch.trim().toLocaleLowerCase('tr-TR');
     const matchesQuery = !query || String(customer.fullName || '').toLocaleLowerCase('tr-TR').includes(query) || String(customer.phone || '').toLocaleLowerCase('tr-TR').includes(query);
-    const type = String(customer.customerType || customer.type || customer.role || '').toLocaleLowerCase('tr-TR');
-    const matchesType = customerTypeFilter === 'Tümü' || (customerTypeFilter === 'Alıcı' ? type.includes('alıcı') || type.includes('alici') || type.includes('buyer') : type.includes('satıcı') || type.includes('satici') || type.includes('seller'));
+    // Database stores customer types in the roles string array, e.g. ['buyer'] or ['seller'].
+    const rawRoles = Array.isArray(customer.roles) ? customer.roles : [customer.customerType, customer.type, customer.role].filter(Boolean);
+    const roles = rawRoles.map((role: any) => String(role).toLocaleLowerCase('tr-TR'));
+    const matchesType = customerTypeFilter === 'Tümü' || (customerTypeFilter === 'Alıcı'
+      ? roles.some((role: string) => role.includes('alıcı') || role.includes('alici') || role.includes('buyer') || role === 'buy')
+      : roles.some((role: string) => role.includes('satıcı') || role.includes('satici') || role.includes('seller') || role === 'sell'));
     return matchesQuery && matchesType;
   });
 
