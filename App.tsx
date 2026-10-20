@@ -536,8 +536,8 @@ export default function App() {
     ]);
   };
   const pdfDependencies = {
-    Alert, getFirebaseClient, getFirebaseAuth, htmlEscape, propertyTypeLabel, money, Print, Sharing,
-    properties, selectedPresentationIds, setPortfolioPresentationMode, setSelectedPresentationIds,
+    htmlEscape, propertyTypeLabel, money, properties, selectedPresentationIds,
+    setPortfolioPresentationMode, setSelectedPresentationIds,
   };
   const createPdf = async (p: Property) => createPropertyPdf(p, pdfDependencies);
   const createMultiPropertyPdf = async () => createMultiPropertyPdfService(pdfDependencies);
