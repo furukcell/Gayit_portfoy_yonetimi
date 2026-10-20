@@ -27,6 +27,7 @@ import { loadProperties as loadPropertiesService, loadCustomers as loadCustomers
 import { loadCustomerOffers as loadCustomerOffersService, addCustomerOffer as addCustomerOfferService, updateOfferStatus as updateOfferStatusService, openCustomerDetail as openCustomerDetailService, addCustomerAppointment as addCustomerAppointmentService, addCustomerActivity as addCustomerActivityService, addRequirementForSelectedCustomer as addRequirementForSelectedCustomerService, updateCustomer as updateCustomerService, saveCustomer as saveCustomerService } from './src/services/customerService';
 import { handleLogin as handleLoginService, handleInitialPasswordChange as handleInitialPasswordChangeService, openProfile as openProfileService, chooseProfileAvatar as chooseProfileAvatarService, handleProfilePasswordChange as handleProfilePasswordChangeService, saveProfile as saveProfileService, chooseAgentAvatar as chooseAgentAvatarService, createAgent as createAgentService, handleSignOut as handleSignOutService } from './src/services/accountActionsService';
 import { updatePropertyStatus as updatePropertyStatusService, openPropertyEditor as openPropertyEditorService, archiveProperty as archivePropertyService, choosePropertyPhotos as choosePropertyPhotosService, uploadPendingPropertyPhotos as uploadPendingPropertyPhotosService, saveProperty as savePropertyService } from './src/services/propertyActionsService';
+import { saveTransaction as saveTransactionService, loadRecentViews as loadRecentViewsService, openProperty as openPropertyService, loadFavorites as loadFavoritesService, toggleFavorite as toggleFavoriteService } from './src/services/portfolioActionsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
 import { restoreUsernameSession } from './src/lib/usernameAuth';
@@ -137,92 +138,17 @@ export default function App() {
     return searchMatch && (showArchived ? p.status === 'Arşivde' : p.status !== 'Arşivde') && (filter === 'Tümü' || p.kind === filter) && typeMatch && cityMatch && districtMatch && statusMatch && minMatch && maxMatch && (!favoritesOnly || favoriteIds.includes(p.id)) && (!recentOnly || recentPropertyIds.includes(p.id));
   }).sort((a,b) => sortBy === 'priceAsc' ? a.price-b.price : sortBy === 'priceDesc' ? b.price-a.price : sortBy === 'newest' ? 0 : 0), [properties, role, search, filter, quickTypeFilter, quickCityFilter, quickDistrictFilter, sortBy, showArchived, statusFilter, minPriceFilter, maxPriceFilter, favoritesOnly, favoriteIds, recentOnly, recentPropertyIds]);
 
-  const saveTransaction = async () => {
-    if (transactionBusy) return;
-    const finalPrice = Number(transactionFinalPrice.replace(/[^0-9]/g,''));
-    const officeCommission = Number(transactionOfficeCommission.replace(/[^0-9]/g,'') || 0);
-    const agentCommission = Number(transactionAgentCommission.replace(/[^0-9]/g,'') || 0);
-    if (!transactionPropertyId || !Number.isSafeInteger(finalPrice) || finalPrice <= 0) { Alert.alert('Eksik bilgi','Portföy seç ve gerçekleşen satış/kiralama bedelini gir.'); return; }
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(transactionDate) || officeCommission < 0 || agentCommission < 0 || officeCommission + agentCommission > finalPrice) { Alert.alert('Bilgileri kontrol et','Tarih YYYY-AA-GG olmalı; komisyonlar negatif olamaz ve toplamı işlem bedelini aşamaz.'); return; }
-    setTransactionBusy(true);
-    try {
-      const firebaseClient = getFirebaseClient();
-      const { data:userResult,error:userError } = await firebaseClient.auth.getUser();
-      if(userError||!userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
-      const property = properties.find(p=>p.id===transactionPropertyId);
-      if(!property) throw new Error('Seçilen portföy bulunamadı.');
-      const { error } = await firebaseClient.from('property_transactions').insert({
-        office_id:officeId, property_id:property.id, agent_id:userResult.user.id,
-        transaction_type:property.kind==='Kiralık'?'rent':'sale', final_price:finalPrice,
-        office_commission:officeCommission, agent_commission:agentCommission,
-        closed_on:transactionDate, notes:transactionNotes.trim(), created_by:userResult.user.id,
-      });
-      if(error) throw error;
-      await getFirebaseClient().from('properties').update({status:property.kind==='Kiralık'?'rented':'sold'}).eq('id',property.id).eq('office_id',officeId);
-      await loadProperties(officeId);
-      setTransactionModalOpen(false); setTransactionPropertyId(''); setTransactionFinalPrice(''); setTransactionOfficeCommission(''); setTransactionAgentCommission(''); setTransactionNotes('');
-      Alert.alert('İşlem kaydedildi','Satış/kiralama ve komisyon kaydı oluşturuldu.');
-    } catch(error) { Alert.alert('İşlem kaydedilemedi',error instanceof Error?error.message:'Firebase Firestore kurallarını ve ofis yetkilerini kontrol et.'); }
-    finally { setTransactionBusy(false); }
+  const portfolioActionDependencies = {
+    transactionBusy, transactionFinalPrice, transactionOfficeCommission, transactionAgentCommission, transactionPropertyId,
+    transactionDate, setTransactionBusy, properties, officeId, transactionNotes, loadProperties, setTransactionModalOpen,
+    setTransactionPropertyId, setTransactionFinalPrice, setTransactionOfficeCommission, setTransactionAgentCommission, setTransactionNotes,
+    setRecentPropertyIds, setSelected, setPropertyPhotos, loadPropertyPhotos, favoriteIds, setFavoriteIds,
   };
-
-  const loadRecentViews = async () => {
-    if (!officeId) return;
-    try {
-      const { data, error } = await getFirebaseClient().from('property_recent_views').select('property_id,viewed_at').eq('office_id',officeId).order('viewed_at',{ascending:false}).limit(50);
-      if (error) throw error;
-      setRecentPropertyIds([...new Set<string>((data||[]).map((row:any)=>String(row.property_id)))]);
-    } catch {
-      // The rest of the portfolio remains usable before migration 011 is applied.
-    }
-  };
-  const openProperty = (property: Property) => {
-    setSelected(property); setPropertyPhotos([]);
-    void loadPropertyPhotos(property.id);
-    if (!officeId) return;
-    void (async()=>{
-      try {
-        const firebaseClient=getFirebaseClient();
-        const {data:userResult}=await firebaseClient.auth.getUser();
-        if(!userResult.user) return;
-        const {error}=await firebaseClient.from('property_recent_views').upsert(
-          {office_id:officeId,property_id:property.id,user_id:userResult.user.id,viewed_at:new Date().toISOString()},
-          {onConflict:'office_id,property_id,user_id'}
-        );
-        if(error) return;
-        setRecentPropertyIds(ids=>[property.id,...ids.filter(id=>id!==property.id)].slice(0,50));
-      } catch { /* Recent-view tracking must not block opening a property. */ }
-    })();
-  };
-
-  const loadFavorites = async () => {
-    if (!officeId) return;
-    try {
-      const { data, error } = await getFirebaseClient().from('property_favorites').select('property_id').eq('office_id', officeId);
-      if (error) throw error;
-      setFavoriteIds((data || []).map((row: any) => row.property_id));
-    } catch {
-      Alert.alert('Favoriler yüklenemedi','Firebase Firestore kurallarını ve Storage kurulumunu kontrol et.');
-    }
-  };
-  const toggleFavorite = async (property: Property) => {
-    if (!officeId) return;
-    const firebaseClient = getFirebaseClient();
-    const { data: userResult, error: userError } = await firebaseClient.auth.getUser();
-    if (userError || !userResult.user) { Alert.alert('Oturum gerekli','Favori kaydetmek için tekrar giriş yap.'); return; }
-    const isFavorite = favoriteIds.includes(property.id);
-    try {
-      if (isFavorite) {
-        const { error } = await firebaseClient.from('property_favorites').delete().eq('office_id',officeId).eq('property_id',property.id).eq('user_id',userResult.user.id);
-        if (error) throw error;
-        setFavoriteIds(ids=>ids.filter(id=>id!==property.id));
-      } else {
-        const { error } = await firebaseClient.from('property_favorites').insert({office_id:officeId,property_id:property.id,user_id:userResult.user.id});
-        if (error) throw error;
-        setFavoriteIds(ids=>[...ids,property.id]);
-      }
-    } catch (error) { Alert.alert('Favori kaydedilemedi',error instanceof Error?error.message:'Firebase 011 migration dosyasını ve yetkileri kontrol et.'); }
-  };
+  const saveTransaction = async () => saveTransactionService(portfolioActionDependencies);
+  const loadRecentViews = async () => loadRecentViewsService(portfolioActionDependencies);
+  const openProperty = (property: Property) => openPropertyService(property, portfolioActionDependencies);
+  const loadFavorites = async () => loadFavoritesService(portfolioActionDependencies);
+  const toggleFavorite = async (property: Property) => toggleFavoriteService(property, portfolioActionDependencies);
 
   const csvDependencies = {
     Alert, Share, find, parseLine, escapeCsv, setCsvImportText,
