@@ -375,7 +375,7 @@ export const deleteCustomer = async (deps: any) => {
 };
 
 export const saveCustomer = async (deps: any) => {
-    const { customerName, customerRoles, setCustomerBusy, officeId, customerPhone, customerNotes, requirementMaxPrice, requirementIntent, requirementDistrict, requirementNeighborhood, requirementRooms, requirementType, requirementCity, loadCustomers, loadMatches, setCustomerModalOpen, setCustomerName, setCustomerPhone, setCustomerRoles, setCustomerNotes, setRequirementIntent, setRequirementType, setRequirementCity, setRequirementDistrict, setRequirementMaxPrice, setRequirementRooms } = deps;
+    const { customerName, customerRoles, setCustomerBusy, officeId, customerPhone, customerNotes, requirementMaxPrice, requirementIntent, requirementDistrict, requirementNeighborhood, requirementRooms, requirementType, requirementCity, loadCustomers, loadMatches, setCustomerModalOpen, setCustomerName, setCustomerPhone, setCustomerRoles, setCustomerNotes, setRequirementIntent, setRequirementType, setRequirementCity, setRequirementDistrict, setRequirementNeighborhood, setRequirementMaxPrice, setRequirementRooms } = deps;
     if (!customerName?.trim()) { Alert.alert('Eksik bilgi', 'Müşterinin adını gir.'); return; }
     if (!Array.isArray(customerRoles) || customerRoles.length === 0) { Alert.alert('Müşteri türü', 'En az bir müşteri rolü seç.'); return; }
     setCustomerBusy(true);
@@ -391,12 +391,12 @@ export const saveCustomer = async (deps: any) => {
       const safeRooms = String(requirementRooms ?? '');
       const safeCity = String(requirementCity ?? '');
       const maxPrice = Number(safeMaxPrice.replace(/[^0-9]/g, ''));
-      const hasRequirement = !!(requirementIntent !== 'sale' || safeDistrict.trim() || safeMaxPrice.trim() || safeRooms.trim() || requirementType !== 'apartment' || safeCity.trim() !== 'Muğla');
+      const hasRequirement = !!(requirementIntent !== 'sale' || safeDistrict.trim() || safeNeighborhood.trim() || safeMaxPrice.trim() || safeRooms.trim() || requirementType !== 'apartment' || safeCity.trim() !== 'Muğla');
       if (hasRequirement) {
         const hasActualSearchCriteria = !!(safeDistrict.trim() || safeNeighborhood.trim() || safeMaxPrice.trim() || safeRooms.trim() || safeCity.trim());
         if (!hasActualSearchCriteria) {
           await loadCustomers(officeId);
-          setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementMaxPrice(''); setRequirementRooms('');
+          setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementNeighborhood(''); setRequirementMaxPrice(''); setRequirementRooms('');
           Alert.alert('Müşteri kaydedildi', 'Müşteri kaydedildi. Arama talebi için konum, bütçe veya oda kriterlerinden en az birini girmen yeterli.');
           return;
         }
