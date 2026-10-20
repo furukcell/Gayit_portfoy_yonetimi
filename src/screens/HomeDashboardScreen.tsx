@@ -26,7 +26,6 @@ export default function HomeDashboardScreen(props: any) {
               </View>
               <View style={styles.sectionHead}><Text style={styles.sectionTitle}>{role === 'owner' ? 'Son portföy hareketleri' : 'Portföyümden'}</Text><Pressable onPress={()=>setTab('portfolio')}><Text style={styles.link}>Tümünü gör</Text></Pressable></View>
               {roleProperties.slice(0,3).map((p: any)=><PropertyRow key={p.id} property={p} money={money} onPress={()=>openProperty(p)} />)}
-              <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Portföy ve ekip kayıtları Firebase Firestore üzerinden yüklenir. Otomatik eşleştirme için Firebase Functions dağıtılmış olmalıdır; görüntülenme analitiği henüz etkin değil.</Text></View>
             </ScrollView>
   );
 }
