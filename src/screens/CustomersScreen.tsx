@@ -5,12 +5,16 @@ import { colors } from '../theme';
 import BrandMark from '../components/BrandMark';
 
 export function CustomersScreen(props: any) {
-  const { visible, customers = [], customersLoading, customerSearch = '', setCustomerSearch, openCustomerDetail, openAddCustomer } = props;\n  const [customerTypeFilter, setCustomerTypeFilter] = React.useState('Tümü');
+  const { visible, customers = [], customersLoading, customerSearch = '', setCustomerSearch, openCustomerDetail, openAddCustomer } = props;
+  const [customerTypeFilter, setCustomerTypeFilter] = React.useState('Tümü');
   if (!visible) return null;
 
   const filtered = customers.filter((customer: any) => {
     const query = customerSearch.trim().toLocaleLowerCase('tr-TR');
-    const matchesQuery = !query || String(customer.fullName || '').toLocaleLowerCase('tr-TR').includes(query) || String(customer.phone || '').toLocaleLowerCase('tr-TR').includes(query);\n    const type = String(customer.customerType || customer.type || customer.role || '').toLocaleLowerCase('tr-TR');\n    const matchesType = customerTypeFilter === 'Tümü' || (customerTypeFilter === 'Alıcı' ? type.includes('alıcı') || type.includes('alici') || type.includes('buyer') : type.includes('satıcı') || type.includes('satici') || type.includes('seller'));\n    return matchesQuery && matchesType;
+    const matchesQuery = !query || String(customer.fullName || '').toLocaleLowerCase('tr-TR').includes(query) || String(customer.phone || '').toLocaleLowerCase('tr-TR').includes(query);
+    const type = String(customer.customerType || customer.type || customer.role || '').toLocaleLowerCase('tr-TR');
+    const matchesType = customerTypeFilter === 'Tümü' || (customerTypeFilter === 'Alıcı' ? type.includes('alıcı') || type.includes('alici') || type.includes('buyer') : type.includes('satıcı') || type.includes('satici') || type.includes('seller'));
+    return matchesQuery && matchesType;
   });
 
   return (
@@ -34,7 +38,9 @@ export function CustomersScreen(props: any) {
         {!!customerSearch && <Pressable onPress={() => setCustomerSearch('')}><Ionicons name="close-circle" size={18} color={colors.muted} /></Pressable>}
       </View>
 
-      <View style={styles.typeFilters}>{['Tümü','Alıcı','Satıcı'].map(type => <Pressable key={type} onPress={() => setCustomerTypeFilter(type)} style={[styles.typeChip, customerTypeFilter === type && styles.typeChipActive]}><Text style={[styles.typeChipText, customerTypeFilter === type && styles.typeChipTextActive]}>{type}</Text></Pressable>)}</View>\n\n      {customersLoading ? (
+      <View style={styles.typeFilters}>{['Tümü','Alıcı','Satıcı'].map(type => <Pressable key={type} onPress={() => setCustomerTypeFilter(type)} style={[styles.typeChip, customerTypeFilter === type && styles.typeChipActive]}><Text style={[styles.typeChipText, customerTypeFilter === type && styles.typeChipTextActive]}>{type}</Text></Pressable>)}</View>
+
+      {customersLoading ? (
         <View style={styles.state}><ActivityIndicator size="large" color={colors.navy} /><Text style={styles.stateText}>Müşteriler yükleniyor...</Text></View>
       ) : filtered.length === 0 ? (
         <View style={styles.empty}>
@@ -77,7 +83,12 @@ const styles = StyleSheet.create({
   addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: colors.navy, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 13 },
   addText: { color: '#fff', fontSize: 13, fontWeight: '800' },
   searchBox: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 13, marginBottom: 14 },
-  searchInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 10 },\n  typeFilters: { flexDirection: 'row', gap: 8, marginBottom: 12 },\n  typeChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },\n  typeChipActive: { backgroundColor: colors.navy, borderColor: colors.navy },\n  typeChipText: { color: colors.muted, fontSize: 12, fontWeight: '700' },\n  typeChipTextActive: { color: '#fff' },
+  searchInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 10 },
+  typeFilters: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  typeChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  typeChipActive: { backgroundColor: colors.navy, borderColor: colors.navy },
+  typeChipText: { color: colors.muted, fontSize: 12, fontWeight: '700' },
+  typeChipTextActive: { color: '#fff' },
   list: { paddingBottom: 24, gap: 10 },
   customerCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16 },
   avatar: { width: 44, height: 44, borderRadius: 15, backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center' },
