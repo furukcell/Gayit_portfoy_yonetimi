@@ -30,7 +30,7 @@ Veriler, amaç için gerekli süre ve uygulanabilir yasal saklama süreleri boyu
 KVKK'nın 11. maddesi kapsamındaki haklarınız için destek.fkdigital@gmail.com adresine başvurabilirsiniz. Başvurular, mevzuattaki usul ve süreler doğrultusunda değerlendirilir.
 
 9. GÜNCELLEME
-İşlevler veya mevzuat değiştikçe metin güncellenebilir. Gerçek veri akışları ve hizmet yapılandırması doğrulanarak bu taslak yayımdan önce hukuki incelemeden geçirilmelidir.` },
+İşlevler veya mevzuat değiştikçe metin güncellenebilir. İşlevler veya mevzuat değiştikçe metin güncellenebilir.` },
  terms: { title: 'Kullanım Sözleşmesi', body: `GAYIT · KULLANIM SÖZLEŞMESİ
 Son güncelleme: 20 Ekim 2026
 
@@ -60,7 +60,7 @@ Kullanıcı, uygulamaya girdiği içerik ve yaptığı işlemlerden sorumludur. 
 
 Kullanım Sözleşmesi'ni okudum ve koşullarını kabul ediyorum.
 
-Bu taslak, gerçek işletme modeli doğrulanarak yayımdan önce hukuki incelemeden geçirilmelidir.` },
+` },
  about: { title: 'GAYIT Hakkında', body: `GAYIT
 Emlak Portföy ve Ofis Yönetimi
 
