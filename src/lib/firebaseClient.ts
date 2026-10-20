@@ -161,7 +161,7 @@ export function getFirebaseClient(): any {
           ]);
           const norm = (v:any) => String(v ?? '').trim().toLocaleLowerCase('tr-TR');
           const properties = propertySnap.docs.map(d => ({ id:d.id, ...d.data() } as Row));
-          const requirements = requirementSnap.docs.map(d => ({ id:d.id, ...d.data() } as Row)).filter(r => !customerId || r.customer_id === customerId);
+          const requirements = requirementSnap.docs.map(d => ({ id:d.id, ...d.data() } as Row));
           const existing = new Map(existingSnap.docs.map(d => [d.id, {ref:d.ref, data:d.data()}]));
           const next = new Map<string, Row>();
           for (const req of requirements) {
