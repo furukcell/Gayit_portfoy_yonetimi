@@ -285,7 +285,7 @@ export const addRequirementForSelectedCustomer = async (deps: any) => {
         office_id: officeId, customer_id: selectedCustomer.id, intent: requirementIntent,
         property_type: requirementType, city: requirementCity.trim(), district: requirementDistrict.trim(),
         max_price: maxPrice > 0 ? maxPrice : null,
-        rooms: requirementRooms.trim() ? [requirementRooms.trim()] : [], is_active: true,
+        rooms: safeRooms.trim() ? [safeRooms.trim()] : [], is_active: true,
       }).select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,must_have,notes,is_active,created_at').single();
       if (error) throw error;
       setCustomerRequirements((current: any[]) => [data, ...current]);
@@ -370,17 +370,21 @@ export const saveCustomer = async (deps: any) => {
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
       const { data: customer, error } = await firebaseClient.from('customers').insert({ office_id: officeId, assigned_agent_id: userResult.user.id, created_by: userResult.user.id, full_name: customerName.trim(), phone: customerPhone.trim(), roles: customerRoles, notes: customerNotes.trim() }).select('id').single();
       if (error || !customer) throw new Error(error?.message || 'Müşteri kaydedilemedi. Migration 003 ve RLS ayarlarını kontrol et.');
-      const maxPrice = Number(requirementMaxPrice.replace(/[^0-9]/g, ''));
-      const hasRequirement = !!(requirementIntent !== 'sale' || requirementDistrict.trim() || requirementMaxPrice.trim() || requirementRooms.trim() || requirementType !== 'apartment' || requirementCity.trim() !== 'Muğla');
+      const safeMaxPrice = String(requirementMaxPrice ?? '');
+      const safeDistrict = String(requirementDistrict ?? '');
+      const safeRooms = String(requirementRooms ?? '');
+      const safeCity = String(requirementCity ?? '');
+      const maxPrice = Number(safeMaxPrice.replace(/[^0-9]/g, ''));
+      const hasRequirement = !!(requirementIntent !== 'sale' || safeDistrict.trim() || safeMaxPrice.trim() || safeRooms.trim() || requirementType !== 'apartment' || safeCity.trim() !== 'Muğla');
       if (hasRequirement) {
-        const hasActualSearchCriteria = !!(String(requirementDistrict ?? '').trim() || safeMaxPrice.trim() || String(requirementRooms ?? '').trim() || String(requirementCity ?? '').trim());
+        const hasActualSearchCriteria = !!(safeDistrict.trim() || safeMaxPrice.trim() || safeRooms.trim() || safeCity.trim());
         if (!hasActualSearchCriteria) {
           await loadCustomers(officeId);
           setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementMaxPrice(''); setRequirementRooms('');
           Alert.alert('Müşteri kaydedildi', 'Müşteri kaydedildi. Arama talebi için konum, bütçe veya oda kriterlerinden en az birini girmen yeterli.');
           return;
         }
-        const { error: requirementError } = await firebaseClient.from('customer_requirements').insert({ office_id: officeId, customer_id: customer.id, intent: requirementIntent, property_type: requirementType, city: requirementCity.trim(), district: requirementDistrict.trim(), max_price: maxPrice > 0 ? maxPrice : null, rooms: requirementRooms.trim() ? [requirementRooms.trim()] : [], is_active: true });
+        const { error: requirementError } = await firebaseClient.from('customer_requirements').insert({ office_id: officeId, customer_id: customer.id, intent: requirementIntent, property_type: requirementType, city: safeCity.trim(), district: safeDistrict.trim(), max_price: maxPrice > 0 ? maxPrice : null, rooms: requirementRooms.trim() ? [requirementRooms.trim()] : [], is_active: true });
         if (requirementError) {
           await firebaseClient.from('customers').delete().eq('id', customer.id).eq('office_id', officeId);
           throw new Error('Arama kriterleri kaydedilemediği için müşteri kaydı tamamlanmadı: ' + requirementError.message);
