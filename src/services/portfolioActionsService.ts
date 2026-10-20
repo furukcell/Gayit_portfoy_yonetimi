@@ -15,7 +15,7 @@ export const saveTransaction = async (deps: any) => {
       const firebaseClient = getFirebaseClient();
       const { data:userResult,error:userError } = await firebaseClient.auth.getUser();
       if(userError||!userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
-      const property = properties.find(p=>p.id===transactionPropertyId);
+      const property = properties.find((p: Property)=>p.id===transactionPropertyId);
       if(!property) throw new Error('Seçilen portföy bulunamadı.');
       const { error } = await firebaseClient.from('property_transactions').insert({
         office_id:officeId, property_id:property.id, agent_id:userResult.user.id,
@@ -58,7 +58,7 @@ export const openProperty = (property: Property, deps: any) => {
           {onConflict:'office_id,property_id,user_id'}
         );
         if(error) return;
-        setRecentPropertyIds(ids=>[property.id,...ids.filter(id=>id!==property.id)].slice(0,50));
+        setRecentPropertyIds((ids: string[])=>[property.id,...ids.filter(id=>id!==property.id)].slice(0,50));
       } catch { /* Recent-view tracking must not block opening a property. */ }
     })();
   };
@@ -85,11 +85,11 @@ export const toggleFavorite = async (property: Property, deps: any) => {
       if (isFavorite) {
         const { error } = await firebaseClient.from('property_favorites').delete().eq('office_id',officeId).eq('property_id',property.id).eq('user_id',userResult.user.id);
         if (error) throw error;
-        setFavoriteIds(ids=>ids.filter(id=>id!==property.id));
+        setFavoriteIds((ids: string[])=>ids.filter(id=>id!==property.id));
       } else {
         const { error } = await firebaseClient.from('property_favorites').insert({office_id:officeId,property_id:property.id,user_id:userResult.user.id});
         if (error) throw error;
-        setFavoriteIds(ids=>[...ids,property.id]);
+        setFavoriteIds((ids: string[])=>[...ids,property.id]);
       }
     } catch (error) { Alert.alert('Favori kaydedilemedi',error instanceof Error?error.message:'Firebase 011 migration dosyasını ve yetkileri kontrol et.'); }
   };
