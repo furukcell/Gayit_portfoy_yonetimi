@@ -9,7 +9,7 @@ export const saveTransaction = async (deps: any) => {
     const officeCommission = Number(transactionOfficeCommission.replace(/[^0-9]/g,'') || 0);
     const agentCommission = Number(transactionAgentCommission.replace(/[^0-9]/g,'') || 0);
     if (!transactionPropertyId || !Number.isSafeInteger(finalPrice) || finalPrice <= 0) { Alert.alert('Eksik bilgi','Portföy seç ve gerçekleşen satış/kiralama bedelini gir.'); return; }
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(transactionDate) || officeCommission < 0 || agentCommission < 0 || officeCommission + agentCommission > finalPrice) { Alert.alert('Bilgileri kontrol et','Tarih YYYY-AA-GG olmalı; komisyonlar negatif olamaz ve toplamı işlem bedelini aşamaz.'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(transactionDate) || officeCommission < 0 || agentCommission < 0 || officeCommission + agentCommission > finalPrice) { Alert.alert('Bilgileri kontrol et','Tarih YYYY-AA-GG olmalı; komisyonlar negatif olamaz ve toplamı işlem bedelini aşamaz.'); return; }
     setTransactionBusy(true);
     try {
       const firebaseClient = getFirebaseClient();
