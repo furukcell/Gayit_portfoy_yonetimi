@@ -1,16 +1,8 @@
 name: Build Android APK
 
 on:
+  # APK only when manually requested from the Actions tab.
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - main
-    paths:
-      - "**"
-      - ".github/workflows/android-apk.yml"
 
 permissions:
   contents: read
