@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme';
 
-export function CustomersScreen() {
+export function CustomersScreen(_props: any) {
   return (
     <View style={styles.container}>
       <View style={styles.icon}><Ionicons name="people-outline" size={34} color={colors.gold} /></View>
