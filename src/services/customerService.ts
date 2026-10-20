@@ -161,40 +161,109 @@ const rebuildCustomerMatches = async (officeId: string, customerId: string) => {
   ]);
   if (reqError) throw reqError;
   if (propError) throw propError;
+
   const { error: clearError } = await db.from('matches').delete().eq('office_id', officeId).eq('customer_id', customerId);
   if (clearError) throw clearError;
+
   const rows: any[] = [];
-  const norm = (v: any) => String(v || '').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').trim();
+  const norm = (value: any) => String(value ?? '')
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
   for (const req of requirements || []) {
     for (const property of properties || []) {
       const reasons: string[] = [];
       let score = 0;
+
       const intent = norm(req.intent);
       const listing = norm(property.listing_type);
-      const intentOk = !intent || (['sale','sell','satilik'].includes(intent) ? listing !== 'rent' && listing !== 'kiralik' : ['rent','kiralik','lease'].includes(intent) ? listing === 'rent' || listing === 'kiralik' : true);
-      if (!intentOk) continue;
-      score += 25; reasons.push('İlan türü uygun');
-      const reqType = norm(req.property_type), propType = norm(property.property_type);
-      if (reqType && propType && reqType !== propType && !(reqType.includes('apartment') && propType.includes('daire'))) continue;
-      if (reqType && propType) { score += 20; reasons.push('Gayrimenkul türü uygun'); }
-      const location = norm([property.district, property.address].join(' '));
-      const wantedLocation = norm([req.city, req.district, req.neighborhood].filter(Boolean).join(' '));
-      if (wantedLocation) {
-        const tokens = wantedLocation.split(/[ ,]+/).filter((x: string) => x.length > 2);
-        const matched = tokens.filter((token: string) => location.includes(token));
-        if (matched.length === 0) continue;
-        score += Math.round(30 * matched.length / tokens.length); reasons.push('Konum eşleşiyor');
+      const isSale = ['sale', 'sell', 'satilik'].includes(intent);
+      const isRent = ['rent', 'kiralik', 'lease'].includes(intent);
+      if (isSale && ['rent', 'kiralik', 'lease'].includes(listing)) continue;
+      if (isRent && !['rent', 'kiralik', 'lease'].includes(listing)) continue;
+      score += 25;
+      reasons.push('İlan türü uygun');
+
+      const reqType = norm(req.property_type);
+      const propType = norm(property.property_type);
+      const sameType = !reqType || !propType || reqType === propType ||
+        (reqType.includes('apartment') && propType.includes('daire')) ||
+        (reqType.includes('daire') && propType.includes('apartment'));
+      if (!sameType) continue;
+      if (reqType && propType) {
+        score += 20;
+        reasons.push('Gayrimenkul türü uygun');
       }
+
+      // Property records currently expose district/address, not a reliable separate city field.
+      // Do not let a city-only requirement block every listing; use district/neighborhood when available.
+      const propertyLocation = norm([property.district, property.address].filter(Boolean).join(' '));
+      const wantedArea = norm([req.district, req.neighborhood].filter(Boolean).join(' '));
+      if (wantedArea) {
+        const tokens = wantedArea.split(/[ ,]+/).filter((token: string) => token.length > 2);
+        const matchedTokens = tokens.filter((token: string) => propertyLocation.includes(token));
+        if (tokens.length && matchedTokens.length === 0) continue;
+        if (tokens.length) {
+          score += Math.round(30 * matchedTokens.length / tokens.length);
+          reasons.push(matchedTokens.length === tokens.length ? 'Konum uygun' : 'Konum kısmen uygun');
+        }
+      } else if (req.city) {
+        score += 15;
+        reasons.push('Şehir kriteri dikkate alındı');
+      }
+
       const price = Number(property.price || 0);
-      if (req.max_price != null && price > Number(req.max_price)) continue;
-      if (req.min_price != null && price < Number(req.min_price)) continue;
-      if (req.max_price != null || req.min_price != null) { score += 15; reasons.push('Bütçe uygun'); }
-      const wantedRooms = Array.isArray(req.rooms) ? req.rooms.map(norm) : [];
+      const minPrice = req.min_price == null || req.min_price === '' ? null : Number(req.min_price);
+      const maxPrice = req.max_price == null || req.max_price === '' ? null : Number(req.max_price);
+      const hasMin = minPrice != null && Number.isFinite(minPrice) && minPrice > 0;
+      const hasMax = maxPrice != null && Number.isFinite(maxPrice) && maxPrice > 0;
+      const inExactBudget = (!hasMin || price >= (minPrice as number)) && (!hasMax || price <= (maxPrice as number));
+
+      let inFlexibleBudget = inExactBudget;
+      if (!inExactBudget && price > 0 && (hasMin || hasMax)) {
+        const flexibleMin = hasMin ? (minPrice as number) * 0.9 : 0;
+        const flexibleMax = hasMax ? (maxPrice as number) * 1.1 : Number.POSITIVE_INFINITY;
+        inFlexibleBudget = price >= flexibleMin && price <= flexibleMax;
+      }
+      if ((hasMin || hasMax) && !inFlexibleBudget) continue;
+
+      if (hasMin || hasMax) {
+        if (inExactBudget) {
+          score += 15;
+          reasons.push('Bütçe aralığında · tam eşleşme');
+        } else {
+          score += 8;
+          let boundary = 'Bütçe esnekliği içinde';
+          if (hasMax && price > (maxPrice as number)) {
+            boundary = 'Tavan bütçenin %' + Math.round((price / (maxPrice as number) - 1) * 100) + ' üzerinde';
+          } else if (hasMin && price < (minPrice as number)) {
+            boundary = 'Taban bütçenin %' + Math.round((1 - price / (minPrice as number)) * 100) + ' altında';
+          }
+          reasons.push('%10 esnek bütçe · ' + boundary);
+        }
+      }
+
+      const wantedRooms = Array.isArray(req.rooms) ? req.rooms.map(norm).filter(Boolean) : [];
       if (wantedRooms.length && !wantedRooms.some((room: string) => norm(property.rooms).includes(room))) continue;
-      if (wantedRooms.length) { score += 10; reasons.push('Oda sayısı uygun'); }
-      rows.push({ office_id: officeId, customer_id: customerId, property_id: property.id, status: 'new', match_kind: score >= 75 ? 'exact' : 'alternative', match_score: Math.min(100, score), match_reasons: reasons });
+      if (wantedRooms.length) {
+        score += 10;
+        reasons.push('Oda sayısı uygun');
+      }
+
+      rows.push({
+        office_id: officeId,
+        customer_id: customerId,
+        property_id: property.id,
+        status: 'new',
+        match_kind: inExactBudget ? (score >= 75 ? 'exact' : 'alternative') : 'alternative',
+        match_score: Math.min(100, score),
+        match_reasons: reasons
+      });
     }
   }
+
   if (rows.length) {
     const { error } = await db.from('matches').insert(rows);
     if (error) throw error;
