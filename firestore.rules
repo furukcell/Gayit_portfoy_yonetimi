@@ -57,7 +57,9 @@ service cloud.firestore {
     }
     match /offices/{officeId} {
       allow read: if isSuperadmin() || activeMembership(officeId);
-      allow create, update, delete: if isSuperadmin();
+      allow create, delete: if isSuperadmin();
+      allow update: if isSuperadmin() || (isOwner(officeId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'logo_url', 'branding_updated_at']));
     }
     match /properties/{propertyId} {
       // Everyone active in the office can see its listings.
