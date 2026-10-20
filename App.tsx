@@ -28,6 +28,7 @@ import { loadCustomerOffers as loadCustomerOffersService, addCustomerOffer as ad
 import { handleLogin as handleLoginService, handleInitialPasswordChange as handleInitialPasswordChangeService, openProfile as openProfileService, chooseProfileAvatar as chooseProfileAvatarService, handleProfilePasswordChange as handleProfilePasswordChangeService, saveProfile as saveProfileService, chooseAgentAvatar as chooseAgentAvatarService, createAgent as createAgentService, handleSignOut as handleSignOutService } from './src/services/accountActionsService';
 import { updatePropertyStatus as updatePropertyStatusService, openPropertyEditor as openPropertyEditorService, archiveProperty as archivePropertyService, choosePropertyPhotos as choosePropertyPhotosService, uploadPendingPropertyPhotos as uploadPendingPropertyPhotosService, saveProperty as savePropertyService } from './src/services/propertyActionsService';
 import { saveTransaction as saveTransactionService, loadRecentViews as loadRecentViewsService, openProperty as openPropertyService, loadFavorites as loadFavoritesService, toggleFavorite as toggleFavoriteService } from './src/services/portfolioActionsService';
+import { toggleAgentStatus as toggleAgentStatusService, handleCreateOfficeAsSuperadmin as createOfficeService, handleSuperadminLogout as superadminLogoutService } from './src/services/officeAdminService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
 import { restoreUsernameSession } from './src/lib/usernameAuth';
@@ -39,9 +40,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as NavigationBar from 'expo-navigation-bar';
 import { getFirebaseClient } from './src/lib/firebaseClient';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirebaseAuth } from './src/lib/firebase';
-import { signOut } from 'firebase/auth';
 import SuperadminPanel from './src/SuperadminPanel';
 
 
@@ -192,37 +191,7 @@ export default function App() {
   const markNotificationRead = async (notificationId: string) => markNotificationReadService(notificationId, officeDataDependencies);
   const loadTeamMembers = async (targetOfficeId: string) => loadTeamMembersService(targetOfficeId, officeDataDependencies);
 
-  const toggleAgentStatus = (person: {id:string; name:string; role:string; status:string}) => {
-    if (person.role !== 'agent' || !person.id || !officeId) return;
-    const nextStatus = person.status === 'active' ? 'disabled' : 'active';
-    const actionLabel = nextStatus === 'disabled' ? 'devre dışı bırakmak' : 'yeniden etkinleştirmek';
-    Alert.alert(
-      nextStatus === 'disabled' ? 'Danışmanı devre dışı bırak' : 'Danışmanı yeniden etkinleştir',
-      `${person.name} hesabını ${actionLabel} istediğine emin misin? ${nextStatus === 'disabled' ? 'Bu üyelikle ofis verilerine erişimi engellenecek.' : 'Danışman tekrar giriş yapabilecek.'}`,
-      [
-        { text: 'Vazgeç', style: 'cancel' },
-        { text: 'Onayla', style: 'destructive', onPress: async () => {
-          setTeamStatusBusyId(person.id);
-          try {
-            const firebaseClient = getFirebaseClient();
-            const { error } = await firebaseClient
-              .from('office_members')
-              .update({ status: nextStatus })
-              .eq('office_id', officeId)
-              .eq('user_id', person.id)
-              .eq('role', 'agent');
-            if (error) throw error;
-            await loadTeamMembers(officeId);
-            Alert.alert('Ekip güncellendi', nextStatus === 'disabled' ? 'Danışmanın ofis erişimi kapatıldı.' : 'Danışmanın ofis erişimi yeniden açıldı.');
-          } catch (error) {
-            Alert.alert('İşlem tamamlanamadı', error instanceof Error ? error.message : 'Üyelik durumu güncellenemedi.');
-          } finally {
-            setTeamStatusBusyId(null);
-          }
-        }},
-      ],
-    );
-  };
+  const toggleAgentStatus = (person: {id:string; name:string; role:string; status:string}) => toggleAgentStatusService(person, { officeId, setTeamStatusBusyId, loadTeamMembers });
 
   const customerActionDependencies = {
     selectedCustomer, setSelectedCustomer, officeId, properties, money,
@@ -315,33 +284,9 @@ export default function App() {
   const uploadPendingPropertyPhotos = async (propertyId: string) => uploadPendingPropertyPhotosService(propertyId, propertyActionDependencies);
   const saveProperty = async () => savePropertyService(propertyActionDependencies);
 
-  const handleCreateOfficeAsSuperadmin = async () => {
-    if (!superOfficeName.trim() || !superOwnerName.trim() || !superOwnerUsername.trim() || superOwnerPassword.length < 10) {
-      setSuperResult('Tüm alanları doldur. Ofis sahibi şifresi en az 10 karakter olmalı.');
-      return;
-    }
-    setSuperCreateBusy(true); setSuperResult('');
-    try {
-      const functions = getFunctions(getFirebaseApp(), 'europe-west1');
-      const createOfficeCall = httpsCallable(functions, 'createOffice');
-      const response:any = await createOfficeCall({
-        officeName: superOfficeName.trim(),
-        ownerFullName: superOwnerName.trim(),
-        ownerUsername: superOwnerUsername.trim().toLowerCase(),
-        ownerPassword: superOwnerPassword
-      });
-      if (!response.data?.success) throw new Error('Ofis oluşturulamadı.');
-      setSuperResult('Ofis oluşturuldu: ' + response.data.office.name + ' · Ofis sahibi kullanıcı adı: ' + response.data.owner.username);
-      setSuperOfficeName(''); setSuperOwnerName(''); setSuperOwnerUsername(''); setSuperOwnerPassword('');
-    } catch (error) {
-      setSuperResult(error instanceof Error ? error.message : 'Ofis oluşturulamadı. Cloud Function dağıtımını kontrol et.');
-    } finally { setSuperCreateBusy(false); }
-  };
-
-  const handleSuperadminLogout = async () => {
-    try { await signOut(getFirebaseAuth()); } catch {}
-    setAuthenticated(false); setRole('owner'); setLoginUsername(''); setLoginPassword(''); setSuperResult('');
-  };
+  const superadminActionDependencies = { superOfficeName, superOwnerName, superOwnerUsername, superOwnerPassword, setSuperResult, setSuperCreateBusy, setSuperOfficeName, setSuperOwnerName, setSuperOwnerUsername, setSuperOwnerPassword, setAuthenticated, setRole, setLoginUsername, setLoginPassword };
+  const handleCreateOfficeAsSuperadmin = async () => createOfficeService(superadminActionDependencies);
+  const handleSuperadminLogout = async () => superadminLogoutService(superadminActionDependencies);
 
   if (authenticated && role === 'superadmin') {
     return <SuperadminPanel
