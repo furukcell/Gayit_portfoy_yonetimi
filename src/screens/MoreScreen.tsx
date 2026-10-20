@@ -1,12 +1,13 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import BrandMark from '../components/BrandMark';
 
 export default function MoreScreen(props: any) {
   const { styles, palette, setLegalDocument, superadminOfficeMode, setSuperadminOfficeMode, setRole, setTab, setOfficeId, role, setNotificationsOpen, notifications, loadNotifications, officeId, setRecentOnly, setFavoritesOnly, loadRecentViews, setCsvImportOpen, openProfile, exportPortfolioCsv, setTransactionPropertyId, properties, setTransactionModalOpen, handleSignOut } = props;
   return (
     <ScrollView contentContainerStyle={styles.page}>
-              <Text style={styles.eyebrow}>GAYIT · ARAÇLAR</Text><Text style={styles.pageTitle}>Daha Fazla</Text><Text style={styles.pageSub}>Daha seyrek kullandığın ofis ve çalışma araçları.</Text>
+              <View style={{flexDirection:'row',alignItems:'center',gap:7}}><BrandMark size={20}/><Text style={styles.eyebrow}>GAYIT · ARAÇLAR</Text></View><Text style={styles.pageTitle}>Daha Fazla</Text><Text style={styles.pageSub}>Daha seyrek kullandığın ofis ve çalışma araçları.</Text>
               <Pressable style={styles.moreCard} onPress={()=>setLegalDocument('about')}><Ionicons name="information-circle-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>GAYIT hakkında</Text><Text style={styles.teamRole}>Uygulama, özellikler ve destek bilgileri.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
               <Pressable style={styles.moreCard} onPress={()=>setLegalDocument('privacy')}><Ionicons name="shield-checkmark-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>KVKK aydınlatma metni</Text><Text style={styles.teamRole}>Kişisel verilerin işlenmesine ilişkin bilgilendirme.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
               <Pressable style={styles.moreCard} onPress={()=>setLegalDocument('terms')}><Ionicons name="document-text-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Kullanım sözleşmesi</Text><Text style={styles.teamRole}>Uygulama kullanım koşullarını görüntüle.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
