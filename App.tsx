@@ -288,7 +288,7 @@ export default function App() {
   const handleSignOut = async () => handleSignOutService(accountActionDependencies);
 
   const propertyActionDependencies = {
-    selected, propertyStatusBusy, role, officeId, setPropertyStatusBusy, setProperties, setSelected, loadProperties,
+    selected, propertyStatusBusy, role, officeId, setPropertyStatusBusy, setProperties, setSelected, setPropertyPhotos, loadProperties,
     setPendingPhotoUris, setEditingPropertyId, setTitle, setAddress, setPrice, setArea, setKind, setRooms, setDescription,
     setBathrooms, setBalcony, setParking, setHeating, setCooling, setOccupancyPermit, setElevator, setNearbyAmenities,
     setBuildingAge, setFloorNumber, setTotalFloors, setOwnerContactName, setOwnerContactPhone, setPropertyType, setAddOpen,
