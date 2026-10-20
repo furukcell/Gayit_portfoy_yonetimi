@@ -91,12 +91,14 @@ export const uploadPendingPropertyPhotos = async (propertyId: string, deps: any)
       const isPng = photo.mimeType === 'image/png' || (photo.fileName || '').toLowerCase().endsWith('.png');
       const ext = isPng ? 'png' : 'jpg';
       const storagePath = officeId + '/' + propertyId + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-      const { error: uploadError } = await firebaseClient.storage.from('property-photos').upload(storagePath, blob, { contentType: isPng ? 'image/png' : 'image/jpeg', upsert: false });
-      if (uploadError) throw new Error('Fotoğraf depolamaya yüklenemedi: ' + uploadError.message);
-      const { error: rowError } = await firebaseClient.from('property_photos').insert({ property_id: propertyId, office_id: officeId, storage_path: storagePath, sort_order: sortOrder });
+      const { data: uploaded, error: uploadError } = await firebaseClient.storage.from('property-photos').upload(storagePath, blob, { contentType: isPng ? 'image/png' : 'image/jpeg', upsert: false });
+      if (uploadError) throw new Error('Fotoğraf depolamaya yüklenemedi: ' + (uploadError.message || 'sağlayıcı hatası'));
+      // Cloudinary returns a permanent HTTPS URL; save it so gallery/PDF can resolve it later.
+      const persistedPath = uploaded?.url || uploaded?.path || storagePath;
+      const { error: rowError } = await firebaseClient.from('property_photos').insert({ property_id: propertyId, office_id: officeId, storage_path: persistedPath, sort_order: sortOrder });
       if (rowError) {
-        await firebaseClient.storage.from('property-photos').remove([storagePath]);
-        throw new Error('Fotoğraf kaydı oluşturulamadı: ' + rowError.message);
+        if (!/^https?:\/\//i.test(persistedPath)) await firebaseClient.storage.from('property-photos').remove([persistedPath]);
+        throw new Error('Fotoğraf kaydı oluşturulamadı: ' + (rowError.message || 'veritabanı hatası'));
       }
       sortOrder += 1;
     }
