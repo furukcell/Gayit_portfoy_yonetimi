@@ -2,11 +2,12 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme';
+import BrandMark from '../components/BrandMark';
 
 export function CustomersScreen(_props: any) {
   return (
     <View style={styles.container}>
-      <View style={styles.icon}><Ionicons name="people-outline" size={34} color={colors.gold} /></View>
+      <View style={styles.icon}><BrandMark size={58} /></View>
       <Text style={styles.eyebrow}>GAYIT · MÜŞTERİLER</Text>
       <Text style={styles.title}>Müşteri takibi</Text>
       <Text style={styles.body}>Alıcı ve kiracı taleplerini, bütçelerini ve aradıkları özellikleri burada yöneteceğiz.</Text>
