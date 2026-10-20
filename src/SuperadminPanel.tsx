@@ -26,6 +26,7 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
   const [agentCount,setAgentCount] = useState(0);
   const [loading,setLoading] = useState(true);
   const [saving,setSaving] = useState(false);
+  const [statusBusy,setStatusBusy] = useState(false);
   const [search,setSearch] = useState('');
   const [selected,setSelected] = useState<Office|null>(null);
   const [officeName,setOfficeName] = useState('');
@@ -161,8 +162,9 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
   };
 
   const toggleOfficeStatus = (office:Office) => {
+    if(statusBusy) return;
     const next=(office.status||'active')==='active'?'disabled':'active';
-    Alert.alert(next==='disabled'?'Ofisi pasifleştir':'Ofisi yeniden aktifleştir',office.name+' için bu değişiklik uygulansın mı?',[{text:'Vazgeç',style:'cancel'},{text:'Onayla',onPress:async()=>{try{await updateDoc(doc(getFirebaseDb(),'offices',office.id),{status:next,updated_at:new Date().toISOString()});await refresh();if(selected?.id===office.id)setSelected({...office,status:next});}catch(e:any){setMessage(e?.message||'Ofis durumu değiştirilemedi.');}}}]);
+    Alert.alert(next==='disabled'?'Ofisi pasifleştir':'Ofisi yeniden aktifleştir',office.name+' için bu değişiklik uygulansın mı?',[{text:'Vazgeç',style:'cancel'},{text:'Onayla',onPress:async()=>{if(statusBusy)return;setStatusBusy(true);setMessage('');try{await updateDoc(doc(getFirebaseDb(),'offices',office.id),{status:next,updated_at:new Date().toISOString()});await refresh();if(selected?.id===office.id)setSelected({...office,status:next});setMessage(next==='active'?'Ofis aktifleştirildi.':'Ofis pasifleştirildi.');}catch(e:any){setMessage(e?.message||'Ofis durumu değiştirilemedi.');}finally{setStatusBusy(false);}}}]);
   };
 
   const Header=()=> <View style={s.header}><View style={s.brandIcon}><Ionicons name="shield-checkmark" size={25} color={C.gold}/></View><View style={{flex:1}}><Text style={s.brand}>GAYIT<Text style={{color:C.gold}}>.</Text></Text><Text style={s.sub}>SÜPERADMİN KONTROL MERKEZİ</Text></View><Pressable onPress={onLogout} style={s.logout}><Ionicons name="log-out-outline" size={17} color={C.navy}/><Text style={s.logoutText}>Çıkış</Text></Pressable></View>;
@@ -189,10 +191,10 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
             <Text style={s.label}>Faturalama dönemi</Text><View style={s.choiceRow}>{(['monthly','yearly'] as const).map(v=><Pressable key={v} onPress={()=>setSelected({...selected,billing_cycle:v})} style={[s.choice,selected.billing_cycle===v&&s.choiceOn]}><Text style={[s.choiceText,selected.billing_cycle===v&&s.choiceTextOn]}>{v==='monthly'?'Aylık':'Yıllık'}</Text></Pressable>)}</View>
             <Text style={s.label}>Abonelik durumu</Text><View style={s.choiceRow}>{(['active','past_due','cancelled','trial'] as const).map(v=><Pressable key={v} onPress={()=>setSelected({...selected,subscription_status:v})} style={[s.choice,selected.subscription_status===v&&s.choiceOn]}><Text style={[s.choiceText,selected.subscription_status===v&&s.choiceTextOn]}>{({active:'Aktif',past_due:'Gecikmiş',cancelled:'İptal',trial:'Deneme'} as any)[v]}</Text></Pressable>)}</View>
             <Text style={s.label}>Sonraki vade (YYYY-AA-GG)</Text><TextInput value={String(selected.next_due_date||'')} onChangeText={v=>setSelected({...selected,next_due_date:v})} placeholder="2026-11-19" style={s.input}/>
-            <Pressable disabled={saving} onPress={saveOffice} style={s.primary}><Text style={s.primaryText}>{saving?'Kaydediliyor…':'Ofis ve aboneliği kaydet'}</Text></Pressable>
-            <Text style={s.sectionTitle}>Tahsilat kaydı</Text><TextInput value={paymentAmount} onChangeText={setPaymentAmount} keyboardType="numeric" placeholder="Tahsil edilen tutar (TL)" style={s.input}/><TextInput value={paymentNote} onChangeText={setPaymentNote} placeholder="Not / dönem (isteğe bağlı)" style={[s.input,{marginTop:9}]}/><Pressable disabled={saving} onPress={recordPayment} style={[s.primary,{backgroundColor:C.green}]}><Text style={s.primaryText}>Tahsilatı kaydet</Text></Pressable>
+            <Pressable disabled={saving} onPress={saveOffice} style={[s.primary,saving&&{opacity:0.55}]}><Text style={s.primaryText}>{saving?'Kaydediliyor…':'Ofis ve aboneliği kaydet'}</Text></Pressable>
+            <Text style={s.sectionTitle}>Tahsilat kaydı</Text><TextInput value={paymentAmount} onChangeText={setPaymentAmount} keyboardType="numeric" placeholder="Tahsil edilen tutar (TL)" style={s.input}/><TextInput value={paymentNote} onChangeText={setPaymentNote} placeholder="Not / dönem (isteğe bağlı)" style={[s.input,{marginTop:9}]}/><Pressable disabled={saving} onPress={recordPayment} style={[s.primary,{backgroundColor:C.green},saving&&{opacity:0.55}]}><Text style={s.primaryText}>{saving?'İşlem yapılıyor…':'Tahsilatı kaydet'}</Text></Pressable>
             <Pressable onPress={()=>onEnterOffice(selected)} style={[s.primary,{backgroundColor:C.gold,marginTop:12}]}><Text style={[s.primaryText,{color:C.navy}]}>Bu ofisin çalışma alanını aç</Text></Pressable>
-            <Pressable onPress={()=>toggleOfficeStatus(selected)} style={[s.secondary,{marginTop:10}]}><Text style={s.secondaryText}>{selected.status==='disabled'?'Ofisi aktifleştir':'Ofisi pasifleştir'}</Text></Pressable>
+            <Pressable disabled={statusBusy} onPress={()=>toggleOfficeStatus(selected)} style={[s.secondary,{marginTop:10},statusBusy&&{opacity:0.55}]}><Text style={s.secondaryText}>{statusBusy?'Güncelleniyor…':selected.status==='disabled'?'Ofisi aktifleştir':'Ofisi pasifleştir'}</Text></Pressable>
           </View>
           <Text style={s.sectionTitle}>Bu ofisin tahsilat geçmişi</Text>
           {payments.filter(p=>p.office_id===selected.id).map(p=><View key={p.id} style={s.rowCard}><View style={{flex:1}}><Text style={s.officeName}>{fmt(p.amount)}</Text><Text style={s.muted}>{dateLabel(p.paid_at)} · {p.note||'Not yok'}</Text></View></View>)}
@@ -224,7 +226,7 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
         <Text style={s.label}>Ücret (TL)</Text><TextInput value={fee} onChangeText={setFee} keyboardType="numeric" style={s.input}/>
         <Text style={s.label}>Dönem</Text><View style={s.choiceRow}>{(['monthly','yearly'] as const).map(v=><Pressable key={v} onPress={()=>setCycle(v)} style={[s.choice,cycle===v&&s.choiceOn]}><Text style={[s.choiceText,cycle===v&&s.choiceTextOn]}>{v==='monthly'?'Aylık':'Yıllık'}</Text></Pressable>)}</View>
         <Text style={s.label}>Sonraki vade (isteğe bağlı, YYYY-AA-GG)</Text><TextInput value={dueDate} onChangeText={setDueDate} style={s.input} placeholder="2026-11-19"/>
-        <Pressable disabled={saving} onPress={createOffice} style={[s.primary,saving&&{opacity:.6}]}><Text style={s.primaryText}>{saving?'Oluşturuluyor…':'Ofisi ve aboneliği oluştur'}</Text></Pressable>
+        <Pressable disabled={saving} onPress={createOffice} style={[s.primary,saving&&{opacity:0.55}]}><Text style={s.primaryText}>{saving?'Oluşturuluyor…':'Ofisi ve aboneliği oluştur'}</Text></Pressable>
       </>}
       {!!message&&<View style={s.message}><Text style={s.messageText}>{message}</Text></View>}
       <Pressable onPress={refresh} style={s.refresh}><Ionicons name="refresh-outline" size={17} color={C.navy}/><Text style={s.backText}>Verileri yenile</Text></Pressable>
