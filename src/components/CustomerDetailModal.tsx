@@ -6,7 +6,7 @@ import { palette, styles } from '../theme/appStyles';
 type Props = { customerDetailOpen: any; setCustomerDetailOpen: any; selectedCustomer: any; editCustomerName: any; setEditCustomerName: any; editCustomerPhone: any; setEditCustomerPhone: any; editFollowUpAt: any; setEditFollowUpAt: any; editCustomerNotes: any; setEditCustomerNotes: any; customerEditBusy: any; updateCustomer: any; appointmentTitle: any; setAppointmentTitle: any; appointmentStartsAt: any; setAppointmentStartsAt: any; appointmentNotes: any; setAppointmentNotes: any; appointmentBusy: any; addCustomerAppointment: any; customerAppointments: any; customerActivities: any; activityType: any; setActivityType: any; activitySummary: any; setActivitySummary: any; activityBusy: any; addCustomerActivity: any; properties: any; offerPropertyId: any; setOfferPropertyId: any; offerAmount: any; setOfferAmount: any; offerStatus: any; setOfferStatus: any; offerNotes: any; setOfferNotes: any; offerBusy: any; addCustomerOffer: any; customerOffers: any; updateOfferStatus: any; customerRequirementsLoading: any; customerRequirements: any; requirementIntent: any; setRequirementIntent: any; requirementType: any; setRequirementType: any; requirementCity: any; setRequirementCity: any; requirementDistrict: any; setRequirementDistrict: any; requirementMaxPrice: any; setRequirementMaxPrice: any; requirementRooms: any; setRequirementRooms: any; addRequirementForSelectedCustomer: any; money: any };
 
 export default function CustomerDetailModal(props: Props) {
-  const [showFullDetails, setShowFullDetails] = useState(false);
+  const [activePanel, setActivePanel] = useState<string | null>(null);
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [chosenDate, setChosenDate] = useState(new Date());
@@ -26,26 +26,50 @@ export default function CustomerDetailModal(props: Props) {
   return (
           <Modal visible={customerDetailOpen} animationType="slide" onRequestClose={()=>setCustomerDetailOpen(false)}>
             <SafeAreaView style={styles.modalSafe}>
-              <View style={styles.modalHeader}><Pressable onPress={()=>setCustomerDetailOpen(false)} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Müşteri detayları</Text><View style={{width:40}}/></View>
+              <View style={[styles.modalHeader,{zIndex:10,elevation:10}]}><Pressable onPress={()=>setCustomerDetailOpen(false)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Müşteri detayını kapat" style={[styles.roundButton,{zIndex:11,elevation:11}]}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Müşteri detayları</Text><View style={{width:40}}/></View>
               <ScrollView contentContainerStyle={styles.formPage} keyboardShouldPersistTaps="handled">
-                <Text style={styles.pageTitle}>{selectedCustomer?.fullName || 'Müşteri'}</Text>
-                <Text style={styles.pageSub}>{selectedCustomer?.phone || 'Telefon eklenmemiş'}</Text>
-                <Pressable onPress={() => { setAppointmentModalOpen(true); setCalendarMonth(new Date(chosenDate.getFullYear(), chosenDate.getMonth(), 1)); syncAppointmentDateTime(chosenDate); }} style={styles.saveButton}><Ionicons name="calendar-outline" size={21} color="#fff"/><Text style={styles.saveButtonText}>Randevu oluştur</Text></Pressable>
-                <Pressable onPress={() => setShowFullDetails(v => !v)} style={[styles.kindButton,{alignSelf:'stretch',marginBottom:14}]}><Text style={styles.kindText}>{showFullDetails ? 'Müşteri detaylarını gizle' : 'Müşteri detaylarını aç'}</Text></Pressable>
-                {showFullDetails && <>
-                <Text style={styles.pageSub}>Müşteri bilgilerini düzenle ve kayıtlı arama taleplerini incele.</Text>
+                <View style={{backgroundColor:palette.white,borderRadius:20,padding:18,marginBottom:18,borderWidth:1,borderColor:palette.line}}>
+                  <View style={{flexDirection:'row',alignItems:'center',gap:14}}>
+                    <View style={{width:58,height:58,borderRadius:18,backgroundColor:palette.navy,alignItems:'center',justifyContent:'center'}}><Ionicons name="person" size={28} color="#fff"/></View>
+                    <View style={{flex:1}}>
+                      <Text style={styles.pageTitle}>{selectedCustomer?.fullName || 'Müşteri'}</Text>
+                      <Text style={styles.pageSub}>{selectedCustomer?.customerType || selectedCustomer?.type || selectedCustomer?.role || 'Alıcı / Satıcı'}</Text>
+                    </View>
+                  </View>
+                  <View style={{marginTop:16,gap:8}}>
+                    <View style={{flexDirection:'row',alignItems:'center',gap:9}}><Ionicons name="call-outline" size={17} color={palette.muted}/><Text style={styles.teamRole}>{selectedCustomer?.phone || 'Telefon eklenmemiş'}</Text></View>
+                    {!!selectedCustomer?.email && <View style={{flexDirection:'row',alignItems:'center',gap:9}}><Ionicons name="mail-outline" size={17} color={palette.muted}/><Text style={styles.teamRole}>{selectedCustomer.email}</Text></View>}
+                    {!!selectedCustomer?.notes && <View style={{flexDirection:'row',alignItems:'flex-start',gap:9}}><Ionicons name="document-text-outline" size={17} color={palette.muted}/><Text style={[styles.teamRole,{flex:1}]}>{selectedCustomer.notes}</Text></View>}
+                    {!!selectedCustomer?.nextFollowUpAt && <View style={{flexDirection:'row',alignItems:'center',gap:9}}><Ionicons name="time-outline" size={17} color={palette.muted}/><Text style={styles.teamRole}>Takip: {new Date(selectedCustomer.nextFollowUpAt).toLocaleString('tr-TR')}</Text></View>}
+                  </View>
+                </View>
+                <View style={{flexDirection:'row',flexWrap:'wrap',gap:10,marginBottom:20}}>
+                  {[
+                    {key:'edit',label:'Düzenle',icon:'create-outline'},
+                    {key:'appointment',label:'Randevu oluştur',icon:'calendar-outline'},
+                    {key:'activities',label:'Görüşme / takip geçmişi',icon:'time-outline'},
+                    {key:'offers',label:'Teklif takibi',icon:'pricetag-outline'},
+                    {key:'requirements',label:'Arama talepleri',icon:'search-outline'},
+                  ].map(item=><Pressable key={item.key} onPress={()=>{ if(item.key==='appointment'){setAppointmentModalOpen(true);setCalendarMonth(new Date(chosenDate.getFullYear(),chosenDate.getMonth(),1));syncAppointmentDateTime(chosenDate);} else setActivePanel(item.key); }} style={{width:'48%',minHeight:94,backgroundColor:palette.white,borderRadius:16,borderWidth:1,borderColor:palette.line,padding:13,justifyContent:'center',gap:8}}>
+                    <Ionicons name={item.icon as any} size={23} color={palette.navy}/><Text style={{color:palette.ink,fontWeight:'800',fontSize:12}}>{item.label}</Text>
+                  </Pressable>)}
+                </View>
+                {activePanel === 'edit' && <View style={{gap:8}}>
+                <Text style={styles.sectionTitle}>Müşteri bilgilerini düzenle</Text>
                 <Text style={styles.fieldLabel}>Ad soyad *</Text><TextInput value={editCustomerName} onChangeText={setEditCustomerName} style={styles.input} placeholder="Ad soyad" placeholderTextColor={palette.muted}/>
                 <Text style={styles.fieldLabel}>Telefon</Text><TextInput value={editCustomerPhone} onChangeText={setEditCustomerPhone} keyboardType="phone-pad" style={styles.input} placeholder="Telefon" placeholderTextColor={palette.muted}/>
                 <Text style={styles.fieldLabel}>Sonraki takip (YYYY-MM-DD SS:DD)</Text><TextInput value={editFollowUpAt} onChangeText={setEditFollowUpAt} style={styles.input} placeholder="2026-10-20 14:00" placeholderTextColor={palette.muted}/>
                 <Text style={styles.fieldLabel}>Notlar</Text><TextInput value={editCustomerNotes} onChangeText={setEditCustomerNotes} style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholder="Müşteri notları" placeholderTextColor={palette.muted}/>
                 <Pressable disabled={customerEditBusy} onPress={updateCustomer} style={[styles.saveButton,customerEditBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{customerEditBusy?'Kaydediliyor...':'Müşteri bilgilerini kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
-                <View style={styles.matchSection}><Text style={styles.sectionTitle}>Görüşme ve takip geçmişi</Text><Text style={styles.pageSub}>Telefon, WhatsApp, toplantı ve notları kaydet.</Text></View>
+                </View>}
+                {activePanel === 'activities' && <View style={{gap:8}}><View style={styles.matchSection}><Text style={styles.sectionTitle}>Görüşme ve takip geçmişi</Text><Text style={styles.pageSub}>Telefon, WhatsApp, toplantı ve notları kaydet.</Text></View>
                 <View style={styles.kindRow}>{([{key:'call',label:'Arama'},{key:'whatsapp',label:'WhatsApp'},{key:'meeting',label:'Toplantı'},{key:'property_viewing',label:'Yer gösterme'},{key:'note',label:'Not'}] as const).map(a=><Pressable key={a.key} onPress={()=>setActivityType(a.key)} style={[styles.kindButton,activityType===a.key&&styles.kindButtonOn]}><Text style={[styles.kindText,activityType===a.key&&styles.kindTextOn]}>{a.label}</Text></Pressable>)}</View>
                 <TextInput value={activitySummary} onChangeText={setActivitySummary} style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholder="Görüşme sonucu, müşterinin geri bildirimi veya sonraki adım" placeholderTextColor={palette.muted}/>
                 <Pressable disabled={activityBusy} onPress={addCustomerActivity} style={[styles.saveButton,activityBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{activityBusy?'Kaydediliyor...':'Görüşme kaydet'}</Text><Ionicons name="add-circle-outline" size={21} color="#fff"/></Pressable>
                 {customerActivities.map((a:any)=><View key={a.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{({call:'Telefon görüşmesi',whatsapp:'WhatsApp',meeting:'Toplantı',property_viewing:'Yer gösterme',note:'Not',email:'E-posta',other:'Diğer'} as Record<string,string>)[a.activity_type] || 'Müşteri aktivitesi'}</Text><Text style={styles.teamRole}>{a.summary}</Text><Text style={styles.teamMeta}>{new Date(a.occurred_at).toLocaleString('tr-TR')}</Text></View></View>)}
                 {!customerActivities.length && <Text style={styles.pageSub}>Henüz görüşme kaydı yok.</Text>}
-                <View style={styles.matchSection}><Text style={styles.sectionTitle}>Teklif takibi</Text><Text style={styles.pageSub}>Müşteri ve portföy bazında teklifleri kaydet, kabul veya ret durumunu izle.</Text></View>
+                </View>}
+                {activePanel === 'offers' && <View style={{gap:8}}><View style={styles.matchSection}><Text style={styles.sectionTitle}>Teklif takibi</Text><Text style={styles.pageSub}>Müşteri ve portföy bazında teklifleri kaydet, kabul veya ret durumunu izle.</Text></View>
                  <Text style={styles.fieldLabel}>Portföy seç</Text>
                  {properties.filter((p: any)=>p.status!=='Arşivde').map((p: any)=><Pressable key={p.id} onPress={()=>setOfferPropertyId(p.id)} style={[styles.kindButton,{marginBottom:7,flexDirection:'row',justifyContent:'space-between'},offerPropertyId===p.id&&styles.kindButtonOn]}><Text style={[styles.kindText,offerPropertyId===p.id&&styles.kindTextOn]}>{p.title} · {money(p.price)}</Text><Ionicons name={offerPropertyId===p.id?'radio-button-on':'radio-button-off'} size={17} color={offerPropertyId===p.id?'#fff':palette.muted}/></Pressable>)}
                  <Text style={styles.fieldLabel}>Teklif tutarı (TL)</Text><TextInput value={offerAmount} onChangeText={setOfferAmount} keyboardType="decimal-pad" style={styles.input} placeholder="Örn. 4250000" placeholderTextColor={palette.muted}/>
@@ -54,7 +78,8 @@ export default function CustomerDetailModal(props: Props) {
                  <Pressable disabled={offerBusy} onPress={addCustomerOffer} style={[styles.saveButton,offerBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{offerBusy?'Kaydediliyor...':'Teklifi kaydet'}</Text><Ionicons name="pricetag-outline" size={20} color="#fff"/></Pressable>
                  {customerOffers.map((offer:any)=><View key={offer.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{properties.find((p: any)=>p.id===offer.property_id)?.title || 'Portföy'} · {money(Number(offer.amount)||0)}</Text><Text style={styles.teamRole}>{({pending:'Bekliyor',countered:'Karşı teklif',accepted:'Kabul edildi',rejected:'Reddedildi'} as Record<string,string>)[offer.status]||offer.status} · {new Date(offer.created_at).toLocaleString('tr-TR')}</Text>{offer.notes?<Text style={styles.teamMeta}>{offer.notes}</Text>:null}</View><View style={{gap:5}}>{offer.status!=='accepted'&&<Pressable onPress={()=>updateOfferStatus(offer,'accepted')} style={styles.memberStatusButtonOn}><Text style={styles.memberStatusButtonTextOn}>Kabul</Text></Pressable>}{offer.status!=='rejected'&&<Pressable onPress={()=>updateOfferStatus(offer,'rejected')} style={styles.memberStatusButton}><Text style={styles.memberStatusButtonText}>Reddet</Text></Pressable>}</View></View>)}
                  {!customerOffers.length&&<Text style={styles.pageSub}>Bu müşteri için henüz teklif kaydı yok.</Text>}
-                 <View style={styles.matchSection}><Text style={styles.sectionTitle}>Arama talepleri</Text><Text style={styles.pageSub}>Bu müşterinin kayıtlı gayrimenkul kriterleri.</Text></View>
+                 </View>}
+                {activePanel === 'requirements' && <View style={{gap:8}}><View style={styles.matchSection}><Text style={styles.sectionTitle}>Arama talepleri</Text><Text style={styles.pageSub}>Bu müşterinin kayıtlı gayrimenkul kriterleri.</Text></View>
                 {customerRequirementsLoading && <Text style={styles.pageSub}>Talepler yükleniyor…</Text>}
                 {!customerRequirementsLoading && customerRequirements.map((r:any)=><View key={r.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{r.intent==='rent'?'Kiralık arıyor':'Satılık arıyor'} · {({apartment:'Daire',villa:'Villa',land:'Arsa',commercial:'İş yeri',house:'Ev',other:'Diğer',any:'Tümü'} as Record<string,string>)[r.property_type] || r.property_type}</Text><Text style={styles.teamRole}>{[r.city,r.district,r.neighborhood].filter(Boolean).join(' · ') || 'Konum fark etmez'}</Text><Text style={styles.teamMeta}>{r.max_price ? 'Azami '+money(Number(r.max_price)) : 'Bütçe belirtilmemiş'}{r.rooms?.length ? ' · '+r.rooms.join(', ') : ''}</Text>{!r.is_active && <Text style={styles.customerRoles}>Pasif talep</Text>}</View></View>)}
                 {!customerRequirementsLoading && !customerRequirements.length && <View style={styles.empty}><Ionicons name="search-outline" size={28} color={palette.muted}/><Text style={styles.teamName}>Henüz arama talebi yok</Text><Text style={styles.pageSub}>Aşağıdan bu müşteri için ilk talebi ekleyebilirsin.</Text></View>}
@@ -66,7 +91,7 @@ export default function CustomerDetailModal(props: Props) {
                 <Text style={styles.fieldLabel}>Azami bütçe (TL)</Text><TextInput value={requirementMaxPrice} onChangeText={setRequirementMaxPrice} keyboardType="numeric" style={styles.input} placeholder="5000000" placeholderTextColor={palette.muted}/>
                 <Text style={styles.fieldLabel}>Oda sayısı</Text><TextInput value={requirementRooms} onChangeText={setRequirementRooms} style={styles.input} placeholder="3+1 (isteğe bağlı)" placeholderTextColor={palette.muted}/>
                 <Pressable disabled={customerEditBusy} onPress={addRequirementForSelectedCustomer} style={[styles.saveButton,customerEditBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{customerEditBusy?'Kaydediliyor...':'Bu müşteriye talep ekle'}</Text><Ionicons name="add-circle-outline" size={21} color="#fff"/></Pressable>
-                </>}
+                </View>}
               </ScrollView>
               <Modal visible={appointmentModalOpen} transparent animationType="slide" onRequestClose={() => setAppointmentModalOpen(false)}>
                 <View style={{flex:1,justifyContent:'flex-end',backgroundColor:'#0006'}}>
