@@ -147,7 +147,75 @@ export function getFirebaseClient(): any {
         } catch(e:any) { return {data:null,error:err(e.message)}; }
       }
     })},
-    functions:{invoke:async(name:string, options?:{body?:any})=>{try{const fn=getFunctions(getFirebaseApp(),'europe-west1');const callableName=({ 'create-agent':'createAgent', 'create-office':'createOffice', 'evaluate-matches':'evaluateMatches' } as Record<string,string>)[name];if(!callableName)return {data:null,error:err(`Firebase sunucu işlemi '${name}' tanımlı değil.`)};const result=await httpsCallable(fn,callableName)(options?.body||{});return {data:result.data,error:null};}catch(e:any){return {data:null,error:err(e?.message||'Firebase sunucu işlemi başarısız.')}}}}
+    functions:{invoke:async(name:string, options?:{body?:any})=>{
+      try {
+        if (name === 'evaluate-matches') {
+          const officeId = String(options?.body?.officeId || '');
+          const customerId = String(options?.body?.customerId || '');
+          if (!officeId) throw new Error('Ofis bilgisi eksik.');
+          const db = getFirebaseDb();
+          const [propertySnap, requirementSnap, existingSnap] = await Promise.all([
+            getDocs(query(collection(db, 'properties'), where('office_id', '==', officeId))),
+            getDocs(query(collection(db, 'customer_requirements'), where('office_id', '==', officeId), where('is_active', '==', true))),
+            getDocs(query(collection(db, 'matches'), where('office_id', '==', officeId)))
+          ]);
+          const norm = (v:any) => String(v ?? '').trim().toLocaleLowerCase('tr-TR');
+          const properties = propertySnap.docs.map(d => ({ id:d.id, ...d.data() } as Row));
+          const requirements = requirementSnap.docs.map(d => ({ id:d.id, ...d.data() } as Row)).filter(r => !customerId || r.customer_id === customerId);
+          const existing = new Map(existingSnap.docs.map(d => [d.id, {ref:d.ref, data:d.data()}]));
+          const next = new Map<string, Row>();
+          for (const req of requirements) {
+            for (const p of properties) {
+              const intent = norm(req.intent || req.listing_type || req.transaction_type);
+              const listing = norm(p.listing_type || p.kind);
+              const wantsRent = intent.includes('rent') || intent.includes('kir');
+              const isRent = listing.includes('rent') || listing.includes('kir');
+              if (intent && listing && wantsRent !== isRent) continue;
+              const max = Number(req.max_price || req.maxPrice || req.budget_max || 0);
+              const min = Number(req.min_price || req.minPrice || 0);
+              const price = Number(p.price || 0);
+              if (max > 0 && price > max) continue;
+              if (min > 0 && price < min) continue;
+              const reqDistrict = norm(req.district), propertyDistrict = norm(p.district);
+              if (reqDistrict && propertyDistrict && reqDistrict !== propertyDistrict) continue;
+              const reqCity = norm(req.city), propertyCity = norm(p.city);
+              if (reqCity && propertyCity && reqCity !== propertyCity) continue;
+              const rooms = Array.isArray(req.rooms) ? req.rooms.map(norm).filter(Boolean) : [];
+              if (rooms.length && !rooms.includes(norm(p.rooms))) continue;
+              const reqType = norm(req.property_type || req.propertyType), propType = norm(p.property_type);
+              if (reqType && propType && reqType !== propType) continue;
+              const key = req.id + '__' + p.id;
+              const oldMatch:any = existing.get(key)?.data;
+              next.set(key, {
+                office_id:officeId, requirement_id:req.id, customer_id:req.customer_id || null, property_id:p.id,
+                match_score:100, score:100, match_kind:'exact', match_reasons:['Kriterlerle eşleşti'],
+                status:oldMatch?.status || 'new', created_at:oldMatch?.created_at || new Date().toISOString()
+              });
+            }
+          }
+          const batchWrites:Array<Promise<any>> = [];
+          for (const [id, item] of existing) if (!next.has(id)) batchWrites.push(deleteDoc(item.ref));
+          for (const [id, data] of next) {
+            const ref = doc(db, 'matches', id);
+            batchWrites.push(setDoc(ref, data, {merge:true}));
+            if (!existing.has(id)) {
+              batchWrites.push(setDoc(doc(db, 'notifications', 'match_' + id), {
+                office_id:officeId, notification_type:'match', title:'Yeni portföy eşleşmesi',
+                body:'Bir müşteri talebi portföyünüzle eşleşti.', match_id:id,
+                customer_id:data.customer_id, property_id:data.property_id, read_at:null, created_at:new Date().toISOString()
+              }, {merge:true}));
+            }
+          }
+          await Promise.all(batchWrites);
+          return {data:{success:true,count:next.size},error:null};
+        }
+        const fn=getFunctions(getFirebaseApp(),'europe-west1');
+        const callableName=({ 'create-agent':'createAgent', 'create-office':'createOffice' } as Record<string,string>)[name];
+        if(!callableName)return {data:null,error:err(`Firebase sunucu işlemi '${name}' tanımlı değil.`)};
+        const result=await httpsCallable(fn,callableName)(options?.body||{});
+        return {data:result.data,error:null};
+      } catch(e:any) { return {data:null,error:err(e?.message||'Firebase işlemi başarısız.')} }
+    }}
   };
   return client;
 }
