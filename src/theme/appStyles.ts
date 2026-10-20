@@ -7,4 +7,4 @@ const palette = {
   amberSoft: '#FFF3D9', red: '#B54747', redSoft: '#FCEBEC',
 }
 
-export ;
+export const styles = StyleSheet.create();
