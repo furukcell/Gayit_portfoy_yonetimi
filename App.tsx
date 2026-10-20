@@ -13,6 +13,7 @@ import HomeDashboardScreen from './src/screens/HomeDashboardScreen';
 import MatchesScreen from './src/screens/MatchesScreen';
 import MoreScreen from './src/screens/MoreScreen';
 import AuthForm from './src/components/AuthForm';
+import WorkspaceScreens from './src/screens/WorkspaceScreens';
 import PortfolioScreen from './src/screens/PortfolioScreen';
 import PropertyFormModal from './src/components/PropertyFormModal';
 import PortfolioOperationModals from './src/components/PortfolioOperationModals';
@@ -342,30 +343,9 @@ export default function App() {
         <Pressable onPress={handleSignOut} style={styles.signOutButton}><Ionicons name="log-out-outline" size={17} color={palette.navy}/><Text style={styles.signOutText}>Çıkış</Text></Pressable>
       </View>
 
-      <View style={styles.body}>
-        {tab === 'home' && <HomeDashboardScreen styles={styles} palette={palette} role={role} setTab={setTab} customers={customers} openCustomerDetail={openCustomerDetail} properties={properties} roleProperties={roleProperties} teamMembers={teamMembers} money={money} openProperty={openProperty} />}
-
-        <PortfolioScreen visible={tab === 'portfolio'} styles={styles} palette={palette} role={role} portfolioPresentationMode={portfolioPresentationMode} setPortfolioPresentationMode={setPortfolioPresentationMode} setSelectedPresentationIds={setSelectedPresentationIds} selectedPresentationIds={selectedPresentationIds} setAddOpen={setAddOpen} search={search} setSearch={setSearch} quickTypeFilter={quickTypeFilter} quickCityFilter={quickCityFilter} quickDistrictFilter={quickDistrictFilter} setQuickDropdown={setQuickDropdown} quickDropdown={quickDropdown} properties={properties} setQuickTypeFilter={setQuickTypeFilter} setQuickCityFilter={setQuickCityFilter} setQuickDistrictFilter={setQuickDistrictFilter} filter={filter} setFilter={setFilter} sortBy={sortBy} setSortBy={setSortBy} recentOnly={recentOnly} setRecentOnly={setRecentOnly} favoritesOnly={favoritesOnly} setFavoritesOnly={setFavoritesOnly} minPriceFilter={minPriceFilter} setMinPriceFilter={setMinPriceFilter} maxPriceFilter={maxPriceFilter} setMaxPriceFilter={setMaxPriceFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} showArchived={showArchived} setShowArchived={setShowArchived} createMultiPropertyPdf={createMultiPropertyPdf} propertiesLoading={propertiesLoading} visibleProperties={visibleProperties} money={money} openProperty={openProperty} toggleFavorite={toggleFavorite} favoriteIds={favoriteIds} />
-
-        <CustomersScreen
-          visible={tab === 'customers'}
-          role={role}
-          customers={customers}
-          customersLoading={customersLoading}
-          customerSearch={customerSearch}
-          setCustomerSearch={setCustomerSearch}
-          openCustomerDetail={openCustomerDetail}
-          openAddCustomer={() => setCustomerModalOpen(true)}
-        />
-
-        {tab === 'matches' && <MatchesScreen styles={styles} palette={palette} matches={matches} matchesLoading={matchesLoading} money={money} />}
-
-        {tab === 'more' && <MoreScreen styles={styles} palette={palette} setLegalDocument={setLegalDocument} superadminOfficeMode={superadminOfficeMode} setSuperadminOfficeMode={setSuperadminOfficeMode} setRole={setRole} setTab={setTab} setOfficeId={setOfficeId} role={role} setNotificationsOpen={setNotificationsOpen} notifications={notifications} loadNotifications={loadNotifications} officeId={officeId} setRecentOnly={setRecentOnly} setFavoritesOnly={setFavoritesOnly} loadRecentViews={loadRecentViews} setCsvImportOpen={setCsvImportOpen} openProfile={openProfile} exportPortfolioCsv={exportPortfolioCsv} setTransactionPropertyId={setTransactionPropertyId} properties={properties} setTransactionModalOpen={setTransactionModalOpen} handleSignOut={handleSignOut} />}
-
-        <TeamScreen visible={tab === 'team'} teamMembers={teamMembers} teamStatusBusyId={teamStatusBusyId} onAddAgent={() => setAgentModalOpen(true)} onToggleAgentStatus={toggleAgentStatus} />
-
-        <StatsScreen visible={tab === 'stats'} role={role} roleProperties={roleProperties} customers={customers} teamMembers={teamMembers} money={money} onSharePortfolioReport={sharePortfolioReport} />
-      </View>
+      <WorkspaceScreens {...{
+        tab, styles, palette, role, setTab, customers, openCustomerDetail, properties, roleProperties, teamMembers, money, openProperty, portfolioPresentationMode, setPortfolioPresentationMode, setSelectedPresentationIds, selectedPresentationIds, setAddOpen, search, setSearch, quickTypeFilter, quickCityFilter, quickDistrictFilter, setQuickDropdown, quickDropdown, setQuickTypeFilter, setQuickCityFilter, setQuickDistrictFilter, filter, setFilter, sortBy, setSortBy, recentOnly, setRecentOnly, favoritesOnly, setFavoritesOnly, minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, statusFilter, setStatusFilter, showArchived, setShowArchived, createMultiPropertyPdf, propertiesLoading, visibleProperties, toggleFavorite, favoriteIds, customersLoading, customerSearch, setCustomerSearch, setCustomerModalOpen, matches, matchesLoading, setLegalDocument, superadminOfficeMode, setSuperadminOfficeMode, setRole, setOfficeId, setNotificationsOpen, notifications, loadNotifications, officeId, loadRecentViews, setCsvImportOpen, openProfile, exportPortfolioCsv, setTransactionPropertyId, setTransactionModalOpen, handleSignOut, teamStatusBusyId, setAgentModalOpen, toggleAgentStatus, sharePortfolioReport
+      }} />
 
       <View style={styles.bottomNav}>{([{key:'home',label:'Ana Sayfa',icon:'grid-outline'},{key:'portfolio',label:'Portföy',icon:'business-outline'},{key:'customers',label:'Müşteriler',icon:'people-outline'},{key:'matches',label:'Eşleşme',icon:'git-compare-outline'},{key:'more',label:'Daha Fazla',icon:'menu-outline'}] as {key:Tab;label:string;icon:keyof typeof Ionicons.glyphMap}[]).map(item=><Pressable key={item.key} onPress={()=>{setTab(item.key);if(item.key==='portfolio'){loadFavorites();loadRecentViews();}}} style={styles.navItem}><View style={[styles.navIcon,tab===item.key&&styles.navIconOn]}><Ionicons name={item.icon} size={20} color={tab===item.key?palette.gold:palette.muted}/></View><Text style={[styles.navLabel,tab===item.key&&styles.navLabelOn]}>{item.label}</Text></Pressable>)}</View>
 
