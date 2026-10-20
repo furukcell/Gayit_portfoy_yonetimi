@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { palette, styles } from '../theme/appStyles';
 import { Stat } from '../components/DashboardPrimitives';
 import type { Customer, Property, PropertyStatus, Role } from '../types/property';
+import BrandMark from '../components/BrandMark';
 
 type TeamMember = { name: string; role: string; id: string };
 type Props = {
@@ -24,7 +25,7 @@ export default function StatsScreen({ visible, role, roleProperties, customers, 
   const upcomingFollowUps = customers.filter(c => c.active && c.nextFollowUpAt && new Date(c.nextFollowUpAt).getTime() >= now && new Date(c.nextFollowUpAt).getTime() <= now + 7 * 24 * 60 * 60 * 1000).length;
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.eyebrow}>PERFORMANS ANALİZİ</Text>
+      <View style={{flexDirection:'row',alignItems:'center',gap:7}}><BrandMark size={20}/><Text style={styles.eyebrow}>PERFORMANS ANALİZİ</Text></View>
       <Text style={styles.pageTitle}>{role === 'owner' ? 'Ofis istatistikleri' : 'Performansım'}</Text>
       <Text style={styles.pageSub}>Portföy ve görüntülenme metrikleri.</Text>
       <Pressable onPress={onSharePortfolioReport} style={[styles.saveButton, { marginTop: 14, marginBottom: 16 }]}><Ionicons name="share-outline" size={19} color="#fff"/><Text style={styles.saveButtonText}>Portföy raporunu paylaş</Text></Pressable>
