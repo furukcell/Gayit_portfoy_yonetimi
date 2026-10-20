@@ -25,9 +25,10 @@ export const loadPropertyPhotos = async (propertyId: string, deps: PhotoDependen
         return { id: row.id, storagePath: row.storage_path, url: signed.signedUrl, sortOrder: row.sort_order || 0 };
       }));
       setPropertyPhotos(photos);
-    } catch (error) {
+    } catch (error: any) {
       setPropertyPhotos([]);
-      Alert.alert('Fotoğraflar yüklenemedi', 'Firebase Firestore kurallarını ve Storage izinlerini kontrol edin.');
+      const detail = error instanceof Error ? error.message : error?.message || 'Bilinmeyen hata';
+      Alert.alert('Fotoğraflar yüklenemedi', `Fotoğraf kayıtları okunamadı: ${detail}`);
     } finally { setPhotosBusy(false); }
   };
 
