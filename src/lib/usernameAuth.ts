@@ -1,4 +1,4 @@
-import { signInWithEmailAndPassword, signOut, updatePassword, type User } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, signInWithEmailAndPassword, signOut, updatePassword, type User } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from './firebase';
 
@@ -76,4 +76,22 @@ export async function changeInitialPassword(newPassword:string):Promise<void> {
   if(!user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
   try { await updatePassword(user,newPassword); await updateDoc(doc(getFirebaseDb(),'profiles',user.uid),{must_change_password:false,updated_at:new Date().toISOString()}); }
   catch { throw new Error('Şifre değiştirildi veya güncelleme tamamlanamadı. Yeniden giriş yapıp tekrar dene.'); }
+}
+
+export async function changePasswordWithCurrent(currentPassword:string,newPassword:string):Promise<void> {
+  if(newPassword.length<10) throw new Error('Yeni şifre en az 10 karakter olmalıdır.');
+  const user=getFirebaseAuth().currentUser;
+  if(!user || !user.email) throw new Error('Oturum bulunamadı. Yeniden giriş yap.');
+  try {
+    const credential=EmailAuthProvider.credential(user.email,currentPassword);
+    await reauthenticateWithCredential(user,credential);
+    await updatePassword(user,newPassword);
+    await updateDoc(doc(getFirebaseDb(),'profiles',user.uid),{must_change_password:false,updated_at:new Date().toISOString()});
+  } catch(error) {
+    const code=(error as {code?:string})?.code;
+    if(code==='auth/wrong-password'||code==='auth/invalid-credential') throw new Error('Mevcut şifre doğru değil.');
+    if(code==='auth/weak-password') throw new Error('Yeni şifre daha güçlü olmalı.');
+    if(code==='auth/requires-recent-login') throw new Error('Güvenlik için çıkış yapıp tekrar giriş yaptıktan sonra yeniden dene.');
+    throw new Error('Şifre güncellenemedi. Bağlantını kontrol edip tekrar dene.');
+  }
 }
