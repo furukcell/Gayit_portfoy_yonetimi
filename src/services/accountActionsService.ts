@@ -52,7 +52,12 @@ export const openProfile = async (deps: any) => {
     setProfileBusy(true);
     try { const client = getFirebaseClient(); const { data, error } = await client.from('profiles').select('phone,email,avatar_path').eq('id', uid).maybeSingle(); if (error) throw new Error('Profil bilgileri alınamadı.');
       setProfilePhone(data?.phone || ''); setProfileEmail(data?.email || ''); setProfileAvatarPath(data?.avatar_path || null); setProfileAvatarUri(null);
-      if (data?.avatar_path) { const { data: signed } = await client.storage.from('avatars').createSignedUrl(data.avatar_path, 3600); setProfileAvatarUrl(signed?.signedUrl || null); } else setProfileAvatarUrl(null); setProfileModalOpen(true);
+      if (data?.avatar_path) {
+        const storedAvatar = String(data.avatar_path);
+        if (/^https?:\/\//i.test(storedAvatar)) setProfileAvatarUrl(storedAvatar);
+        else { const { data: signed } = await client.storage.from('avatars').createSignedUrl(storedAvatar, 3600); setProfileAvatarUrl(signed?.signedUrl || null); }
+      } else setProfileAvatarUrl(null);
+      setProfileModalOpen(true);
     } catch (error) { Alert.alert('Profil açılamadı', error instanceof Error ? error.message : 'Lütfen tekrar dene.'); } finally { setProfileBusy(false); }
   };
 export const chooseProfileAvatar = async (deps: any) => {
@@ -79,7 +84,12 @@ export const saveProfile = async (deps: any) => {
     setProfileBusy(true); try { const client = getFirebaseClient(); let avatarPath = profileAvatarPath;
       if (profileAvatarUri) { const uploaded = await uploadMediaFromUri(profileAvatarUri, { folder: `gayit/${officeId || uid}/avatars`, fileName: `${uid}-profile-${Date.now()}.jpg` }); avatarPath = uploaded.url; }
       const { error } = await client.from('profiles').update({ phone: profilePhone.trim(), email: profileEmail.trim(), avatar_path: avatarPath || null, updated_at: new Date().toISOString() }).eq('id', uid); if (error) throw new Error('Profil kaydedilemedi. Firestore profil güncelleme kurallarını kontrol et.');
-      setProfileAvatarPath(avatarPath || null); setProfileAvatarUri(null); if (avatarPath) { const { data: signed } = await client.storage.from('avatars').createSignedUrl(avatarPath, 3600); setProfileAvatarUrl(signed?.signedUrl || null); }
+      setProfileAvatarPath(avatarPath || null);
+      setProfileAvatarUri(null);
+      if (avatarPath) {
+        if (/^https?:\/\//i.test(avatarPath)) setProfileAvatarUrl(avatarPath);
+        else { const { data: signed } = await client.storage.from('avatars').createSignedUrl(avatarPath, 3600); setProfileAvatarUrl(signed?.signedUrl || null); }
+      } else setProfileAvatarUrl(null);
       Alert.alert('Profil kaydedildi', 'Profil bilgilerin güncellendi ve PDF sunumlarında kullanılacak.'); setProfileModalOpen(false);
     } catch (error) { Alert.alert('Profil kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar dene.'); } finally { setProfileBusy(false); }
   };
