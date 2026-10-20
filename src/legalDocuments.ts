@@ -30,7 +30,7 @@ Veriler, amaç için gerekli süre ve uygulanabilir yasal saklama süreleri boyu
 KVKK'nın 11. maddesi kapsamındaki haklarınız için destek.fkdigital@gmail.com adresine başvurabilirsiniz. Başvurular, mevzuattaki usul ve süreler doğrultusunda değerlendirilir.
 
 9. GÜNCELLEME
-İşlevler veya mevzuat değiştikçe metin güncellenebilir. İşlevler veya mevzuat değiştikçe metin güncellenebilir.` },
+İşlevler veya mevzuat değiştikçe metin güncellenebilir.` },
  terms: { title: 'Kullanım Sözleşmesi', body: `GAYIT · KULLANIM SÖZLEŞMESİ
 Son güncelleme: 20 Ekim 2026
 
