@@ -49,7 +49,7 @@ export const importPortfolioCsv = async (deps: CsvDependencies) => {
     if (csvImportBusy) return;
     const source = csvImportText.trim();
     if (!source) { Alert.alert('CSV verisi gerekli','CSV içeriğini buraya yapıştır.'); return; }
-    const lines=source.replace(/^\uFEFF/,'').split(/\\r?\\n/).filter(line=>line.trim().length>0);
+    const lines=source.replace(/^\uFEFF/,'').split(/\r?\n/).filter(line=>line.trim().length>0);
     if(lines.length<2){Alert.alert('CSV biçimi hatalı','Başlık satırı ve en az bir portföy satırı gerekli.');return;}
     const payloads=lines.slice(1).map(parseLine).map(row=>{
       const price=Number((row[3]||'').replace(/[^0-9]/g,''));
