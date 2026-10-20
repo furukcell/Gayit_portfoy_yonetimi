@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { palette, styles } from './src/theme/appStyles';
 import AnimatedSplash from './src/components/AnimatedSplash';
+import { Stat, Feature } from './src/components/DashboardPrimitives';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
 import { changeInitialPassword, changePasswordWithCurrent, restoreUsernameSession, signInWithUsername } from './src/lib/usernameAuth';
@@ -1847,14 +1848,14 @@ export default function App() {
   );
 }
 
-function Stat({icon,label,value,note}:{icon:keyof typeof Ionicons.glyphMap;label:string;value:string;note:string}) {
+:{icon:keyof typeof Ionicons.glyphMap;label:string;value:string;note:string}) {
   return <View style={styles.statCard}><View style={styles.statTop}><View style={styles.statIcon}><Ionicons name={icon} size={18} color={palette.navy2}/></View><Text style={styles.statNote}>{note}</Text></View><Text style={styles.statValue}>{value}</Text><Text style={styles.statLabel}>{label}</Text></View>;
 }
 function PropertyRow({property,onPress}:{property:Property;onPress:()=>void}) {
   const active = property.status === 'Aktif';
   return <Pressable onPress={onPress} style={styles.propertyCard}><View style={styles.propertyThumb}><Ionicons name="home-outline" size={36} color={palette.navy2}/><Text style={styles.thumbCode}>{property.id}</Text></View><View style={styles.propertyInfo}><View style={styles.propertyTitleLine}><Text numberOfLines={1} style={styles.propertyTitle}>{property.title}</Text><View style={[styles.miniStatus,active?styles.activeStatus:styles.optionStatus]}><Text style={[styles.miniStatusText,{color:active?palette.green:palette.amber}]}>{property.status}</Text></View></View><Text numberOfLines={1} style={styles.propertyAddress}><Ionicons name="location-outline" size={12}/> {property.address}</Text><Text style={styles.propertyPrice}>{money(property.price)}{property.kind==='Kiralık'?<Text style={styles.rentSuffix}> / ay</Text>:null}</Text><Text style={styles.propertyMeta}>{property.rooms}  ·  {property.area}  ·  {property.kind}</Text></View><Ionicons name="chevron-forward" size={17} color={palette.muted}/></Pressable>;
 }
-function Feature({icon,label,value}:{icon:keyof typeof Ionicons.glyphMap;label:string;value:string}) {
+:{icon:keyof typeof Ionicons.glyphMap;label:string;value:string}) {
   return <View style={styles.feature}><Ionicons name={icon} size={20} color={palette.gold}/><Text style={styles.featureValue}>{value}</Text><Text style={styles.featureLabel}>{label}</Text></View>;
 }
 
