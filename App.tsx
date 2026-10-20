@@ -18,6 +18,8 @@ import AgentModal from './src/components/AgentModal';
 import NotificationsModal from './src/components/NotificationsModal';
 import PropertyDetailModal from './src/components/PropertyDetailModal';
 import CustomerCreateModal from './src/components/CustomerCreateModal';
+import LegalAcceptanceModal from './src/components/LegalAcceptanceModal';
+import LegalDocumentModal from './src/components/LegalDocumentModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
 import { changeInitialPassword, changePasswordWithCurrent, restoreUsernameSession, signInWithUsername } from './src/lib/usernameAuth';
@@ -1455,34 +1457,21 @@ export default function App() {
     return <SafeAreaView style={styles.safe} edges={['top','left','right','bottom']}>
       <StatusBar barStyle="dark-content" />
 
-      <Modal visible={authenticated && legalReady && !legalAccepted} animationType="slide" onRequestClose={()=>{}}>
-        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
-          <View style={styles.modalHeader}><View style={{width:40}}/><Text style={styles.modalHeaderTitle}>GAYIT · İlk kullanım</Text><View style={{width:40}}/></View>
-          <ScrollView contentContainerStyle={styles.formPage}>
-            <Text style={styles.eyebrow}>DEVAM ETMEDEN ÖNCE</Text>
-            <Text style={styles.pageTitle}>Bilgilendirme ve kullanım koşulları</Text>
-            <Text style={styles.pageSub}>İlk kullanımda aşağıdaki metinleri incele. KVKK aydınlatması ile sözleşme kabulü ayrı işlemlerdir.</Text>
-            <Pressable style={styles.moreCard} onPress={()=>setLegalDocument('privacy')}><Ionicons name="shield-checkmark-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>KVKK Aydınlatma Metni</Text><Text style={styles.teamRole}>Kişisel verilerin işlenmesine ilişkin bilgilendirme.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
-            <Pressable style={styles.moreCard} onPress={()=>setLegalDocument('terms')}><Ionicons name="document-text-outline" size={23} color={palette.navy}/><View style={{flex:1}}><Text style={styles.teamName}>Kullanım Sözleşmesi</Text><Text style={styles.teamRole}>GAYIT kullanım koşulları.</Text></View><Ionicons name="chevron-forward" size={18} color={palette.muted}/></Pressable>
-            <Pressable onPress={()=>setLegalReadPrivacy(v=>!v)} style={{flexDirection:'row',alignItems:'flex-start',gap:10,padding:14,backgroundColor:palette.white,borderWidth:1,borderColor:legalReadPrivacy?palette.green:palette.line,borderRadius:13,marginTop:18}}>
-              <Ionicons name={legalReadPrivacy?'checkbox':'square-outline'} size={22} color={legalReadPrivacy?palette.green:palette.muted}/>
-              <Text style={{flex:1,fontSize:12,lineHeight:18,color:palette.ink}}>KVKK Aydınlatma Metni'ni okudum ve kişisel verilerimin işlenmesine ilişkin bilgilendirildim.</Text>
-            </Pressable>
-            <Pressable onPress={()=>setLegalAcceptTerms(v=>!v)} style={{flexDirection:'row',alignItems:'flex-start',gap:10,padding:14,backgroundColor:palette.white,borderWidth:1,borderColor:legalAcceptTerms?palette.green:palette.line,borderRadius:13,marginTop:10}}>
-              <Ionicons name={legalAcceptTerms?'checkbox':'square-outline'} size={22} color={legalAcceptTerms?palette.green:palette.muted}/>
-              <Text style={{flex:1,fontSize:12,lineHeight:18,color:palette.ink}}>Kullanım Sözleşmesi'ni okudum ve koşullarını kabul ediyorum.</Text>
-            </Pressable>
-            <Pressable disabled={!legalReadPrivacy||!legalAcceptTerms||legalGateBusy} onPress={confirmLegalAcceptance} style={[styles.saveButton,{opacity:!legalReadPrivacy||!legalAcceptTerms||legalGateBusy?0.45:1}]}><Ionicons name="checkmark-circle-outline" size={20} color="#fff"/><Text style={styles.saveButtonText}>{legalGateBusy?'Kaydediliyor…':'Onayla ve GAYIT’a devam et'}</Text></Pressable>
-            <Text style={{fontSize:10,lineHeight:15,color:palette.muted,textAlign:'center',marginTop:6}}>Kabul kaydı bu cihazda kullanıcı hesabına özel saklanır. Metin sürümü değişirse yeniden inceleme istenebilir.</Text>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-      <Modal visible={legalDocument !== null} animationType="slide" onRequestClose={()=>setLegalDocument(null)}>
-        <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
-          <View style={styles.modalHeader}><Pressable onPress={()=>setLegalDocument(null)} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle} numberOfLines={1}>{legalDocument ? LEGAL_DOCUMENTS[legalDocument].title : ''}</Text><View style={{width:40}}/></View>
-          <ScrollView contentContainerStyle={styles.formPage}><Text style={styles.pageTitle}>{legalDocument ? LEGAL_DOCUMENTS[legalDocument].title : ''}</Text><Text style={{fontSize:12,lineHeight:20,color:palette.ink}}>{legalDocument ? LEGAL_DOCUMENTS[legalDocument].body : ''}</Text>{legalDocument==='about'&&<Text style={{fontSize:11,fontWeight:'800',color:palette.navy,textAlign:'center',marginTop:22}}>© 2026 FK Digital. Tüm hakları saklıdır.</Text>}{legalDocument==='privacy'&&<Text style={{fontSize:10,lineHeight:15,color:palette.muted,marginTop:18}}>Bu metin genel taslaktır; gerçek veri akışları ve teknik hizmet yapılandırması doğrulanarak hukuki incelemeden geçirilmelidir.</Text>}</ScrollView>
-        </SafeAreaView>
-      </Modal>
+      <LegalAcceptanceModal
+        authenticated={authenticated}
+        legalReady={legalReady}
+        legalAccepted={legalAccepted}
+        setLegalDocument={setLegalDocument}
+        legalReadPrivacy={legalReadPrivacy}
+        setLegalReadPrivacy={setLegalReadPrivacy}
+        legalAcceptTerms={legalAcceptTerms}
+        setLegalAcceptTerms={setLegalAcceptTerms}
+        legalGateBusy={legalGateBusy}
+        confirmLegalAcceptance={confirmLegalAcceptance}
+        styles={styles}
+        palette={palette}
+      />
+      <LegalDocumentModal legalDocument={legalDocument} setLegalDocument={setLegalDocument} styles={styles} palette={palette} />
 
       <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
       <ScrollView contentContainerStyle={styles.authPage} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
