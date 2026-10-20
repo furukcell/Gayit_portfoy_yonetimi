@@ -17,7 +17,7 @@ export default function WorkspaceScreens(props: any) {
     showArchived, setShowArchived, createMultiPropertyPdf, propertiesLoading, visibleProperties, toggleFavorite, favoriteIds,
     customersLoading, customerSearch, setCustomerSearch, setCustomerModalOpen, matches, matchesLoading, setLegalDocument,
     superadminOfficeMode, setSuperadminOfficeMode, setRole, setOfficeId, setNotificationsOpen, notifications, loadNotifications,
-    officeId, loadRecentViews, setCsvImportOpen, openProfile, exportPortfolioCsv, setTransactionPropertyId, setTransactionModalOpen,
+    officeId, loadRecentViews, setCsvImportOpen, openProfile, setOfficeBrandingOpen, exportPortfolioCsv, setTransactionPropertyId, setTransactionModalOpen,
     handleSignOut, teamStatusBusyId, setAgentModalOpen, toggleAgentStatus, sharePortfolioReport } = props;
   return (
     <View style={styles.body}>
@@ -38,7 +38,7 @@ export default function WorkspaceScreens(props: any) {
     
             {tab === 'matches' && <MatchesScreen styles={styles} palette={palette} matches={matches} matchesLoading={matchesLoading} money={money} />}
     
-            {tab === 'more' && <MoreScreen styles={styles} palette={palette} setLegalDocument={setLegalDocument} superadminOfficeMode={superadminOfficeMode} setSuperadminOfficeMode={setSuperadminOfficeMode} setRole={setRole} setTab={setTab} setOfficeId={setOfficeId} role={role} setNotificationsOpen={setNotificationsOpen} notifications={notifications} loadNotifications={loadNotifications} officeId={officeId} setRecentOnly={setRecentOnly} setFavoritesOnly={setFavoritesOnly} loadRecentViews={loadRecentViews} setCsvImportOpen={setCsvImportOpen} openProfile={openProfile} exportPortfolioCsv={exportPortfolioCsv} setTransactionPropertyId={setTransactionPropertyId} properties={properties} setTransactionModalOpen={setTransactionModalOpen} handleSignOut={handleSignOut} />}
+            {tab === 'more' && <MoreScreen styles={styles} palette={palette} setLegalDocument={setLegalDocument} superadminOfficeMode={superadminOfficeMode} setSuperadminOfficeMode={setSuperadminOfficeMode} setRole={setRole} setTab={setTab} setOfficeId={setOfficeId} role={role} setNotificationsOpen={setNotificationsOpen} notifications={notifications} loadNotifications={loadNotifications} officeId={officeId} setRecentOnly={setRecentOnly} setFavoritesOnly={setFavoritesOnly} loadRecentViews={loadRecentViews} setCsvImportOpen={setCsvImportOpen} openProfile={openProfile} setOfficeBrandingOpen={setOfficeBrandingOpen} exportPortfolioCsv={exportPortfolioCsv} setTransactionPropertyId={setTransactionPropertyId} properties={properties} setTransactionModalOpen={setTransactionModalOpen} handleSignOut={handleSignOut} />}
     
             <TeamScreen visible={tab === 'team'} teamMembers={teamMembers} teamStatusBusyId={teamStatusBusyId} onAddAgent={() => setAgentModalOpen(true)} onToggleAgentStatus={toggleAgentStatus} />
     
