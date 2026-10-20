@@ -1569,6 +1569,7 @@ export default function App() {
         </ScrollView>}
 
         <CustomersScreen
+          visible={tab === 'customers'}
           role={role}
           customers={customers}
           customersLoading={customersLoading}
