@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Role, Tab, Customer, PropertyStatus, PropertyPhoto, Property } from '../types/property';
+import type { LegalDocumentKey } from '../legalDocuments';
 import { initialProperties } from '../data/initialProperties';
 
 export default function useAppState() {
