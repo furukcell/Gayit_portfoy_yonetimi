@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { palette, styles } from './src/theme/appStyles';
 import AnimatedSplash from './src/components/AnimatedSplash';
 import AsyncStorage from '@react-native-async-storage/async-storage';
