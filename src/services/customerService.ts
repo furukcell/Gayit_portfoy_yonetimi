@@ -257,7 +257,7 @@ const rebuildCustomerMatches = async (officeId: string, customerId: string) => {
         customer_id: customerId,
         property_id: property.id,
         status: 'new',
-        match_kind: inExactBudget ? (score >= 75 ? 'exact' : 'alternative') : 'alternative',
+        match_kind: inExactBudget ? 'exact' : 'alternative',
         match_score: Math.min(100, score),
         match_reasons: reasons
       });
