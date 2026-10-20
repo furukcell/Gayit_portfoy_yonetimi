@@ -46,12 +46,17 @@ export const addPropertyPhoto = async (deps: PhotoDependencies) => {
       const ext = asset.mimeType === 'image/png' ? 'png' : 'jpg';
       const storagePath = officeId + '/' + selected.id + '/' + Date.now() + '.' + ext;
       const firebaseClient = getFirebaseClient();
-      const { error: uploadError } = await firebaseClient.storage.from('property-photos').upload(storagePath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
-      if (uploadError) throw uploadError;
-      const { error: rowError } = await firebaseClient.from('property_photos').insert({ property_id: selected.id, office_id: officeId, storage_path: storagePath, sort_order: propertyPhotos.length });
-      if (rowError) { await firebaseClient.storage.from('property-photos').remove([storagePath]); throw rowError; }
+      const { data: uploaded, error: uploadError } = await firebaseClient.storage.from('property-photos').upload(storagePath, blob, { contentType: ext === 'png' ? 'image/png' : 'image/jpeg', upsert: false });
+      if (uploadError) throw new Error(uploadError.message || 'Medya sağlayıcısı fotoğrafı kabul etmedi.');
+      // The active provider is Cloudinary: persist its HTTPS URL, not the virtual Firebase-style path.
+      const persistedPath = uploaded?.url || uploaded?.path || storagePath;
+      const { error: rowError } = await firebaseClient.from('property_photos').insert({ property_id: selected.id, office_id: officeId, storage_path: persistedPath, sort_order: propertyPhotos.length });
+      if (rowError) {
+        if (!/^https?:\/\//i.test(persistedPath)) await firebaseClient.storage.from('property-photos').remove([persistedPath]);
+        throw new Error(rowError.message || 'Fotoğrafın ilan kaydı oluşturulamadı.');
+      }
       await loadPropertyPhotos(selected.id, deps);
-    } catch (error) { Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : 'Firebase Storage hizmetinin etkin olduğunu ve kuralların yayınlandığını kontrol edin.'); }
+    } catch (error: any) { Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : error?.message || 'Bilinmeyen yükleme hatası. Cloudinary ayarlarını ve Firestore erişim izinlerini kontrol edin.'); }
     finally { setPhotosBusy(false); }
   };
 
