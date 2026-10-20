@@ -91,7 +91,7 @@ export const markNotificationRead = async (notificationId: string, deps: any) =>
       const firebaseClient = getFirebaseClient();
       const { error } = await firebaseClient.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notificationId);
       if (error) throw error;
-      setNotifications(current => current.map(n => n.id === notificationId ? {...n, read_at: new Date().toISOString()} : n));
+      setNotifications((current: any[]) => current.map((n: any) => n.id === notificationId ? {...n, read_at: new Date().toISOString()} : n));
     } catch (error) {
       Alert.alert('Bildirim güncellenemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.');
     }
