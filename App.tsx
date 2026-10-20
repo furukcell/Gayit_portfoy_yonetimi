@@ -48,7 +48,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as NavigationBar from 'expo-navigation-bar';
 import SuperadminPanel from './src/SuperadminPanel';
 
-
 export default function App() {
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -281,7 +280,6 @@ export default function App() {
       <WorkspaceBottomNavigation styles={styles} palette={palette} tab={tab} setTab={setTab} loadFavorites={loadFavorites} loadRecentViews={loadRecentViews} />
 
       <PortfolioOperationModals transactionModalOpen={transactionModalOpen} setTransactionModalOpen={setTransactionModalOpen} transactionBusy={transactionBusy} setTransactionPropertyId={setTransactionPropertyId} transactionPropertyId={transactionPropertyId} properties={properties} setTransactionFinalPrice={setTransactionFinalPrice} transactionFinalPrice={transactionFinalPrice} money={money} transactionOfficeCommission={transactionOfficeCommission} setTransactionOfficeCommission={setTransactionOfficeCommission} transactionAgentCommission={transactionAgentCommission} setTransactionAgentCommission={setTransactionAgentCommission} transactionDate={transactionDate} setTransactionDate={setTransactionDate} transactionNotes={transactionNotes} setTransactionNotes={setTransactionNotes} saveTransaction={saveTransaction} csvImportOpen={csvImportOpen} setCsvImportOpen={setCsvImportOpen} csvImportBusy={csvImportBusy} pickPortfolioSpreadsheet={pickPortfolioSpreadsheet} excelFileName={excelFileName} excelPreviewCount={excelPreviewCount} csvImportText={csvImportText} setCsvImportText={setCsvImportText} importPortfolioCsv={importPortfolioCsv} />
-
 
       <PropertyDetailModal selected={selected} setSelected={setSelected} setPropertyPhotos={setPropertyPhotos} propertyPhotos={propertyPhotos} photosBusy={photosBusy} addPropertyPhoto={addPropertyPhoto} movePropertyPhoto={movePropertyPhoto} removePropertyPhoto={removePropertyPhoto} propertyTypeLabel={propertyTypeLabel} money={money} openPropertyEditor={openPropertyEditor} archiveProperty={archiveProperty} propertyStatusBusy={propertyStatusBusy} updatePropertyStatus={updatePropertyStatus} openMap={openMap} shareWhatsApp={shareWhatsApp} createPdf={createPdf} selectedOwnerContact={selectedOwnerContact} />
 
