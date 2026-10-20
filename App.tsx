@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { palette, styles } from './src/theme/appStyles';
 import AnimatedSplash from './src/components/AnimatedSplash';
 import { Stat, Feature } from './src/components/DashboardPrimitives';
+import type { Role, Tab, Customer, PropertyStatus, PropertyPhoto, Property } from './src/types/property';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
 import { changeInitialPassword, changePasswordWithCurrent, restoreUsernameSession, signInWithUsername } from './src/lib/usernameAuth';
@@ -26,21 +27,7 @@ import { getFirebaseApp, getFirebaseAuth } from './src/lib/firebase';
 import { signOut } from 'firebase/auth';
 import SuperadminPanel from './src/SuperadminPanel';
 
-type Role = 'owner' | 'agent' | 'superadmin';
-type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
-type Customer = { id: string; fullName: string; phone: string; roles: string[]; assignedAgent: string; notes: string; active: boolean; requirementCount: number; nextFollowUpAt: string | null; assignedAgentId: string };
-type PropertyStatus = 'Aktif' | 'Opsiyonlu' | 'Satıldı' | 'Kiralandı' | 'Arşivde';
-type PropertyPhoto = { id: string; storagePath: string; url: string; sortOrder: number };
-type Property = {
-  id: string; title: string; address: string; district: string; price: number;
-  rooms: string; area: string; propertyType?: string; kind: 'Satılık' | 'Kiralık'; status: PropertyStatus;
-  agent: string; ownerAgentId: string; views: number; createdAt: string; description: string;
-  bathrooms?: string; balcony?: string; parking?: string; heating?: string; cooling?: string;
-  occupancyPermit?: string; elevator?: string; nearbyAmenities?: string;
-  buildingAge?: string; floorNumber?: string; totalFloors?: string;
-};
 
-;
 const initialProperties: Property[] = [
   { id: 'GY-1024', title: 'Modern Aile Dairesi', address: 'İsmetpaşa Mahallesi, Milas, Muğla', district: 'Milas', price: 4250000, rooms: '3+1', area: '145 m²', kind: 'Satılık', status: 'Aktif', agent: 'Mert Yılmaz', ownerAgentId: 'demo-agent-1', views: 0, createdAt: '12 Ekim 2026', description: 'Aydınlık salonu, kullanışlı planı ve merkezi konumuyla öne çıkan aile dairesi.' },
   { id: 'GY-1023', title: 'Bahçeli Müstakil Villa', address: 'Konacık Mahallesi, Bodrum, Muğla', district: 'Bodrum', price: 125000, rooms: '4+1', area: '220 m²', kind: 'Kiralık', status: 'Opsiyonlu', agent: 'Elif Demir', ownerAgentId: 'demo-agent-2', views: 0, createdAt: '10 Ekim 2026', description: 'Özel bahçeli, ferah yaşam alanlarına sahip müstakil villa.' },
