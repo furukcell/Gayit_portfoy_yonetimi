@@ -4,7 +4,7 @@ import AnimatedSplash from './src/components/AnimatedSplash';
 import { Stat, Feature } from './src/components/DashboardPrimitives';
 import type { Role, Tab, Customer, PropertyStatus, PropertyPhoto, Property } from './src/types/property';
 import { initialProperties } from './src/data/initialProperties';
-import { findImportColumn as find, normalizeImportHeader as normalize } from './src/utils/importHelpers';
+import { findImportColumn as find } from './src/utils/importHelpers';
 import PropertyRow from './src/components/PropertyRow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
