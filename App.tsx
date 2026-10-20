@@ -14,6 +14,7 @@ import MatchesScreen from './src/screens/MatchesScreen';
 import MoreScreen from './src/screens/MoreScreen';
 import AuthForm from './src/components/AuthForm';
 import BrandMark from './src/components/BrandMark';
+import { OfficeBrandProvider, OfficeBrandTitle, OfficeBrandingModal } from './src/components/OfficeBranding';
 import WorkspaceScreens from './src/screens/WorkspaceScreens';
 import WorkspaceBottomNavigation from './src/components/WorkspaceBottomNavigation';
 import useLegalAcceptance from './src/hooks/useLegalAcceptance';
@@ -82,7 +83,7 @@ export default function App() {
     quickDropdown, setQuickDropdown, sortBy, setSortBy, showArchived, setShowArchived, statusFilter, setStatusFilter, favoriteIds, setFavoriteIds, favoritesOnly, setFavoritesOnly,
     recentOnly, setRecentOnly, recentPropertyIds, setRecentPropertyIds, portfolioPresentationMode, setPortfolioPresentationMode, selectedPresentationIds, setSelectedPresentationIds, transactionModalOpen, setTransactionModalOpen, transactionPropertyId, setTransactionPropertyId,
     transactionFinalPrice, setTransactionFinalPrice, transactionOfficeCommission, setTransactionOfficeCommission, transactionAgentCommission, setTransactionAgentCommission, transactionDate, setTransactionDate, transactionNotes, setTransactionNotes, transactionBusy, setTransactionBusy,
-    csvImportOpen, setCsvImportOpen, csvImportText, setCsvImportText, csvImportBusy, setCsvImportBusy, profileModalOpen, setProfileModalOpen, profilePhone, setProfilePhone, profileEmail, setProfileEmail,
+    csvImportOpen, setCsvImportOpen, csvImportText, setCsvImportText, csvImportBusy, setCsvImportBusy, profileModalOpen, setProfileModalOpen, officeBrandingOpen, setOfficeBrandingOpen, profilePhone, setProfilePhone, profileEmail, setProfileEmail,
     profileAvatarPath, setProfileAvatarPath, profileAvatarUrl, setProfileAvatarUrl, profileAvatarUri, setProfileAvatarUri, profileBusy, setProfileBusy, currentPassword, setCurrentPassword, profileNewPassword, setProfileNewPassword,
     profileConfirmPassword, setProfileConfirmPassword, passwordBusy, setPasswordBusy, excelFileName, setExcelFileName, excelPreviewCount, setExcelPreviewCount, minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter,
     propertyPhotos, setPropertyPhotos, photosBusy, setPhotosBusy, title, setTitle, address, setAddress, price, setPrice, rooms, setRooms,
@@ -302,19 +303,20 @@ export default function App() {
   }
 
   return (
+    <OfficeBrandProvider officeId={officeId}>
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
       <LegalDocumentModal legalDocument={legalDocument} setLegalDocument={setLegalDocument} styles={styles} palette={palette} />
       <View style={styles.topbar}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
           {showBackButton && <Pressable accessibilityRole="button" accessibilityLabel="Geri" onPress={handleBack} hitSlop={10} style={{ width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F4F8' }}><Ionicons name="arrow-back" size={22} color={palette.navy} /></Pressable>}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}><BrandMark size={38}/><View><Text style={styles.brand}>GAYIT<Text style={styles.brandDot}>.</Text></Text><Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text></View></View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}><BrandMark size={38}/><OfficeBrandTitle /></View>
         </View>
         <Pressable onPress={handleSignOut} style={styles.signOutButton}><Ionicons name="log-out-outline" size={17} color={palette.navy}/><Text style={styles.signOutText}>Çıkış</Text></Pressable>
       </View>
 
       <WorkspaceScreens {...{
-        tab, styles, palette, role, setTab: navigateTab, customers, openCustomerDetail, properties, roleProperties, teamMembers, money, openProperty, portfolioPresentationMode, setPortfolioPresentationMode, setSelectedPresentationIds, selectedPresentationIds, setAddOpen, search, setSearch, quickTypeFilter, quickCityFilter, quickDistrictFilter, setQuickDropdown, quickDropdown, setQuickTypeFilter, setQuickCityFilter, setQuickDistrictFilter, filter, setFilter, sortBy, setSortBy, recentOnly, setRecentOnly, favoritesOnly, setFavoritesOnly, minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, statusFilter, setStatusFilter, showArchived, setShowArchived, createMultiPropertyPdf, propertiesLoading, visibleProperties, toggleFavorite, favoriteIds, customersLoading, customerSearch, setCustomerSearch, setCustomerModalOpen, matches, matchesLoading, setLegalDocument, superadminOfficeMode, setSuperadminOfficeMode, setRole, setOfficeId, setNotificationsOpen, notifications, loadNotifications, officeId, loadRecentViews, setCsvImportOpen, openProfile, exportPortfolioCsv, setTransactionPropertyId, setTransactionModalOpen, handleSignOut, teamStatusBusyId, setAgentModalOpen, toggleAgentStatus, sharePortfolioReport
+        tab, styles, palette, role, setTab: navigateTab, customers, openCustomerDetail, properties, roleProperties, teamMembers, money, openProperty, portfolioPresentationMode, setPortfolioPresentationMode, setSelectedPresentationIds, selectedPresentationIds, setAddOpen, search, setSearch, quickTypeFilter, quickCityFilter, quickDistrictFilter, setQuickDropdown, quickDropdown, setQuickTypeFilter, setQuickCityFilter, setQuickDistrictFilter, filter, setFilter, sortBy, setSortBy, recentOnly, setRecentOnly, favoritesOnly, setFavoritesOnly, minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, statusFilter, setStatusFilter, showArchived, setShowArchived, createMultiPropertyPdf, propertiesLoading, visibleProperties, toggleFavorite, favoriteIds, customersLoading, customerSearch, setCustomerSearch, setCustomerModalOpen, matches, matchesLoading, setLegalDocument, superadminOfficeMode, setSuperadminOfficeMode, setRole, setOfficeId, setNotificationsOpen, notifications, loadNotifications, officeId, loadRecentViews, setCsvImportOpen, openProfile, setOfficeBrandingOpen, exportPortfolioCsv, setTransactionPropertyId, setTransactionModalOpen, handleSignOut, teamStatusBusyId, setAgentModalOpen, toggleAgentStatus, sharePortfolioReport
       }} />
 
       <WorkspaceBottomNavigation styles={styles} palette={palette} tab={tab} setTab={navigateTab} loadFavorites={loadFavorites} loadRecentViews={loadRecentViews} />
@@ -329,11 +331,14 @@ export default function App() {
 
       <NotificationsModal notificationsOpen={notificationsOpen} setNotificationsOpen={setNotificationsOpen} notificationsLoading={notificationsLoading} notifications={notifications} markNotificationRead={markNotificationRead} />
 
+      <OfficeBrandingModal visible={officeBrandingOpen} officeId={officeId} onClose={()=>setOfficeBrandingOpen(false)} />
+
       <ProfileModal profileModalOpen={profileModalOpen} setProfileModalOpen={setProfileModalOpen} profileBusy={profileBusy} chooseProfileAvatar={chooseProfileAvatar} profileAvatarUri={profileAvatarUri} profileAvatarUrl={profileAvatarUrl} profilePhone={profilePhone} setProfilePhone={setProfilePhone} profileEmail={profileEmail} setProfileEmail={setProfileEmail} saveProfile={saveProfile} currentPassword={currentPassword} setCurrentPassword={setCurrentPassword} profileNewPassword={profileNewPassword} setProfileNewPassword={setProfileNewPassword} profileConfirmPassword={profileConfirmPassword} setProfileConfirmPassword={setProfileConfirmPassword} passwordBusy={passwordBusy} handleProfilePasswordChange={handleProfilePasswordChange} />
 
       <AgentModal agentModalOpen={agentModalOpen} setAgentModalOpen={setAgentModalOpen} chooseAgentAvatar={chooseAgentAvatar} agentAvatarUri={agentAvatarUri} agentName={agentName} setAgentName={setAgentName} agentUsername={agentUsername} setAgentUsername={setAgentUsername} agentPassword={agentPassword} setAgentPassword={setAgentPassword} agentBusy={agentBusy} createAgent={createAgent} />
 
       <PropertyFormModal addOpen={addOpen} setAddOpen={setAddOpen} editingPropertyId={editingPropertyId} setEditingPropertyId={setEditingPropertyId} title={title} setTitle={setTitle} address={address} setAddress={setAddress} kind={kind} setKind={setKind} propertyType={propertyType} setPropertyType={setPropertyType} price={price} setPrice={setPrice} rooms={rooms} setRooms={setRooms} area={area} setArea={setArea} bathrooms={bathrooms} setBathrooms={setBathrooms} balcony={balcony} setBalcony={setBalcony} parking={parking} setParking={setParking} heating={heating} setHeating={setHeating} cooling={cooling} setCooling={setCooling} occupancyPermit={occupancyPermit} setOccupancyPermit={setOccupancyPermit} elevator={elevator} setElevator={setElevator} buildingAge={buildingAge} setBuildingAge={setBuildingAge} floorNumber={floorNumber} setFloorNumber={setFloorNumber} totalFloors={totalFloors} setTotalFloors={setTotalFloors} nearbyAmenities={nearbyAmenities} setNearbyAmenities={setNearbyAmenities} description={description} setDescription={setDescription} ownerContactName={ownerContactName} setOwnerContactName={setOwnerContactName} ownerContactPhone={ownerContactPhone} setOwnerContactPhone={setOwnerContactPhone} pendingPhotoUris={pendingPhotoUris} setPendingPhotoUris={setPendingPhotoUris} choosePropertyPhotos={choosePropertyPhotos} propertyBusy={propertyBusy} saveProperty={saveProperty} />
     </SafeAreaView>
+    </OfficeBrandProvider>
   );
 }
