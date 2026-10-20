@@ -4,7 +4,7 @@ import AnimatedSplash from './src/components/AnimatedSplash';
 import { Stat, Feature } from './src/components/DashboardPrimitives';
 import type { Role, Tab, Customer, PropertyStatus, PropertyPhoto, Property } from './src/types/property';
 import { initialProperties } from './src/data/initialProperties';
-import { findImportColumn as find } from './src/utils/importHelpers';
+import { findImportColumn as find, parseSemicolonCsvLine as parseLine } from './src/utils/importHelpers';
 import PropertyRow from './src/components/PropertyRow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
@@ -358,11 +358,6 @@ export default function App() {
     if (csvImportBusy) return;
     const source = csvImportText.trim();
     if (!source) { Alert.alert('CSV verisi gerekli','CSV içeriğini buraya yapıştır.'); return; }
-    const parseLine = (line: string) => {
-      const values:string[]=[]; let value=''; let quoted=false;
-      for(let i=0;i<line.length;i++){const char=line[i];if(char==='"'&&quoted&&line[i+1]==='"'){value+='"';i++;}else if(char==='"')quoted=!quoted;else if(char===';'&&!quoted){values.push(value);value='';}else value+=char;}
-      values.push(value); return values.map(v=>v.trim());
-    };
     const lines=source.replace(/^\\uFEFF/,'').split(/\\r?\\n/).filter(line=>line.trim().length>0);
     if(lines.length<2){Alert.alert('CSV biçimi hatalı','Başlık satırı ve en az bir portföy satırı gerekli.');return;}
     const payloads=lines.slice(1).map(parseLine).map(row=>{
