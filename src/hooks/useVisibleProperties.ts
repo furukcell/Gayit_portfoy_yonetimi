@@ -17,7 +17,7 @@ type Options = {
   recentOnly: boolean;
   recentPropertyIds: string[];
   sortBy: string;
-  propertyTypeLabel: (type: string) => string;
+  propertyTypeLabel: (type: any) => string;
 };
 
 export default function useVisibleProperties(options: Options) {
