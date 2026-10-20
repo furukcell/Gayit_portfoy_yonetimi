@@ -102,6 +102,19 @@ Bu geliştirmeler GitHub'a gönderilmiş olsa da bu belge cihaz testinin veya ca
 5. TypeScript kontrolü: npm run typecheck
 6. APK üretimi, repodaki GitHub Actions/CI iş akışı ve yapılandırılmış Android imzalama sırlarına bağlıdır.
 
+## Cloudinary geçici medya kurulumu
+
+Şu an uygulamanın medya yükleme sağlayıcısı olarak Cloudinary kullanılacak şekilde yapılandırma hazırlanmıştır. Expo projesinde aşağıdaki ortam değişkenleri hem `preview` hem de `production` ortamlarında tanımlı olmalıdır:
+
+- `EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME`: Cloudinary cloud name.
+- `EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET`: Yalnızca istemci yüklemesi için oluşturulan unsigned upload preset adı.
+
+Mevcut değerler: cloud name `dxuml0h3`, upload preset `gayit_portfoy`. Bu değerler gizli anahtar değildir. **Cloudinary API Secret veya başka bir özel anahtar mobil uygulama değişkenlerine eklenmemelidir.**
+
+Cloudinary panelinde `gayit_portfoy` preset'i unsigned modda olmalıdır. Güvenlik için izin verilen dosya türlerini görsel formatlarıyla sınırlandırın, mümkünse maksimum dosya boyutu belirleyin ve kullanım/credit ekranını takip edin. Unsigned preset'in adı uygulamada bulunduğundan bu bir erişim kontrolü sayılmaz; preset'e erişen kişiler Cloudinary hesabınızın kullanım kotasını tüketebilir.
+
+**Firebase Storage geçiş notu:** Firebase Storage entegrasyonu `src/lib/firebase.ts` ve `src/lib/firebaseClient.ts` içinde korunur; mevcut geçici sağlayıcı değişikliği bu kodu silmeyi gerektirmez. İleride Firebase Storage'a dönüşte medya sağlayıcısı tek bir adaptör/config üzerinden değiştirilmeli ve Cloudinary'de kayıtlı mevcut URL'ler için ayrıca taşıma planı yapılmalıdır. README'de yazması tek başına yükleme akışının cihazda doğrulandığı anlamına gelmez; Cloudinary yükleme, görüntüleme ve hata senaryoları gerçek APK'da test edilmelidir.
+
 ## Firebase ilk kurulum kontrol listesi
 - [ ] Firebase projesi ve Android/iOS uygulama kayıtları doğru.
 - [ ] Firebase Authentication'da gerekli giriş sağlayıcısı etkin.
