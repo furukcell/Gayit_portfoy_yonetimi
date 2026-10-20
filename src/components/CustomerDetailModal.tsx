@@ -94,7 +94,7 @@ export default function CustomerDetailModal(props: Props) {
                     <View style={styles.kindRow}>{['00','15','30','45'].map(m=><Pressable key={m} onPress={()=>{setChosenMinute(m);syncAppointmentDateTime(chosenDate,chosenHour,m)}} style={[styles.kindButton,chosenMinute===m&&styles.kindButtonOn]}><Text style={[styles.kindText,chosenMinute===m&&styles.kindTextOn]}>{m}</Text></Pressable>)}</View>
                     <Text style={styles.fieldLabel}>Not (isteğe bağlı)</Text>
                     <TextInput value={appointmentNotes} onChangeText={setAppointmentNotes} style={styles.input} placeholder="Görüşme ayrıntısı" placeholderTextColor={palette.muted}/>
-                    <Pressable disabled={appointmentBusy} onPress={async()=>{await addCustomerAppointment(); if(!appointmentBusy) setAppointmentModalOpen(false);}} style={[styles.saveButton,appointmentBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{appointmentBusy?'Kaydediliyor...':'Randevuyu kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
+                    <Pressable disabled={appointmentBusy} onPress={async()=>{const saved = await addCustomerAppointment(); if(saved) setAppointmentModalOpen(false);}} style={[styles.saveButton,appointmentBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{appointmentBusy?'Kaydediliyor...':'Randevuyu kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
                   </View>
                 </View>
               </Modal>
