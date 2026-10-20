@@ -71,6 +71,7 @@ export default function useAppState() {
   const [requirementType, setRequirementType] = useState('apartment');
   const [requirementCity, setRequirementCity] = useState('Muğla');
   const [requirementDistrict, setRequirementDistrict] = useState('');
+  const [requirementNeighborhood, setRequirementNeighborhood] = useState('');
   const [requirementMaxPrice, setRequirementMaxPrice] = useState('');
   const [requirementRooms, setRequirementRooms] = useState('');
   const [customerBusy, setCustomerBusy] = useState(false);
@@ -135,6 +136,11 @@ export default function useAppState() {
   const [photosBusy, setPhotosBusy] = useState(false);
   const [title, setTitle] = useState('');
   const [address, setAddress] = useState('');
+  const [propertyCity, setPropertyCity] = useState('Muğla');
+  const [propertyDistrict, setPropertyDistrict] = useState('');
+  const [propertyNeighborhood, setPropertyNeighborhood] = useState('');
+  const [propertyLatitude, setPropertyLatitude] = useState('');
+  const [propertyLongitude, setPropertyLongitude] = useState('');
   const [price, setPrice] = useState('');
   const [rooms, setRooms] = useState('3+1');
   const [area, setArea] = useState('');
@@ -170,7 +176,7 @@ export default function useAppState() {
     offerPropertyId, setOfferPropertyId, offerAmount, setOfferAmount, offerStatus, setOfferStatus, offerNotes, setOfferNotes, offerBusy, setOfferBusy,
     appointmentTitle, setAppointmentTitle, appointmentStartsAt, setAppointmentStartsAt, appointmentNotes, setAppointmentNotes, appointmentBusy, setAppointmentBusy, customerName, setCustomerName,
     customerPhone, setCustomerPhone, customerRoles, setCustomerRoles, customerNotes, setCustomerNotes, requirementIntent, setRequirementIntent, requirementType, setRequirementType,
-    requirementCity, setRequirementCity, requirementDistrict, setRequirementDistrict, requirementMaxPrice, setRequirementMaxPrice, requirementRooms, setRequirementRooms, customerBusy, setCustomerBusy,
+    requirementCity, setRequirementCity, requirementDistrict, setRequirementDistrict, requirementNeighborhood, setRequirementNeighborhood, requirementMaxPrice, setRequirementMaxPrice, requirementRooms, setRequirementRooms, customerBusy, setCustomerBusy,
     matches, setMatches, matchesLoading, setMatchesLoading, notifications, setNotifications, notificationsLoading, setNotificationsLoading, notificationsOpen, setNotificationsOpen,
     propertiesLoading, setPropertiesLoading, propertyBusy, setPropertyBusy, propertyStatusBusy, setPropertyStatusBusy, archiveBusy, setArchiveBusy, offerStatusBusyId, setOfferStatusBusyId,
     tab, setTab, properties, setProperties, selected, setSelected, addOpen, setAddOpen, editingPropertyId, setEditingPropertyId,
