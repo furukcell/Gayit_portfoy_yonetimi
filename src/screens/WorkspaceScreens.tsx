@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import HomeDashboardScreen from './HomeDashboardScreen';
 import PortfolioScreen from './PortfolioScreen';
-import CustomersScreen from './CustomersScreen';
+import { CustomersScreen } from './CustomersScreen';
 import MatchesScreen from './MatchesScreen';
 import MoreScreen from './MoreScreen';
 import TeamScreen from './TeamScreen';
