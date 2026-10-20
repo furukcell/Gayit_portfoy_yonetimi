@@ -39,6 +39,16 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
   const [dueDate,setDueDate] = useState('');
   const [paymentAmount,setPaymentAmount] = useState('');
   const [paymentNote,setPaymentNote] = useState('');
+  const [paymentOfficeId,setPaymentOfficeId] = useState('');
+  const [paymentCycle,setPaymentCycle] = useState<'monthly'|'yearly'>('monthly');
+  const [paymentDate,setPaymentDate] = useState(new Date().toISOString().slice(0,10));
+  const [paymentPeriod,setPaymentPeriod] = useState(new Date().toISOString().slice(0,7));
+  const [subscriptionOfficeId,setSubscriptionOfficeId] = useState('');
+  const [subscriptionPlan,setSubscriptionPlan] = useState('Standart');
+  const [subscriptionFee,setSubscriptionFee] = useState('1000');
+  const [subscriptionCycle,setSubscriptionCycle] = useState<'monthly'|'yearly'>('monthly');
+  const [subscriptionDueDate,setSubscriptionDueDate] = useState('');
+  const [subscriptionStatus,setSubscriptionStatus] = useState<'active'|'past_due'|'trial'|'cancelled'>('active');
   const [message,setMessage] = useState('');
 
   const refresh = useCallback(async () => {
@@ -151,7 +161,7 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
     try{
       const db=getFirebaseDb();const ref=doc(collection(db,'superadmin_payments'));
       const paidAt=new Date().toISOString();
-      await setDoc(ref,{office_id:selected.id,office_name:selected.name,amount:Number(paymentAmount),paid_at:paidAt,period:selected.billing_cycle==='yearly'?'yearly':'monthly',note:paymentNote.trim(),recorded_by:getFirebaseAuth().currentUser?.uid||null});
+      await setDoc(ref,{office_id:selected.id,office_name:selected.name,amount:Number(paymentAmount),paid_at:paidAt,period:selected.billing_cycle==='yearly'?'yearly':'monthly',billing_period:selected.billing_cycle==='yearly'?String(new Date().getFullYear()):new Date().toISOString().slice(0,7),note:paymentNote.trim(),recorded_by:getFirebaseAuth().currentUser?.uid||null});
       const next=new Date();next.setDate(next.getDate()+(selected.billing_cycle==='yearly'?365:30));
       await updateDoc(doc(db,'offices',selected.id),{next_due_date:next.toISOString().slice(0,10),subscription_status:'active'});
       setPaymentAmount('');setPaymentNote('');setMessage('Tahsilat kaydedildi ve sonraki vade güncellendi.');
@@ -159,6 +169,55 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
       const fresh={...selected,next_due_date:next.toISOString().slice(0,10),subscription_status:'active'};setSelected(fresh);
     }catch(e:any){setMessage('Tahsilat kaydedilemedi: '+(e?.message||'İzinleri kontrol et.'));}
     finally{setSaving(false);}
+  };
+
+  const saveManualSubscription = async () => {
+    const office = offices.find(o=>o.id===subscriptionOfficeId);
+    const amount = Number(subscriptionFee);
+    if(!office){setMessage('Abonelik tanımlanacak ofisi seç.');return;}
+    if(!subscriptionPlan.trim()||!Number.isFinite(amount)||amount<0){setMessage('Paket adını ve geçerli abonelik ücretini gir.');return;}
+    const fallback = new Date();
+    fallback.setDate(fallback.getDate()+(subscriptionCycle==='yearly'?365:30));
+    const due = /^\d{4}-\d{2}-\d{2}$/.test(subscriptionDueDate.trim()) ? subscriptionDueDate.trim() : fallback.toISOString().slice(0,10);
+    setSaving(true);setMessage('');
+    try {
+      await updateDoc(doc(getFirebaseDb(),'offices',office.id),{
+        plan_name:subscriptionPlan.trim().slice(0,80),fee_amount:amount,billing_cycle:subscriptionCycle,
+        subscription_status:subscriptionStatus,subscription_start:office.subscription_start||new Date().toISOString(),
+        next_due_date:due,updated_at:new Date().toISOString()
+      });
+      setMessage(office.name+' için abonelik bilgileri kaydedildi.');
+      setSubscriptionOfficeId('');setSubscriptionDueDate('');
+      await refresh();
+    } catch(e:any) { setMessage('Abonelik kaydedilemedi: '+(e?.message||'Lütfen tekrar dene.')); }
+    finally { setSaving(false); }
+  };
+
+  const recordManualPayment = async () => {
+    const office = offices.find(o=>o.id===paymentOfficeId);
+    const amount = Number(paymentAmount);
+    if(!office){setMessage('Tahsilat yapılacak ofisi seç.');return;}
+    if(!Number.isFinite(amount)||amount<=0){setMessage('Geçerli tahsilat tutarı gir.');return;}
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)||!(paymentCycle==='yearly'?/^\d{4}$/.test(paymentPeriod):/^\d{4}-\d{2}$/.test(paymentPeriod))){setMessage(paymentCycle==='yearly'?'Ödeme tarihi ve yılı YYYY biçiminde gir.':'Ödeme tarihi ve ay YYYY-AA biçiminde gir.');return;}
+    setSaving(true);setMessage('');
+    try {
+      const db=getFirebaseDb();
+      const paidAt=new Date(paymentDate+'T12:00:00').toISOString();
+      await setDoc(doc(collection(db,'superadmin_payments')),{
+        office_id:office.id,office_name:office.name,amount,paid_at:paidAt,
+        period:paymentCycle,billing_period:paymentPeriod,note:paymentNote.trim(),
+        recorded_by:getFirebaseAuth().currentUser?.uid||null
+      });
+      const base = office.next_due_date && new Date(office.next_due_date+'T12:00:00').getTime()>Date.now()
+        ? new Date(office.next_due_date+'T12:00:00') : new Date(paymentDate+'T12:00:00');
+      base.setDate(base.getDate()+(paymentCycle==='yearly'?365:30));
+      const nextDue=base.toISOString().slice(0,10);
+      await updateDoc(doc(db,'offices',office.id),{next_due_date:nextDue,subscription_status:'active',updated_at:new Date().toISOString()});
+      setPaymentAmount('');setPaymentNote('');
+      setMessage(office.name+' için tahsilat kaydedildi. Yeni vade: '+dateLabel(nextDue));
+      await refresh();
+    } catch(e:any) { setMessage('Tahsilat kaydedilemedi: '+(e?.message||'Lütfen tekrar dene.')); }
+    finally { setSaving(false); }
   };
 
   const toggleOfficeStatus = (office:Office) => {
@@ -211,9 +270,35 @@ export default function SuperadminPanel({ onEnterOffice, onLogout }: { onEnterOf
         {!users.length&&<Text style={s.empty}>Kullanıcı bulunamadı.</Text>}
       </>}
       {section==='payments'&&<>
-        <Text style={s.eyebrow}>FİNANS</Text><Text style={s.title}>Tahsilatlar</Text><Text style={s.desc}>Süperadmin üzerinden kaydedilmiş ödeme hareketleri.</Text>
-        <View style={s.revenue}><Text style={s.revenueLabel}>Toplam kaydedilmiş tahsilat</Text><Text style={s.revenueValue}>{fmt(payments.reduce((a,p)=>a+Number(p.amount||0),0))}</Text></View>
-        {payments.map(p=><Pressable key={p.id} onPress={()=>{const o=offices.find(x=>x.id===p.office_id);if(o){setSelected(o);setSection('offices');}}} style={s.rowCard}><View style={{flex:1}}><Text style={s.officeName}>{p.office_name||offices.find(o=>o.id===p.office_id)?.name||'Ofis'}</Text><Text style={s.muted}>{dateLabel(p.paid_at)} · {p.note||'Tahsilat kaydı'}</Text></View><Text style={s.paymentAmount}>{fmt(p.amount)}</Text></Pressable>)}
+        <Text style={s.eyebrow}>FİNANS</Text><Text style={s.title}>Tahsilatlar ve abonelikler</Text><Text style={s.desc}>Abonelik tanımla, aylık veya yıllık ödemeleri kaydet ve ofislerin ödeme durumunu takip et.</Text>
+        <View style={s.revenue}><Text style={s.revenueLabel}>Toplam kaydedilmiş tahsilat</Text><Text style={s.revenueValue}>{fmt(payments.reduce((a,p)=>a+Number(p.amount||0),0))}</Text><View style={s.revenueDivider}/><Text style={s.revenueLabel}>Vadesi geçmiş abonelik</Text><Text style={s.revenueValue}>{String(overdue)} ofis</Text></View>
+        <View style={s.detailCard}>
+          <Text style={s.sectionTitle}>Manuel abonelik tanımla / güncelle</Text>
+          <Text style={s.muted}>Ofis oluştururken abonelik girilmediyse buradan ekleyebilirsin.</Text>
+          <Text style={s.label}>Ofis seç</Text>
+          <View style={s.choiceRow}>{offices.map(o=><Pressable key={o.id} onPress={()=>setSubscriptionOfficeId(o.id)} style={[s.choice,subscriptionOfficeId===o.id&&s.choiceOn]}><Text style={[s.choiceText,subscriptionOfficeId===o.id&&s.choiceTextOn]}>{o.name}</Text></Pressable>)}</View>
+          <Text style={s.label}>Paket adı</Text><TextInput value={subscriptionPlan} onChangeText={setSubscriptionPlan} style={s.input} placeholder="Örn. Standart"/>
+          <Text style={s.label}>Abonelik ücreti (TL)</Text><TextInput value={subscriptionFee} onChangeText={setSubscriptionFee} keyboardType="numeric" style={s.input} placeholder="1000"/>
+          <Text style={s.label}>Ödeme dönemi</Text><View style={s.choiceRow}>{(['monthly','yearly'] as const).map(v=><Pressable key={v} onPress={()=>setSubscriptionCycle(v)} style={[s.choice,subscriptionCycle===v&&s.choiceOn]}><Text style={[s.choiceText,subscriptionCycle===v&&s.choiceOn&&s.choiceTextOn]}>{v==='monthly'?'Aylık':'Yıllık'}</Text></Pressable>)}</View>
+          <Text style={s.label}>Abonelik durumu</Text><View style={s.choiceRow}>{(['active','past_due','trial','cancelled'] as const).map(v=><Pressable key={v} onPress={()=>setSubscriptionStatus(v)} style={[s.choice,subscriptionStatus===v&&s.choiceOn]}><Text style={[s.choiceText,subscriptionStatus===v&&s.choiceTextOn]}>{({active:'Aktif',past_due:'Ödemesi gecikmiş',trial:'Deneme',cancelled:'İptal'} as any)[v]}</Text></Pressable>)}</View>
+          <Text style={s.label}>Sonraki ödeme tarihi (isteğe bağlı, YYYY-AA-GG)</Text><TextInput value={subscriptionDueDate} onChangeText={setSubscriptionDueDate} style={s.input} placeholder="2026-11-20"/>
+          <Pressable disabled={saving} onPress={saveManualSubscription} style={[s.primary,saving&&{opacity:0.55}]}><Text style={s.primaryText}>{saving?'Kaydediliyor…':'Aboneliği kaydet'}</Text></Pressable>
+        </View>
+        <View style={[s.detailCard,{marginTop:14}]}>
+          <Text style={s.sectionTitle}>Manuel tahsilat ekle</Text>
+          <Text style={s.label}>Ofis seç</Text>
+          <View style={s.choiceRow}>{offices.map(o=><Pressable key={o.id} onPress={()=>{setPaymentOfficeId(o.id);setPaymentCycle(o.billing_cycle==='yearly'?'yearly':'monthly');}} style={[s.choice,paymentOfficeId===o.id&&s.choiceOn]}><Text style={[s.choiceText,paymentOfficeId===o.id&&s.choiceTextOn]}>{o.name}</Text></Pressable>)}</View>
+          <Text style={s.label}>Tahsil edilen tutar (TL)</Text><TextInput value={paymentAmount} onChangeText={setPaymentAmount} keyboardType="numeric" style={s.input} placeholder="Örn. 1000"/>
+          <Text style={s.label}>Ödeme dönemi</Text><View style={s.choiceRow}>{(['monthly','yearly'] as const).map(v=><Pressable key={v} onPress={()=>{setPaymentCycle(v);setPaymentPeriod(v==='yearly'?new Date().getFullYear().toString():new Date().toISOString().slice(0,7));}} style={[s.choice,paymentCycle===v&&s.choiceOn]}><Text style={[s.choiceText,paymentCycle===v&&s.choiceTextOn]}>{v==='monthly'?'Aylık':'Yıllık'}</Text></Pressable>)}</View>
+          <Text style={s.label}>{paymentCycle==='yearly'?'Ödenen yıl':'Ödenen ay (YYYY-AA)'}</Text><TextInput value={paymentPeriod} onChangeText={setPaymentPeriod} style={s.input} placeholder={paymentCycle==='yearly'?'2026':'2026-10'}/>
+          <Text style={s.label}>Tahsilat tarihi (YYYY-AA-GG)</Text><TextInput value={paymentDate} onChangeText={setPaymentDate} style={s.input} placeholder="2026-10-20"/>
+          <Text style={s.label}>Not (isteğe bağlı)</Text><TextInput value={paymentNote} onChangeText={setPaymentNote} style={s.input} placeholder="Örn. Ekim 2026 abonelik ödemesi"/>
+          <Pressable disabled={saving} onPress={recordManualPayment} style={[s.primary,{backgroundColor:C.green},saving&&{opacity:0.55}]}><Text style={s.primaryText}>{saving?'Kaydediliyor…':'Tahsilatı kaydet ve vadeyi güncelle'}</Text></Pressable>
+        </View>
+        <Text style={s.sectionTitle}>Abonelik durumu ve ödeme takibi</Text>
+        {offices.map(o=><View key={o.id} style={s.rowCard}><View style={{flex:1}}><Text style={s.officeName}>{o.name}</Text><Text style={s.muted}>{o.plan_name||'Paket tanımlanmamış'} · {fmt(Number(o.fee_amount||0))}/{o.billing_cycle==='yearly'?'yıl':'ay'}</Text><Text style={s.muted}>Durum: {({active:'Aktif',past_due:'Ödemesi gecikmiş',trial:'Deneme',cancelled:'İptal'} as any)[o.subscription_status||'active']||'Aktif'} · Sonraki vade: {dateLabel(o.next_due_date)}</Text></View><Pressable onPress={()=>{setSubscriptionOfficeId(o.id);setSubscriptionPlan(o.plan_name||'Standart');setSubscriptionFee(String(o.fee_amount??0));setSubscriptionCycle(o.billing_cycle==='yearly'?'yearly':'monthly');setSubscriptionStatus((['active','past_due','trial','cancelled'].includes(o.subscription_status||'')?o.subscription_status:'active') as any);setSubscriptionDueDate(o.next_due_date||'');}} style={s.choice}><Text style={s.choiceText}>Düzenle</Text></Pressable></View>)}
+        <Text style={s.sectionTitle}>Ödeme geçmişi</Text>
+        {payments.map(p=><View key={p.id} style={s.rowCard}><View style={{flex:1}}><Text style={s.officeName}>{p.office_name||offices.find(o=>o.id===p.office_id)?.name||'Ofis'}</Text><Text style={s.muted}>{dateLabel(p.paid_at)} · {p.billing_period||p.period||'Dönem belirtilmemiş'} · {p.note||'Not yok'}</Text></View><Text style={s.paymentAmount}>{fmt(p.amount)}</Text></View>)}
         {!payments.length&&<Text style={s.empty}>Henüz tahsilat kaydı yok.</Text>}
       </>}
       {section==='create'&&<>
