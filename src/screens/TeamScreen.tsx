@@ -37,7 +37,6 @@ export default function TeamScreen({ visible, teamMembers, teamStatusBusyId, onA
         </View>
       ))}
       {!teamMembers.length && <View style={styles.empty}><Ionicons name="people-outline" size={30} color={palette.muted}/><Text style={styles.sectionTitle}>Henüz ekip üyesi yok</Text><Text style={styles.pageSub}>Sağ üstteki butondan ilk danışmanını ekleyebilirsin.</Text></View>}
-      <View style={styles.notice}><Ionicons name="shield-checkmark-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>Ekip üyeleri oturum açmış ofisin veritabanından yüklenir. Firebase Functions dağıtılmış ve Firebase yapılandırması tamamlanmış olmalıdır.</Text></View>
     </ScrollView>
   );
 }
