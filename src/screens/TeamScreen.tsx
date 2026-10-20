@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { palette, styles } from '../theme/appStyles';
+import BrandMark from '../components/BrandMark';
 
 type TeamMember = { name: string; username: string; role: string; status: string; avatarPath: string | null; avatarUrl: string | null; id: string };
 
@@ -17,7 +18,7 @@ export default function TeamScreen({ visible, teamMembers, teamStatusBusyId, onA
   if (!visible) return null;
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.eyebrow}>EKİP YÖNETİMİ</Text>
+      <View style={{flexDirection:'row',alignItems:'center',gap:7}}><BrandMark size={20}/><Text style={styles.eyebrow}>EKİP YÖNETİMİ</Text></View>
       <View style={styles.titleRow}>
         <View><Text style={styles.pageTitle}>Danışmanlar</Text><Text style={styles.pageSub}>Ofis ekibinin portföy ve performans özeti.</Text></View>
         <Pressable onPress={onAddAgent} style={styles.addButton}><Ionicons name="person-add-outline" size={22} color="#fff"/></Pressable>
