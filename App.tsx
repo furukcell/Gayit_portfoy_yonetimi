@@ -347,7 +347,7 @@ export default function App() {
   };
 
   const csvDependencies = {
-    Alert, Share, DocumentPicker, XLSX, find, parseLine, escapeCsv, setCsvImportText,
+    Alert, Share, find, parseLine, escapeCsv, setCsvImportText,
     setExcelFileName, setExcelPreviewCount, csvImportBusy, csvImportText, officeId,
     setCsvImportBusy, loadProperties, setCsvImportOpen, roleProperties, propertyTypeLabel, money,
   };
