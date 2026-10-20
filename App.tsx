@@ -17,6 +17,7 @@ import WorkspaceScreens from './src/screens/WorkspaceScreens';
 import WorkspaceBottomNavigation from './src/components/WorkspaceBottomNavigation';
 import useLegalAcceptance from './src/hooks/useLegalAcceptance';
 import useRestoreSession from './src/hooks/useRestoreSession';
+import useSelectedOwnerContact from './src/hooks/useSelectedOwnerContact';
 import PortfolioScreen from './src/screens/PortfolioScreen';
 import PropertyFormModal from './src/components/PropertyFormModal';
 import PortfolioOperationModals from './src/components/PortfolioOperationModals';
@@ -44,7 +45,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as NavigationBar from 'expo-navigation-bar';
-import { getFirebaseClient } from './src/lib/firebaseClient';
 import SuperadminPanel from './src/SuperadminPanel';
 
 
@@ -84,17 +84,7 @@ export default function App() {
     pendingPhotoUris, setPendingPhotoUris
   } = useAppState();
 
-  useEffect(() => {
-    let cancelled = false;
-    setSelectedOwnerContact(null);
-    if (!selected?.id) return;
-    void (async () => {
-      const client = getFirebaseClient();
-      const { data } = await client.from('properties').select('owner_contact_name,owner_contact_phone').eq('id', selected.id).maybeSingle();
-      if (!cancelled && data) setSelectedOwnerContact({ name: data.owner_contact_name || '', phone: data.owner_contact_phone || '' });
-    })();
-    return () => { cancelled = true; };
-  }, [selected?.id]);
+  useSelectedOwnerContact(selected?.id, setSelectedOwnerContact);
 
   const { confirmLegalAcceptance } = useLegalAcceptance({
     authenticated, legalReadPrivacy, legalAcceptTerms, legalGateBusy,
