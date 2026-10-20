@@ -13,6 +13,7 @@ import HomeDashboardScreen from './src/screens/HomeDashboardScreen';
 import MatchesScreen from './src/screens/MatchesScreen';
 import MoreScreen from './src/screens/MoreScreen';
 import AuthForm from './src/components/AuthForm';
+import BrandMark from './src/components/BrandMark';
 import WorkspaceScreens from './src/screens/WorkspaceScreens';
 import WorkspaceBottomNavigation from './src/components/WorkspaceBottomNavigation';
 import useLegalAcceptance from './src/hooks/useLegalAcceptance';
@@ -307,7 +308,7 @@ export default function App() {
       <View style={styles.topbar}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
           {showBackButton && <Pressable accessibilityRole="button" accessibilityLabel="Geri" onPress={handleBack} hitSlop={10} style={{ width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F4F8' }}><Ionicons name="arrow-back" size={22} color={palette.navy} /></Pressable>}
-          <View><Text style={styles.brand}>GAYIT<Text style={styles.brandDot}>.</Text></Text><Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text></View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}><BrandMark size={38}/><View><Text style={styles.brand}>GAYIT<Text style={styles.brandDot}>.</Text></Text><Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text></View></View>
         </View>
         <Pressable onPress={handleSignOut} style={styles.signOutButton}><Ionicons name="log-out-outline" size={17} color={palette.navy}/><Text style={styles.signOutText}>Çıkış</Text></Pressable>
       </View>
