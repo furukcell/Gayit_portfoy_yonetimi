@@ -188,7 +188,7 @@ export default function useAppState() {
     csvImportBusy, setCsvImportBusy, profileModalOpen, setProfileModalOpen, officeBrandingOpen, setOfficeBrandingOpen, profilePhone, setProfilePhone, profileEmail, setProfileEmail, profileAvatarPath, setProfileAvatarPath,
     profileAvatarUrl, setProfileAvatarUrl, profileAvatarUri, setProfileAvatarUri, profileBusy, setProfileBusy, currentPassword, setCurrentPassword, profileNewPassword, setProfileNewPassword,
     profileConfirmPassword, setProfileConfirmPassword, passwordBusy, setPasswordBusy, excelFileName, setExcelFileName, excelPreviewCount, setExcelPreviewCount, minPriceFilter, setMinPriceFilter,
-    maxPriceFilter, setMaxPriceFilter, propertyPhotos, setPropertyPhotos, photosBusy, setPhotosBusy, title, setTitle, address, setAddress,
+    maxPriceFilter, setMaxPriceFilter, propertyPhotos, setPropertyPhotos, photosBusy, setPhotosBusy, title, setTitle, address, setAddress, propertyCity, setPropertyCity, propertyDistrict, setPropertyDistrict, propertyNeighborhood, setPropertyNeighborhood, propertyLatitude, setPropertyLatitude, propertyLongitude, setPropertyLongitude,
     price, setPrice, rooms, setRooms, area, setArea, kind, setKind, propertyType, setPropertyType,
     description, setDescription, bathrooms, setBathrooms, balcony, setBalcony, parking, setParking, heating, setHeating,
     cooling, setCooling, occupancyPermit, setOccupancyPermit, elevator, setElevator, nearbyAmenities, setNearbyAmenities, buildingAge, setBuildingAge,
