@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, SafeAreaView, View, Pressable, ScrollView, Text, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { palette, styles } from '../theme/appStyles';
@@ -6,6 +6,22 @@ import { palette, styles } from '../theme/appStyles';
 type Props = { customerDetailOpen: any; setCustomerDetailOpen: any; selectedCustomer: any; editCustomerName: any; setEditCustomerName: any; editCustomerPhone: any; setEditCustomerPhone: any; editFollowUpAt: any; setEditFollowUpAt: any; editCustomerNotes: any; setEditCustomerNotes: any; customerEditBusy: any; updateCustomer: any; appointmentTitle: any; setAppointmentTitle: any; appointmentStartsAt: any; setAppointmentStartsAt: any; appointmentNotes: any; setAppointmentNotes: any; appointmentBusy: any; addCustomerAppointment: any; customerAppointments: any; customerActivities: any; activityType: any; setActivityType: any; activitySummary: any; setActivitySummary: any; activityBusy: any; addCustomerActivity: any; properties: any; offerPropertyId: any; setOfferPropertyId: any; offerAmount: any; setOfferAmount: any; offerStatus: any; setOfferStatus: any; offerNotes: any; setOfferNotes: any; offerBusy: any; addCustomerOffer: any; customerOffers: any; updateOfferStatus: any; customerRequirementsLoading: any; customerRequirements: any; requirementIntent: any; setRequirementIntent: any; requirementType: any; setRequirementType: any; requirementCity: any; setRequirementCity: any; requirementDistrict: any; setRequirementDistrict: any; requirementMaxPrice: any; setRequirementMaxPrice: any; requirementRooms: any; setRequirementRooms: any; addRequirementForSelectedCustomer: any; money: any };
 
 export default function CustomerDetailModal(props: Props) {
+  const [showFullDetails, setShowFullDetails] = useState(false);
+  const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [chosenDate, setChosenDate] = useState(new Date());
+  const [chosenHour, setChosenHour] = useState('10');
+  const [chosenMinute, setChosenMinute] = useState('00');
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const selectedDateLabel = `${pad(chosenDate.getDate())}.${pad(chosenDate.getMonth()+1)}.${chosenDate.getFullYear()}`;
+  const syncAppointmentDateTime = (date: Date, hour = chosenHour, minute = chosenMinute) => {
+    setChosenDate(date);
+    setAppointmentStartsAt(`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${hour}:${minute}`);
+  };
+  const monthDays = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth()+1, 0).getDate();
+  const firstWeekday = (new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay()+6)%7;
+  const calendarCells = [...Array(firstWeekday).fill(null), ...Array.from({length:monthDays}, (_,i)=>i+1)];
+
   const { customerDetailOpen, setCustomerDetailOpen, selectedCustomer, editCustomerName, setEditCustomerName, editCustomerPhone, setEditCustomerPhone, editFollowUpAt, setEditFollowUpAt, editCustomerNotes, setEditCustomerNotes, customerEditBusy, updateCustomer, appointmentTitle, setAppointmentTitle, appointmentStartsAt, setAppointmentStartsAt, appointmentNotes, setAppointmentNotes, appointmentBusy, addCustomerAppointment, customerAppointments, customerActivities, activityType, setActivityType, activitySummary, setActivitySummary, activityBusy, addCustomerActivity, properties, offerPropertyId, setOfferPropertyId, offerAmount, setOfferAmount, offerStatus, setOfferStatus, offerNotes, setOfferNotes, offerBusy, addCustomerOffer, customerOffers, updateOfferStatus, customerRequirementsLoading, customerRequirements, requirementIntent, setRequirementIntent, requirementType, setRequirementType, requirementCity, setRequirementCity, requirementDistrict, setRequirementDistrict, requirementMaxPrice, setRequirementMaxPrice, requirementRooms, setRequirementRooms, addRequirementForSelectedCustomer, money } = props;
   return (
           <Modal visible={customerDetailOpen} animationType="slide" onRequestClose={()=>setCustomerDetailOpen(false)}>
@@ -13,19 +29,16 @@ export default function CustomerDetailModal(props: Props) {
               <View style={styles.modalHeader}><Pressable onPress={()=>setCustomerDetailOpen(false)} style={styles.roundButton}><Ionicons name="close" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Müşteri detayları</Text><View style={{width:40}}/></View>
               <ScrollView contentContainerStyle={styles.formPage} keyboardShouldPersistTaps="handled">
                 <Text style={styles.pageTitle}>{selectedCustomer?.fullName || 'Müşteri'}</Text>
+                <Text style={styles.pageSub}>{selectedCustomer?.phone || 'Telefon eklenmemiş'}</Text>
+                <Pressable onPress={() => { setAppointmentModalOpen(true); setCalendarMonth(new Date(chosenDate.getFullYear(), chosenDate.getMonth(), 1)); syncAppointmentDateTime(chosenDate); }} style={styles.saveButton}><Ionicons name="calendar-outline" size={21} color="#fff"/><Text style={styles.saveButtonText}>Randevu oluştur</Text></Pressable>
+                <Pressable onPress={() => setShowFullDetails(v => !v)} style={[styles.kindButton,{alignSelf:'stretch',marginBottom:14}]}><Text style={styles.kindText}>{showFullDetails ? 'Müşteri detaylarını gizle' : 'Müşteri detaylarını aç'}</Text></Pressable>
+                {showFullDetails && <>
                 <Text style={styles.pageSub}>Müşteri bilgilerini düzenle ve kayıtlı arama taleplerini incele.</Text>
                 <Text style={styles.fieldLabel}>Ad soyad *</Text><TextInput value={editCustomerName} onChangeText={setEditCustomerName} style={styles.input} placeholder="Ad soyad" placeholderTextColor={palette.muted}/>
                 <Text style={styles.fieldLabel}>Telefon</Text><TextInput value={editCustomerPhone} onChangeText={setEditCustomerPhone} keyboardType="phone-pad" style={styles.input} placeholder="Telefon" placeholderTextColor={palette.muted}/>
                 <Text style={styles.fieldLabel}>Sonraki takip (YYYY-MM-DD SS:DD)</Text><TextInput value={editFollowUpAt} onChangeText={setEditFollowUpAt} style={styles.input} placeholder="2026-10-20 14:00" placeholderTextColor={palette.muted}/>
                 <Text style={styles.fieldLabel}>Notlar</Text><TextInput value={editCustomerNotes} onChangeText={setEditCustomerNotes} style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholder="Müşteri notları" placeholderTextColor={palette.muted}/>
                 <Pressable disabled={customerEditBusy} onPress={updateCustomer} style={[styles.saveButton,customerEditBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{customerEditBusy?'Kaydediliyor...':'Müşteri bilgilerini kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
-                <View style={styles.matchSection}><Text style={styles.sectionTitle}>Randevular</Text><Text style={styles.pageSub}>Bu müşteri için görüşme veya yer gösterme planla.</Text></View>
-                <Text style={styles.fieldLabel}>Randevu başlığı</Text><TextInput value={appointmentTitle} onChangeText={setAppointmentTitle} style={styles.input} placeholder="Müşteri görüşmesi" placeholderTextColor={palette.muted}/>
-                <Text style={styles.fieldLabel}>Tarih ve saat (YYYY-MM-DD SS:DD)</Text><TextInput value={appointmentStartsAt} onChangeText={setAppointmentStartsAt} style={styles.input} placeholder="2026-10-20 14:00" placeholderTextColor={palette.muted}/>
-                <Text style={styles.fieldLabel}>Randevu notu</Text><TextInput value={appointmentNotes} onChangeText={setAppointmentNotes} style={styles.input} placeholder="Görüşme ayrıntısı (isteğe bağlı)" placeholderTextColor={palette.muted}/>
-                <Pressable disabled={appointmentBusy} onPress={addCustomerAppointment} style={[styles.saveButton,appointmentBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{appointmentBusy?'Kaydediliyor...':'Randevu oluştur'}</Text><Ionicons name="calendar-outline" size={21} color="#fff"/></Pressable>
-                {customerAppointments.map((a:any)=><View key={a.id} style={styles.matchCard}><View style={{flex:1}}><Text style={styles.teamName}>{a.title}</Text><Text style={styles.teamRole}>{new Date(a.starts_at).toLocaleString('tr-TR')}</Text><Text style={styles.teamMeta}>{a.status==='scheduled'?'Planlandı':a.status==='completed'?'Tamamlandı':a.status==='cancelled'?'İptal edildi':'Gelmedi'}{a.notes?' · '+a.notes:''}</Text></View></View>)}
-                {!customerAppointments.length && <Text style={styles.pageSub}>Henüz randevu yok.</Text>}
                 <View style={styles.matchSection}><Text style={styles.sectionTitle}>Görüşme ve takip geçmişi</Text><Text style={styles.pageSub}>Telefon, WhatsApp, toplantı ve notları kaydet.</Text></View>
                 <View style={styles.kindRow}>{([{key:'call',label:'Arama'},{key:'whatsapp',label:'WhatsApp'},{key:'meeting',label:'Toplantı'},{key:'property_viewing',label:'Yer gösterme'},{key:'note',label:'Not'}] as const).map(a=><Pressable key={a.key} onPress={()=>setActivityType(a.key)} style={[styles.kindButton,activityType===a.key&&styles.kindButtonOn]}><Text style={[styles.kindText,activityType===a.key&&styles.kindTextOn]}>{a.label}</Text></Pressable>)}</View>
                 <TextInput value={activitySummary} onChangeText={setActivitySummary} style={[styles.input,styles.multiline]} multiline textAlignVertical="top" placeholder="Görüşme sonucu, müşterinin geri bildirimi veya sonraki adım" placeholderTextColor={palette.muted}/>
@@ -53,7 +66,38 @@ export default function CustomerDetailModal(props: Props) {
                 <Text style={styles.fieldLabel}>Azami bütçe (TL)</Text><TextInput value={requirementMaxPrice} onChangeText={setRequirementMaxPrice} keyboardType="numeric" style={styles.input} placeholder="5000000" placeholderTextColor={palette.muted}/>
                 <Text style={styles.fieldLabel}>Oda sayısı</Text><TextInput value={requirementRooms} onChangeText={setRequirementRooms} style={styles.input} placeholder="3+1 (isteğe bağlı)" placeholderTextColor={palette.muted}/>
                 <Pressable disabled={customerEditBusy} onPress={addRequirementForSelectedCustomer} style={[styles.saveButton,customerEditBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{customerEditBusy?'Kaydediliyor...':'Bu müşteriye talep ekle'}</Text><Ionicons name="add-circle-outline" size={21} color="#fff"/></Pressable>
+                </>}
               </ScrollView>
+              <Modal visible={appointmentModalOpen} transparent animationType="slide" onRequestClose={() => setAppointmentModalOpen(false)}>
+                <View style={{flex:1,justifyContent:'flex-end',backgroundColor:'#0006'}}>
+                  <View style={{backgroundColor:palette.bg,borderTopLeftRadius:24,borderTopRightRadius:24,maxHeight:'92%',padding:20}}>
+                    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                      <Text style={styles.modalHeaderTitle}>Randevu oluştur</Text>
+                      <Pressable onPress={() => setAppointmentModalOpen(false)} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable>
+                    </View>
+                    <Text style={styles.pageSub}>{selectedCustomer?.fullName || 'Müşteri'} için tarih ve saat seç.</Text>
+                    <Text style={styles.fieldLabel}>Randevu başlığı</Text>
+                    <TextInput value={appointmentTitle} onChangeText={setAppointmentTitle} style={styles.input} placeholder="Müşteri görüşmesi" placeholderTextColor={palette.muted}/>
+                    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:18,marginBottom:12}}>
+                      <Pressable onPress={() => setCalendarMonth(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1,1))} style={styles.roundButton}><Ionicons name="chevron-back" size={19} color={palette.navy}/></Pressable>
+                      <Text style={styles.teamName}>{calendarMonth.toLocaleDateString('tr-TR',{month:'long',year:'numeric'})}</Text>
+                      <Pressable onPress={() => setCalendarMonth(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,1))} style={styles.roundButton}><Ionicons name="chevron-forward" size={19} color={palette.navy}/></Pressable>
+                    </View>
+                    <View style={{flexDirection:'row',justifyContent:'space-around',marginBottom:8}}>{['Pt','Sa','Ça','Pe','Cu','Ct','Pz'].map(d=><Text key={d} style={{width:'13%',textAlign:'center',color:palette.muted,fontSize:11,fontWeight:'800'}}>{d}</Text>)}</View>
+                    <View style={{flexDirection:'row',flexWrap:'wrap',gap:'1.14%'}}>
+                      {calendarCells.map((day:number|null,index:number)=>day===null?<View key={'blank'+index} style={{width:'13.14%',height:40}}/>:<Pressable key={day} onPress={() => syncAppointmentDateTime(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth(),day))} style={{width:'13.14%',height:40,marginBottom:4,borderRadius:10,alignItems:'center',justifyContent:'center',backgroundColor:chosenDate.getFullYear()===calendarMonth.getFullYear()&&chosenDate.getMonth()===calendarMonth.getMonth()&&chosenDate.getDate()===day?palette.navy:palette.white,borderWidth:1,borderColor:palette.line}}><Text style={{fontSize:13,fontWeight:'800',color:chosenDate.getFullYear()===calendarMonth.getFullYear()&&chosenDate.getMonth()===calendarMonth.getMonth()&&chosenDate.getDate()===day?'#fff':palette.ink}}>{day}</Text></Pressable>)}
+                    </View>
+                    <Text style={styles.fieldLabel}>Seçilen tarih: {selectedDateLabel}</Text>
+                    <Text style={styles.fieldLabel}>Saat</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:7,paddingVertical:4}}>{Array.from({length:13},(_,i)=>String(i+8).padStart(2,'0')).map(h=><Pressable key={h} onPress={()=>{setChosenHour(h);syncAppointmentDateTime(chosenDate,h,chosenMinute)}} style={[styles.kindButton,{minWidth:54},chosenHour===h&&styles.kindButtonOn]}><Text style={[styles.kindText,chosenHour===h&&styles.kindTextOn]}>{h}</Text></Pressable>)}</ScrollView>
+                    <Text style={styles.fieldLabel}>Dakika</Text>
+                    <View style={styles.kindRow}>{['00','15','30','45'].map(m=><Pressable key={m} onPress={()=>{setChosenMinute(m);syncAppointmentDateTime(chosenDate,chosenHour,m)}} style={[styles.kindButton,chosenMinute===m&&styles.kindButtonOn]}><Text style={[styles.kindText,chosenMinute===m&&styles.kindTextOn]}>{m}</Text></Pressable>)}</View>
+                    <Text style={styles.fieldLabel}>Not (isteğe bağlı)</Text>
+                    <TextInput value={appointmentNotes} onChangeText={setAppointmentNotes} style={styles.input} placeholder="Görüşme ayrıntısı" placeholderTextColor={palette.muted}/>
+                    <Pressable disabled={appointmentBusy} onPress={async()=>{await addCustomerAppointment(); if(!appointmentBusy) setAppointmentModalOpen(false);}} style={[styles.saveButton,appointmentBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{appointmentBusy?'Kaydediliyor...':'Randevuyu kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
+                  </View>
+                </View>
+              </Modal>
             </SafeAreaView>
           </Modal>
   );
