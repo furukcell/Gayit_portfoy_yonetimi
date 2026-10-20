@@ -365,7 +365,7 @@ export default function App() {
     const url = `https://wa.me/?text=${encodeURIComponent(shareText(p))}`;
     try { await Linking.openURL(url); } catch { await Share.share({ message: shareText(p) }); }
   };
-  const propertyPhotoDependencies = { selected, officeId, propertyPhotos, setPhotosBusy, setPropertyPhotos };
+  const propertyPhotoDependencies = { selected, officeId, propertyPhotos, photosBusy, setPhotosBusy, setPropertyPhotos };
   const loadPropertyPhotos = async (propertyId: string) => loadPropertyPhotosService(propertyId, propertyPhotoDependencies);
   const addPropertyPhoto = async () => addPropertyPhotoService(propertyPhotoDependencies);
   const movePropertyPhoto = async (photo: PropertyPhoto, direction: -1 | 1) => movePropertyPhotoService(photo, direction, propertyPhotoDependencies);
