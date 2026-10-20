@@ -117,7 +117,7 @@ export function getFirebaseClient(): any {
           form.append('file', body as any);
           form.append('upload_preset', uploadPreset);
           // Keep Firebase-style path organization as a Cloudinary folder/public ID.
-          const cleanPath = path.replace(/^\\/+|\\/+$/g, '').replace(/\\.[^/.]+$/, '');
+          const cleanPath = path.replace(/^\/+|\/+$/g, '').replace(/\.[^/.]+$/, '');
           if (cleanPath) {
             const parts = cleanPath.split('/');
             const fileName = parts.pop();
@@ -134,15 +134,15 @@ export function getFirebaseClient(): any {
         try {
           // New Cloudinary records store secure_url directly; old Firebase paths
           // can still be resolved by Firebase Storage for a future migration.
-          if (/^https?:\\/\\//i.test(path)) return {data:{signedUrl:path},error:null};
+          if (/^https?:\/\//i.test(path)) return {data:{signedUrl:path},error:null};
           return {data:{signedUrl:await getDownloadURL(ref(getFirebaseStorage(),path))},error:null};
         } catch(e:any) { return {data:null,error:err(e.message)}; }
       },
       remove:async(paths:string[])=>{
         try {
-          const firebasePaths = paths.filter(p => !/^https?:\\/\\//i.test(p));
+          const firebasePaths = paths.filter(p => !/^https?:\/\//i.test(p));
           await Promise.all(firebasePaths.map(p=>deleteObject(ref(getFirebaseStorage(),p))));
-          if (paths.some(p => /^https?:\\/\\//i.test(p))) throw new Error('Cloudinary dosyaları istemciden güvenli biçimde silinemez; imzalı sunucu işlemi gerekir.');
+          if (paths.some(p => /^https?:\/\//i.test(p))) throw new Error('Cloudinary dosyaları istemciden güvenli biçimde silinemez; imzalı sunucu işlemi gerekir.');
           return {data:paths.map(name=>({name})),error:null};
         } catch(e:any) { return {data:null,error:err(e.message)}; }
       }
