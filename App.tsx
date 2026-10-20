@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGAL_DOCUMENTS, LEGAL_VERSION, type LegalDocumentKey } from './src/legalDocuments';
-import { changeInitialPassword, restoreUsernameSession, signInWithUsername } from './src/lib/usernameAuth';
+import { changeInitialPassword, changePasswordWithCurrent, restoreUsernameSession, signInWithUsername } from './src/lib/usernameAuth';
 import {
   Alert, Linking, Modal, Pressable, ScrollView, Share, StatusBar, KeyboardAvoidingView, Platform,
   StyleSheet, Text, TextInput, View, Image, ImageBackground, Animated, Easing
@@ -195,6 +195,10 @@ export default function App() {
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileAvatarUri, setProfileAvatarUri] = useState<string | null>(null);
   const [profileBusy, setProfileBusy] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [profileNewPassword, setProfileNewPassword] = useState('');
+  const [profileConfirmPassword, setProfileConfirmPassword] = useState('');
+  const [passwordBusy, setPasswordBusy] = useState(false);
   const [excelFileName, setExcelFileName] = useState('');
   const [excelPreviewCount, setExcelPreviewCount] = useState(0);
   const [minPriceFilter, setMinPriceFilter] = useState('');
@@ -1162,6 +1166,20 @@ export default function App() {
     } catch (error) { Alert.alert('Profil açılamadı', error instanceof Error ? error.message : 'Lütfen tekrar dene.'); } finally { setProfileBusy(false); }
   };
   const chooseProfileAvatar = async () => { const permission = await ImagePicker.requestMediaLibraryPermissionsAsync(); if (!permission.granted) { Alert.alert('Fotoğraf izni gerekli', 'Profil fotoğrafı seçmek için galeri izni vermelisin.'); return; } const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1,1], quality: 0.82 }); if (!result.canceled && result.assets[0]) setProfileAvatarUri(result.assets[0].uri); };
+  const handleProfilePasswordChange = async () => {
+    if (!currentPassword || !profileNewPassword || !profileConfirmPassword) { Alert.alert('Eksik bilgi', 'Tüm şifre alanlarını doldur.'); return; }
+    if (profileNewPassword.length < 10) { Alert.alert('Şifre kısa', 'Yeni şifre en az 10 karakter olmalı.'); return; }
+    if (profileNewPassword !== profileConfirmPassword) { Alert.alert('Şifreler eşleşmiyor', 'Yeni şifre ve tekrar alanları aynı olmalı.'); return; }
+    if (currentPassword === profileNewPassword) { Alert.alert('Yeni şifre gerekli', 'Yeni şifren mevcut şifrenle aynı olamaz.'); return; }
+    setPasswordBusy(true);
+    try {
+      await changePasswordWithCurrent(currentPassword, profileNewPassword);
+      setCurrentPassword(''); setProfileNewPassword(''); setProfileConfirmPassword('');
+      Alert.alert('Şifre değiştirildi', 'Hesap şifren başarıyla güncellendi.');
+    } catch (error) { Alert.alert('Şifre değiştirilemedi', error instanceof Error ? error.message : 'Lütfen tekrar dene.'); }
+    finally { setPasswordBusy(false); }
+  };
+
   const saveProfile = async () => {
     const uid = getFirebaseAuth().currentUser?.uid; if (!uid) { Alert.alert('Oturum bulunamadı', 'Lütfen yeniden giriş yap.'); return; }
     if (profileEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileEmail.trim())) { Alert.alert('E-posta hatalı', 'Geçerli bir e-posta adresi gir.'); return; }
@@ -1782,6 +1800,12 @@ export default function App() {
             <Text style={styles.fieldLabel}>Cep telefonu</Text><TextInput value={profilePhone} onChangeText={setProfilePhone} keyboardType="phone-pad" style={styles.input} placeholder="05xx xxx xx xx" placeholderTextColor={palette.muted}/>
             <Text style={styles.fieldLabel}>E-posta adresi</Text><TextInput value={profileEmail} onChangeText={setProfileEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="ornek@eposta.com" placeholderTextColor={palette.muted}/>
             <Pressable disabled={profileBusy} onPress={saveProfile} style={[styles.saveButton,profileBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{profileBusy?'Kaydediliyor…':'Profili kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable><Text style={styles.noticeText}>PDF oluşturulurken kayıtlı profil fotoğrafın, telefonun ve e-posta adresin otomatik alınır. Boş alanlar PDF'de gösterilmez.</Text>
+            <View style={{height:1,backgroundColor:palette.line,marginVertical:24}} />
+            <Text style={styles.pageTitle}>Şifre değiştir</Text><Text style={styles.pageSub}>Hesap güvenliğin için mevcut şifreni doğrula. Yeni şifre en az 10 karakter olmalı.</Text>
+            <Text style={styles.fieldLabel}>Mevcut şifre</Text><TextInput value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Mevcut şifren" placeholderTextColor={palette.muted} />
+            <Text style={styles.fieldLabel}>Yeni şifre</Text><TextInput value={profileNewPassword} onChangeText={setProfileNewPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="En az 10 karakter" placeholderTextColor={palette.muted} />
+            <Text style={styles.fieldLabel}>Yeni şifre (tekrar)</Text><TextInput value={profileConfirmPassword} onChangeText={setProfileConfirmPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Yeni şifreni tekrar gir" placeholderTextColor={palette.muted} />
+            <Pressable disabled={passwordBusy} onPress={handleProfilePasswordChange} style={[styles.saveButton,{marginTop:14},passwordBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{passwordBusy?'Şifre güncelleniyor…':'Şifreyi değiştir'}</Text><Ionicons name="lock-closed-outline" size={20} color="#fff" /></Pressable>
           </ScrollView>
         </SafeAreaView>
       </Modal>
