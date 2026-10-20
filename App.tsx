@@ -266,7 +266,6 @@ export default function App() {
         legalGateBusy={legalGateBusy}
         confirmLegalAcceptance={confirmLegalAcceptance}
       />
-      <LegalDocumentModal legalDocument={legalDocument} setLegalDocument={setLegalDocument} styles={styles} palette={palette} />
 
       <AuthForm styles={styles} palette={palette} mustChangePassword={mustChangePassword} newPassword={newPassword} setNewPassword={setNewPassword} confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword} authBusy={authBusy} handleInitialPasswordChange={handleInitialPasswordChange} loginUsername={loginUsername} setLoginUsername={setLoginUsername} loginPassword={loginPassword} setLoginPassword={setLoginPassword} handleLogin={handleLogin} authError={authError} />
     </SafeAreaView>;
@@ -275,6 +274,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
+      <LegalDocumentModal legalDocument={legalDocument} setLegalDocument={setLegalDocument} styles={styles} palette={palette} />
       <View style={styles.topbar}>
         <View><Text style={styles.brand}>GAYIT<Text style={styles.brandDot}>.</Text></Text><Text style={styles.brandSub}>PORTFÖY YÖNETİMİ</Text></View>
         <Pressable onPress={handleSignOut} style={styles.signOutButton}><Ionicons name="log-out-outline" size={17} color={palette.navy}/><Text style={styles.signOutText}>Çıkış</Text></Pressable>
