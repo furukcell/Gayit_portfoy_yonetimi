@@ -6,7 +6,17 @@ import PropertyRow from '../components/PropertyRow';
 
 export default function PortfolioScreen(props: any) {
   const { styles, palette, role, portfolioPresentationMode, setPortfolioPresentationMode, setSelectedPresentationIds, selectedPresentationIds, setAddOpen, search, setSearch, quickTypeFilter, quickCityFilter, quickDistrictFilter, setQuickDropdown, quickDropdown, properties, setQuickTypeFilter, setQuickCityFilter, setQuickDistrictFilter, filter, setFilter, sortBy, setSortBy, recentOnly, setRecentOnly, favoritesOnly, setFavoritesOnly, minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, statusFilter, setStatusFilter, showArchived, setShowArchived, createMultiPropertyPdf, propertiesLoading, visibleProperties, money, openProperty, toggleFavorite, favoriteIds } = props;
-  const quickFilterOptions: string[] = ['Tümü', ...(quickDropdown === 'type' ? ['Daire','Villa','Arsa','İş yeri','Müstakil ev','Diğer'] : quickDropdown === 'city' ? Array.from(new Set<string>(properties.map((p: any) => String(p.address || '').split(',').map((part: string) => part.trim()).filter(Boolean).slice(-1)[0] || '').filter((value: string) => value.length > 0)).sort((a: string, b: string) => a.localeCompare(b, 'tr')) : Array.from(new Set<string>(properties.map((p: any) => String(p.district || String(p.address || '').split(',').map((part: string) => part.trim()).filter(Boolean).slice(-2)[0] || '')).filter((value: string) => value.length > 0)).sort((a: string, b: string) => a.localeCompare(b, 'tr')))];
+  const cityOptions: string[] = Array.from(new Set<string>(
+    properties
+      .map((p: any) => String(p.address || '').split(',').map((part: string) => part.trim()).filter(Boolean).slice(-1)[0] || '')
+      .filter((value: string) => value.length > 0)
+  )).sort((a: string, b: string) => a.localeCompare(b, 'tr'));
+  const districtOptions: string[] = Array.from(new Set<string>(
+    properties
+      .map((p: any) => String(p.district || String(p.address || '').split(',').map((part: string) => part.trim()).filter(Boolean).slice(-2)[0] || ''))
+      .filter((value: string) => value.length > 0)
+  )).sort((a: string, b: string) => a.localeCompare(b, 'tr'));
+  const quickFilterOptions: string[] = ['Tümü', ...(quickDropdown === 'type' ? ['Daire', 'Villa', 'Arsa', 'İş yeri', 'Müstakil ev', 'Diğer'] : quickDropdown === 'city' ? cityOptions : districtOptions)];
   if (!props.visible) return null;
   return (
     <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
