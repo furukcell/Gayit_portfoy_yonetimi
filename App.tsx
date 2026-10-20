@@ -157,6 +157,9 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [propertiesLoading, setPropertiesLoading] = useState(false);
   const [propertyBusy, setPropertyBusy] = useState(false);
+  const [propertyStatusBusy, setPropertyStatusBusy] = useState(false);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [offerStatusBusyId, setOfferStatusBusyId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('home');
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [selected, setSelected] = useState<Property | null>(null);
@@ -908,13 +911,15 @@ export default function App() {
   };
 
   const updateOfferStatus = async (offer: any, status: 'pending'|'countered'|'accepted'|'rejected') => {
+    if (offerStatusBusyId) return;
+    setOfferStatusBusyId(offer.id);
     try {
       const { error } = await getFirebaseClient().from('property_offers').update({ status, updated_at: new Date().toISOString() }).eq('id', offer.id).eq('office_id', officeId);
       if (error) throw error;
       setCustomerOffers(current => current.map(item => item.id === offer.id ? { ...item, status, updated_at: new Date().toISOString() } : item));
     } catch (error) {
       Alert.alert('Teklif güncellenemedi', error instanceof Error ? error.message : 'Teklif durumu güncellenemedi.');
-    }
+    } finally { setOfferStatusBusyId(null); }
   };
 
   const openCustomerDetail = async (customer: Customer) => {
@@ -1262,9 +1267,10 @@ export default function App() {
   };
 
   const updatePropertyStatus = async (nextStatus: PropertyStatus) => {
-    if (!selected) return;
+    if (!selected || propertyStatusBusy) return;
     if (role === 'agent' && selected.ownerAgentId !== getFirebaseAuth().currentUser?.uid) { Alert.alert('İşlem yetkisi yok', 'Yalnızca kendi ilanlarının durumunu değiştirebilirsin.'); return; }
     const statusMap: Record<PropertyStatus, string> = { 'Aktif': 'active', 'Opsiyonlu': 'optioned', 'Satıldı': 'sold', 'Kiralandı': 'rented', 'Arşivde': 'archived' };
+    setPropertyStatusBusy(true);
     try {
       const firebaseClient = getFirebaseClient();
       const { error } = await firebaseClient.from('properties').update({ status: statusMap[nextStatus] }).eq('id', selected.id).eq('office_id', officeId);
@@ -1275,7 +1281,7 @@ export default function App() {
       await loadProperties(officeId);
     } catch (error) {
       Alert.alert('Güncellenemedi', error instanceof Error ? error.message : 'İlan durumu değiştirilemedi.');
-    }
+    } finally { setPropertyStatusBusy(false); }
   };
 
   const openPropertyEditor = (p: Property) => {
@@ -1301,11 +1307,13 @@ export default function App() {
   };
 
   const archiveProperty = async () => {
-    if (!selected) return;
+    if (!selected || archiveBusy) return;
     if (role === 'agent' && selected.ownerAgentId !== getFirebaseAuth().currentUser?.uid) { Alert.alert('İşlem yetkisi yok', 'Yalnızca kendi ilanlarını arşivleyebilirsin.'); return; }
     Alert.alert('Portföyü arşivle', 'Bu ilan aktif portföy listesinden çıkarılacak. Devam edilsin mi?', [
       {text:'Vazgeç',style:'cancel'},
       {text:'Arşivle',style:'destructive',onPress:async()=>{
+        if (archiveBusy) return;
+        setArchiveBusy(true);
         try {
           const firebaseClient=getFirebaseClient();
           const {error}=await firebaseClient.from('properties').update({status:'archived'}).eq('id',selected.id).eq('office_id',officeId);
@@ -1313,6 +1321,7 @@ export default function App() {
           setSelected(null); await loadProperties(officeId);
           Alert.alert('Arşivlendi','Portföy arşivlendi.');
         } catch(error) { Alert.alert('Arşivlenemedi',error instanceof Error?error.message:'Tekrar deneyin.'); }
+        finally { setArchiveBusy(false); }
       }}
     ]);
   };
@@ -1701,7 +1710,7 @@ export default function App() {
 <Text style={styles.eyebrow}>{propertyTypeLabel(selected.propertyType).toLocaleUpperCase('tr-TR')} · {selected.kind.toLocaleUpperCase('tr-TR')}</Text><Text style={styles.detailTitle}>{selected.title}</Text><View style={styles.addressLine}><Ionicons name="location-outline" size={18} color={palette.muted}/><Text style={styles.addressText}>{selected.address}</Text></View><Text style={styles.detailPrice}>{money(selected.price)}{selected.kind==='Kiralık'?<Text style={styles.perMonth}> / ay</Text>:null}</Text>
           <View style={styles.featureRow}><Feature icon="bed-outline" label="Oda" value={selected.rooms}/><Feature icon="resize-outline" label="Alan" value={selected.area}/><Feature icon="eye-outline" label="Görüntülenme" value={String(selected.views)}/></View>
           <View style={styles.shareRow}><Pressable style={styles.pdfButton} onPress={()=>openPropertyEditor(selected)}><Ionicons name="create-outline" size={20} color={palette.navy}/><Text style={styles.pdfButtonText}>Düzenle</Text></Pressable><Pressable style={[styles.pdfButton,{borderColor:'#DCA6A6'}]} onPress={archiveProperty}><Ionicons name="archive-outline" size={20} color="#A13D3D"/><Text style={[styles.pdfButtonText,{color:'#A13D3D'}]}>Arşivle</Text></Pressable></View>
-          <Text style={styles.sectionTitle}>İlan durumunu yönet</Text><View style={styles.kindRow}>{(['Aktif','Opsiyonlu','Satıldı','Kiralandı'] as PropertyStatus[]).map(status=><Pressable key={status} onPress={()=>updatePropertyStatus(status)} style={[styles.kindButton,selected.status===status&&styles.kindButtonOn]}><Text style={[styles.kindText,selected.status===status&&styles.kindTextOn]}>{status}</Text></Pressable>)}</View>
+          <Text style={styles.sectionTitle}>İlan durumunu yönet</Text><View style={styles.kindRow}>{(['Aktif','Opsiyonlu','Satıldı','Kiralandı'] as PropertyStatus[]).map(status=><Pressable key={status} disabled={propertyStatusBusy} onPress={()=>updatePropertyStatus(status)} style={[styles.kindButton,selected.status===status&&styles.kindButtonOn,propertyStatusBusy&&{opacity:0.55}]}><Text style={[styles.kindText,selected.status===status&&styles.kindTextOn]}>{propertyStatusBusy&&selected.status!==status?'Güncelleniyor…':status}</Text></Pressable>)}</View>
           <Text style={styles.sectionTitle}>Açıklama</Text><Text style={styles.description}>{selected.description || 'Açıklama eklenmemiş.'}</Text>
           <Text style={styles.sectionTitle}>Konum ve paylaşım</Text><Pressable style={styles.mapButton} onPress={()=>openMap(selected)}><Ionicons name="navigate-circle-outline" size={23} color="#fff"/><View style={{flex:1}}><Text style={styles.mapButtonTitle}>Google Maps'te yol tarifi</Text><Text style={styles.mapButtonSub}>Adresi haritada aç ve navigasyonu başlat</Text></View><Ionicons name="open-outline" size={18} color="#fff"/></Pressable>
           <View style={styles.shareRow}><Pressable style={styles.whatsappButton} onPress={()=>shareWhatsApp(selected)}><Ionicons name="logo-whatsapp" size={21} color="#fff"/><Text style={styles.actionButtonText}>WhatsApp</Text></Pressable><Pressable style={styles.pdfButton} onPress={()=>createPdf(selected)}><Ionicons name="document-text-outline" size={21} color={palette.navy}/><Text style={styles.pdfButtonText}>PDF sunumu</Text></Pressable></View>
