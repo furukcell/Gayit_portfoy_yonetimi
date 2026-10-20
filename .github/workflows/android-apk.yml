@@ -19,6 +19,8 @@ jobs:
       EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       EXPO_PUBLIC_FIREBASE_APP_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_APP_ID }}
+      EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME }}
+      EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET: ${{ secrets.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET }}
 
     steps:
       - name: Checkout repository
@@ -49,6 +51,12 @@ jobs:
         run: |
           for name in EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID; do
             if [ -z "$(printenv "$name")" ]; then echo "Missing GitHub Actions secret: $name"; exit 1; fi
+          done
+
+      - name: Validate Cloudinary media configuration
+        run: |
+          for name in EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET; do
+            if [ -z "$(printenv "$name")" ]; then echo "Missing GitHub Actions secret: $name (Cloudinary image uploads will fail without it)"; exit 1; fi
           done
 
       - name: Install dependencies
