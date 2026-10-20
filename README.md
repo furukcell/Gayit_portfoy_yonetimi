@@ -2,7 +2,7 @@
 
 GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve satış operasyonlarını tek mobil uygulamada yönetmesi için geliştirilen Android/iOS uygulamasıdır. Genel kullanıma açık bir ilan pazaryeri değil, emlak ofislerinin iç operasyon aracıdır.
 
-> **Durum notu (19 Ekim 2026):** Bu README, repodaki uygulama kodunu ve yapılandırma dosyalarını özetler. Bir özelliğin kodda bulunması canlı Firebase projesinde kuralların yayımlandığı veya gerçek cihazda başarıyla test edildiği anlamına gelmez.
+> **Durum notu (20 Ekim 2026):** Bu README, repodaki uygulama kodunu ve yapılandırma dosyalarını özetler. Bir özelliğin kodda bulunması canlı Firebase projesinde kuralların yayımlandığı veya gerçek cihazda başarıyla test edildiği anlamına gelmez.
 
 ## İçindekiler
 - [Kullanıcı rolleri](#kullanıcı-rolleri)
@@ -71,6 +71,7 @@ GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve 
 
 ## Son geliştirmeler
 - Firebase Auth oturum kalıcılığı için AsyncStorage tabanlı persistence düzenlemesi.
+- Uygulama açılışında `assets/images/splash.png` görseli ve uygulama kodunda animasyonlu, altın renkli dönen yükleme göstergesi.
 - Danışman oluşturma akışının Cloud Functions olmadan çalışması için istemci tarafı Firebase Authentication + Firestore yazma yolu.
 - Ofis sahibi/süperadmin danışman ekleme akışına yönelik Firestore rules düzenlemesi.
 - Portföy ekranında çoklu seçim ve müşteriye özel tek PDF sunumu.
@@ -82,6 +83,7 @@ Bu geliştirmeler GitHub'a gönderilmiş olsa da bu belge cihaz testinin veya ca
 
 ## Teknik mimari
 - **Mobil:** React Native, Expo, TypeScript.
+- **Açılış ekranı:** Expo yerel splash görseli + oturum geri yükleme sırasında React Native animasyonlu spinner. Animasyonlu spinner, yerel işletim sistemi splash ekranının parçası değil; JS arayüzü başlatıldıktan sonra görünür.
 - **Kimlik doğrulama:** Firebase Authentication; kullanıcı adı tabanlı giriş, Firebase Auth tarafında dahili bir e-posta biçimine eşlenir.
 - **Veri ve medya:** Firebase Firestore ve Firebase Storage.
 - **UI/araçlar:** React Native, Expo Print/Sharing, Image Picker, Document Picker ve XLSX.
@@ -108,14 +110,20 @@ Bu geliştirmeler GitHub'a gönderilmiş olsa da bu belge cihaz testinin veya ca
 - [ ] Portföy, fotoğraf, müşteri, randevu, işlem ve komisyon verileri gerçek cihazda test edilmiş.
 - [ ] GitHub Actions TypeScript ve bağımlılık kontrolleri başarılı.
 
+## Kod incelemesi ve doğrulama durumu
+- 20 Ekim 2026 itibarıyla açılış ekranı, kullanıcı oturumu geri yüklenirken çalışan dairesel spinner ve `assets/images/splash.png` bağlantısı koda eklenmiştir.
+- GitHub Actions Android release APK derlemesi ve Mobile CI, `5aa6b1d` commit'i için başarılı raporlanmıştır. Bu kontroller TypeScript/derleme hattının geçtiğini gösterir; Firebase canlı bağlantısını veya tüm ekran akışlarını uçtan uca test etmez.
+- `firestore.rules` ve `storage.rules` dosyaları repoda mevcuttur. Dosyaların repoda olması, canlı Firebase projesine yayımlandıklarını kanıtlamaz.
+
 ## Bilinen sınırlamalar ve sonraki işler
-1. Danışman oluşturma ve persistence değişiklikleri gerçek cihazda doğrulanmalı.
-2. Ücretli Cloud Functions'a bağlı eşleştirme/ofis oluşturma gibi akışlar Spark planı kısıtlarıyla yeniden ele alınmalı; ücretli altyapı olmadan çalışan alternatifler tamamlanmalı.
-3. Yer gösterme kayıtlarını belirli portföyle ilişkilendirme ve ayrı bir teklif kanban panosu geliştirme.
-4. Danışman performans raporları gerçekleşen işlem, komisyon, yeni müşteri, takip, randevu ve teklif verileriyle tutarlı hesaplanmalı.
-5. Firestore rules ve Storage rules gerçek Firebase projesinde yayımlanıp farklı rollerde negatif/pozitif testlerden geçirilmeli.
-6. Excel içe aktarma ve birleşik PDF akışları gerçek dosya ve fotoğraflarla test edilmeli.
-7. Üretim öncesinde yedekleme, veri dışa aktarma, gizlilik ve kişisel veri saklama politikaları gözden geçirilmeli.
+1. Firebase Storage bucket, `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET` ve `storage.rules` canlı projede doğrulanmalı; portföy fotoğrafı ve avatar yükleme/silme işlemleri farklı kullanıcı rolleriyle gerçek cihazda test edilmeli.
+2. Firebase Authentication, Firestore ve Storage canlı projede yapılandırılmalı; ofisler arası veri izolasyonu ve rol izinleri için pozitif/negatif yetki testleri çalıştırılmalı.
+3. Danışman oluşturma, oturum kalıcılığı, şifre değiştirme ve devre dışı bırakılan hesabın erişimi gerçek cihazda doğrulanmalı.
+4. Ücretli Cloud Functions'a bağlı eşleştirme/ofis oluşturma gibi akışlar Spark planı kısıtlarıyla yeniden ele alınmalı; gerekli fonksiyonların dağıtımı ve izinleri doğrulanmalı.
+5. Yer gösterme kayıtlarını belirli portföyle ilişkilendirme ve ayrı bir teklif kanban panosu geliştirme.
+6. Danışman performans raporları gerçekleşen işlem, komisyon, yeni müşteri, takip, randevu ve teklif verileriyle tutarlı hesaplanmalı.
+7. Excel içe aktarma ve birleşik PDF akışları gerçek dosya ve fotoğraflarla test edilmeli.
+8. Üretim öncesinde yedekleme, veri dışa aktarma, gizlilik ve kişisel veri saklama politikaları gözden geçirilmeli.
 
 ## Güvenlik notları
 - Firebase istemci anahtarları istemci uygulamalarında bulunabilir; asıl erişim denetimi Firestore/Storage rules ile sağlanmalıdır.
