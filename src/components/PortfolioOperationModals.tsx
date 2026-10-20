@@ -7,6 +7,7 @@ import { palette, styles } from '../theme/appStyles';
 export default function PortfolioOperationModals(props: any) {
  const { transactionModalOpen, setTransactionModalOpen, transactionBusy, setTransactionPropertyId, transactionPropertyId, properties, setTransactionFinalPrice, transactionFinalPrice, money, transactionOfficeCommission, setTransactionOfficeCommission, transactionAgentCommission, setTransactionAgentCommission, transactionDate, setTransactionDate, transactionNotes, setTransactionNotes, saveTransaction, csvImportOpen, setCsvImportOpen, csvImportBusy, pickPortfolioSpreadsheet, excelFileName, excelPreviewCount, csvImportText, setCsvImportText, importPortfolioCsv } = props;
  return (
+      <>
         <Modal visible={transactionModalOpen} animationType="slide" onRequestClose={()=>{if(!transactionBusy)setTransactionModalOpen(false);}}>
           <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}>
             <View style={styles.modalHeader}><Pressable disabled={transactionBusy} onPress={()=>setTransactionModalOpen(false)} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>Satış / kiralama kaydı</Text><View style={{width:40}}/></View>
@@ -35,6 +36,6 @@ export default function PortfolioOperationModals(props: any) {
             </ScrollView>
           </SafeAreaView>
         </Modal>
-  
+      </>
  );
 }
