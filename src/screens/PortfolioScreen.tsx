@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { palette, styles } from '../theme/appStyles';
 import PropertyRow from '../components/PropertyRow';
+import BrandMark from '../components/BrandMark';
 
 export default function PortfolioScreen(props: any) {
   const { styles, palette, role, portfolioPresentationMode, setPortfolioPresentationMode, setSelectedPresentationIds, selectedPresentationIds, setAddOpen, search, setSearch, quickTypeFilter, quickCityFilter, quickDistrictFilter, setQuickDropdown, quickDropdown, properties, setQuickTypeFilter, setQuickCityFilter, setQuickDistrictFilter, filter, setFilter, sortBy, setSortBy, recentOnly, setRecentOnly, favoritesOnly, setFavoritesOnly, minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, statusFilter, setStatusFilter, showArchived, setShowArchived, createMultiPropertyPdf, propertiesLoading, visibleProperties, money, openProperty, toggleFavorite, favoriteIds } = props;
@@ -20,7 +21,7 @@ export default function PortfolioScreen(props: any) {
   if (!props.visible) return null;
   return (
     <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
-              <Text style={styles.eyebrow}>GAYIT · PORTFÖY</Text><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Portföyler</Text><Text style={styles.pageSub}>{role === 'owner' ? 'Ofisteki tüm gayrimenkuller' : 'Sana ait gayrimenkuller'}</Text></View><View style={{flexDirection:'row',gap:8}}><Pressable onPress={()=>{setPortfolioPresentationMode((v: boolean)=>!v);setSelectedPresentationIds([]);}} style={[styles.addButton,{backgroundColor:portfolioPresentationMode?palette.green:palette.navy2}]}><Ionicons name="documents-outline" size={22} color="#fff"/></Pressable><Pressable onPress={()=>setAddOpen(true)} style={styles.addButton}><Ionicons name="add" size={25} color="#fff"/></Pressable></View></View>
+              <View style={{flexDirection:'row',alignItems:'center',gap:7}}><BrandMark size={20}/><Text style={styles.eyebrow}>GAYIT · PORTFÖY</Text></View><View style={styles.titleRow}><View><Text style={styles.pageTitle}>Portföyler</Text><Text style={styles.pageSub}>{role === 'owner' ? 'Ofisteki tüm gayrimenkuller' : 'Sana ait gayrimenkuller'}</Text></View><View style={{flexDirection:'row',gap:8}}><Pressable onPress={()=>{setPortfolioPresentationMode((v: boolean)=>!v);setSelectedPresentationIds([]);}} style={[styles.addButton,{backgroundColor:portfolioPresentationMode?palette.green:palette.navy2}]}><Ionicons name="documents-outline" size={22} color="#fff"/></Pressable><Pressable onPress={()=>setAddOpen(true)} style={styles.addButton}><Ionicons name="add" size={25} color="#fff"/></Pressable></View></View>
               <View style={styles.search}><Ionicons name="search-outline" size={19} color={palette.muted}/><TextInput value={search} onChangeText={setSearch} placeholder="İlan, adres veya kod ara" placeholderTextColor={palette.muted} style={styles.searchInput}/></View>
               <Text style={[styles.sectionTitle,{marginTop:12,marginBottom:8}]}>Hızlı ilan bul</Text>
               <View style={{flexDirection:'row',gap:8}}>
