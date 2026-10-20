@@ -30,6 +30,15 @@ workflows:
             fi
           done
 
+      - name: Check required Cloudinary media configuration
+        script: |
+          for name in EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET; do
+            if [ -z "$(printenv "$name")" ]; then
+              echo "Missing $name. Add it in Codemagic environment variables before building; listing photo uploads will not work without it."
+              exit 1
+            fi
+          done
+
       - name: Install dependencies
         script: |
           npm install --legacy-peer-deps
