@@ -28,7 +28,7 @@ export const saveTransaction = async (deps: any) => {
       await loadProperties(officeId);
       setTransactionModalOpen(false); setTransactionPropertyId(''); setTransactionFinalPrice(''); setTransactionOfficeCommission(''); setTransactionAgentCommission(''); setTransactionNotes('');
       Alert.alert('İşlem kaydedildi','Satış/kiralama ve komisyon kaydı oluşturuldu.');
-    } catch(error) { Alert.alert('İşlem kaydedilemedi',error instanceof Error?error.message:'Firebase Firestore kurallarını ve ofis yetkilerini kontrol et.'); }
+    } catch { Alert.alert('İşlem kaydedilemedi','İşlem şu anda tamamlanamadı. Lütfen tekrar dene.'); }
     finally { setTransactionBusy(false); }
   };
 
@@ -71,7 +71,7 @@ export const loadFavorites = async (deps: any) => {
       if (error) throw error;
       setFavoriteIds((data || []).map((row: any) => row.property_id));
     } catch {
-      Alert.alert('Favoriler yüklenemedi','Firebase Firestore kurallarını ve Storage kurulumunu kontrol et.');
+      Alert.alert('Favoriler yüklenemedi','Favoriler şu anda yüklenemiyor. Lütfen tekrar dene.');
     }
   };
 export const toggleFavorite = async (property: Property, deps: any) => {
@@ -91,5 +91,5 @@ export const toggleFavorite = async (property: Property, deps: any) => {
         if (error) throw error;
         setFavoriteIds((ids: string[])=>[...ids,property.id]);
       }
-    } catch (error) { Alert.alert('Favori kaydedilemedi',error instanceof Error?error.message:'Firebase 011 migration dosyasını ve yetkileri kontrol et.'); }
+    } catch { Alert.alert('Favori kaydedilemedi','Favori işlemi tamamlanamadı. Lütfen tekrar dene.'); }
   };
