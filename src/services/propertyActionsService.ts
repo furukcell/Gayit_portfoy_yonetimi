@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { getFirebaseClient } from '../lib/firebaseClient';
 import { getFirebaseAuth } from '../lib/firebase';
 import type { Property, PropertyStatus } from '../types/property';
+import { rebuildAllOfficeMatches } from './customerService';
 
 export const updatePropertyStatus = async (nextStatus: PropertyStatus, deps: any) => {
     const { selected, propertyStatusBusy, role, officeId, setPropertyStatusBusy, setProperties, setSelected, loadProperties } = deps;
@@ -206,10 +207,13 @@ export const saveProperty = async (deps: any) => {
         catch (photoError) { Alert.alert('İlan kaydedildi, fotoğraf yüklemesi tamamlanmadı', photoError instanceof Error ? photoError.message : 'Fotoğrafları ilan detayından tekrar ekleyebilirsin.'); }
       }
       await loadProperties(officeId);
-      if(savedId && !editingPropertyId) {
-        const {error:matchingError}=await firebaseClient.functions.invoke('evaluate-matches',{body:{officeId,propertyId:savedId}});
-        if(!matchingError) await loadMatches(officeId);
-        else Alert.alert('Eşleştirme beklemede','Portföy kaydedildi ancak eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
+      if (savedId) {
+        try {
+          await rebuildAllOfficeMatches(officeId);
+          await loadMatches(officeId);
+        } catch (matchingError) {
+          Alert.alert('Eşleştirme güncellenemedi', matchingError instanceof Error ? matchingError.message : 'Portföy kaydedildi ancak eşleştirmeler yenilenemedi.');
+        }
       }
       setAddOpen(false); setEditingPropertyId(null);
       setTitle(''); setAddress(''); setPrice(''); setArea(''); setDescription(''); setPropertyType('apartment'); setPendingPhotoUris([]); setOwnerContactName(''); setOwnerContactPhone('');
