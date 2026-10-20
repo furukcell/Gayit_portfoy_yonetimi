@@ -66,8 +66,10 @@ GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve 
 
 ### 7. Bildirimler ve medya
 - Uygulama içi bildirim listesi ve okundu işaretleme akışı.
-- Firebase Storage üzerinden portföy fotoğrafı ve avatar depolama akışları.
-- PDF üretiminde geçici imzalı fotoğraf URL'leri kullanma.
+- Şu anki medya yükleme sağlayıcısı Cloudinary'dir; portföy fotoğrafları ve avatarlar `gayit_portfoy` unsigned upload preset'i ile yüklenir.
+- Firebase Storage kodu ve yapılandırması silinmemiştir. İleride Firebase Storage'a geçiş için korunur; uygulama kodu sağlayıcı adaptörü üzerinden çalışmalıdır.
+- Cloudinary unsigned upload, istemci tarafında silme işlemini tek başına güvenli biçimde desteklemez. Silme ihtiyacı için güvenli sunucu tarafı imzalı işlem gerekir.
+- PDF üretiminde kayıtlı fotoğraf URL'leri kullanılır; URL türüne göre erişim davranışı değişebilir.
 
 ## Son geliştirmeler
 - Firebase Auth oturum kalıcılığı için AsyncStorage tabanlı persistence düzenlemesi.
@@ -85,7 +87,9 @@ Bu geliştirmeler GitHub'a gönderilmiş olsa da bu belge cihaz testinin veya ca
 - **Mobil:** React Native, Expo, TypeScript.
 - **Açılış ekranı:** Expo yerel splash görseli + oturum geri yükleme sırasında React Native animasyonlu spinner. Animasyonlu spinner, yerel işletim sistemi splash ekranının parçası değil; JS arayüzü başlatıldıktan sonra görünür.
 - **Kimlik doğrulama:** Firebase Authentication; kullanıcı adı tabanlı giriş, Firebase Auth tarafında dahili bir e-posta biçimine eşlenir.
-- **Veri ve medya:** Firebase Firestore ve Firebase Storage.
+- **Veri:** Firebase Firestore.
+- **Medya (şimdilik):** Cloudinary (`EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME=dxumI0h3`, `EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET=gayit_portfoy`). Bu değişkenler sır değildir; API Secret mobil uygulamaya kesinlikle eklenmemelidir.
+- **Medya (ileride):** Firebase Storage entegrasyonu `src/lib/firebase.ts` ve `src/lib/firebaseClient.ts` içinde korunur. Cloudinary'den Firebase Storage'a geçerken medya adaptörünün sağlayıcısı değiştirilmelidir; mevcut kayıtlı Cloudinary URL'lerinin taşınması ayrı bir migrasyon işidir.
 - **UI/araçlar:** React Native, Expo Print/Sharing, Image Picker, Document Picker ve XLSX.
 - **Sunucu işlevleri:** Repoda functions/ içinde callable function kodu vardır. Firebase'in ücretsiz Spark planında ücretli Cloud Functions dağıtımı kullanılamayabileceğinden bu işlevlere bağlı özellikler ayrıca değerlendirilmelidir.
 - **Geçiş dosyaları:** supabase/ altındaki SQL dosyaları önceki veri modeli/geçiş referansları olabilir; Firebase'e otomatik uygulanmaz. SQL dosyaları Firestore Rules yerine geçmez.
@@ -116,14 +120,15 @@ Bu geliştirmeler GitHub'a gönderilmiş olsa da bu belge cihaz testinin veya ca
 - `firestore.rules` ve `storage.rules` dosyaları repoda mevcuttur. Dosyaların repoda olması, canlı Firebase projesine yayımlandıklarını kanıtlamaz.
 
 ## Bilinen sınırlamalar ve sonraki işler
-1. Firebase Storage bucket, `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET` ve `storage.rules` canlı projede doğrulanmalı; portföy fotoğrafı ve avatar yükleme/silme işlemleri farklı kullanıcı rolleriyle gerçek cihazda test edilmeli.
-2. Firebase Authentication, Firestore ve Storage canlı projede yapılandırılmalı; ofisler arası veri izolasyonu ve rol izinleri için pozitif/negatif yetki testleri çalıştırılmalı.
-3. Danışman oluşturma, oturum kalıcılığı, şifre değiştirme ve devre dışı bırakılan hesabın erişimi gerçek cihazda doğrulanmalı.
-4. Ücretli Cloud Functions'a bağlı eşleştirme/ofis oluşturma gibi akışlar Spark planı kısıtlarıyla yeniden ele alınmalı; gerekli fonksiyonların dağıtımı ve izinleri doğrulanmalı.
-5. Yer gösterme kayıtlarını belirli portföyle ilişkilendirme ve ayrı bir teklif kanban panosu geliştirme.
-6. Danışman performans raporları gerçekleşen işlem, komisyon, yeni müşteri, takip, randevu ve teklif verileriyle tutarlı hesaplanmalı.
-7. Excel içe aktarma ve birleşik PDF akışları gerçek dosya ve fotoğraflarla test edilmeli.
-8. Üretim öncesinde yedekleme, veri dışa aktarma, gizlilik ve kişisel veri saklama politikaları gözden geçirilmeli.
+1. Cloudinary preset ve medya adaptörü gerçek cihazda fotoğraf yükleme/görüntüleme akışlarıyla test edilmeli; unsigned upload için Cloudinary kullanım/limitleri takip edilmeli.
+2. Firebase Storage kodu kaldırılmadı. İleride `EXPO_PUBLIC_MEDIA_PROVIDER=firebase` gibi açık bir sağlayıcı seçimiyle Firebase Storage'a dönüş planlanmalı; mevcut Cloudinary URL'leri için veri taşıma planı hazırlanmalı.
+3. Firebase Authentication ve Firestore canlı projede yapılandırılmalı; ofisler arası veri izolasyonu ve rol izinleri için pozitif/negatif yetki testleri çalıştırılmalı.
+4. Danışman oluşturma, oturum kalıcılığı, şifre değiştirme ve devre dışı bırakılan hesabın erişimi gerçek cihazda doğrulanmalı.
+5. Ücretli Cloud Functions'a bağlı eşleştirme/ofis oluşturma gibi akışlar Spark planı kısıtlarıyla yeniden ele alınmalı; gerekli fonksiyonların dağıtımı ve izinleri doğrulanmalı.
+6. Yer gösterme kayıtlarını belirli portföyle ilişkilendirme ve ayrı bir teklif kanban panosu geliştirme.
+7. Danışman performans raporları gerçekleşen işlem, komisyon, yeni müşteri, takip, randevu ve teklif verileriyle tutarlı hesaplanmalı.
+8. Excel içe aktarma ve birleşik PDF akışları gerçek dosya ve fotoğraflarla test edilmeli.
+9. Üretim öncesinde yedekleme, veri dışa aktarma, gizlilik ve kişisel veri saklama politikaları gözden geçirilmeli.
 
 ## Güvenlik notları
 - Firebase istemci anahtarları istemci uygulamalarında bulunabilir; asıl erişim denetimi Firestore/Storage rules ile sağlanmalıdır.
