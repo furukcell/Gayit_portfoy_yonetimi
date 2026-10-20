@@ -153,6 +153,53 @@ export const addCustomerActivity = async (deps: any) => {
     } finally { setActivityBusy(false); }
   };
 
+const rebuildCustomerMatches = async (officeId: string, customerId: string) => {
+  const db = getFirebaseClient();
+  const [{ data: requirements, error: reqError }, { data: properties, error: propError }] = await Promise.all([
+    db.from('customer_requirements').select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,is_active').eq('office_id', officeId).eq('customer_id', customerId).eq('is_active', true),
+    db.from('properties').select('id,title,price,listing_type,status,property_type,district,address,rooms,office_id').eq('office_id', officeId).in('status', ['active','optioned'])
+  ]);
+  if (reqError) throw reqError;
+  if (propError) throw propError;
+  const { error: clearError } = await db.from('matches').delete().eq('office_id', officeId).eq('customer_id', customerId);
+  if (clearError) throw clearError;
+  const rows: any[] = [];
+  const norm = (v: any) => String(v || '').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').trim();
+  for (const req of requirements || []) {
+    for (const property of properties || []) {
+      const reasons: string[] = [];
+      let score = 0;
+      const intent = norm(req.intent);
+      const listing = norm(property.listing_type);
+      const intentOk = !intent || (['sale','sell','satilik'].includes(intent) ? listing !== 'rent' && listing !== 'kiralik' : ['rent','kiralik','lease'].includes(intent) ? listing === 'rent' || listing === 'kiralik' : true);
+      if (!intentOk) continue;
+      score += 25; reasons.push('İlan türü uygun');
+      const reqType = norm(req.property_type), propType = norm(property.property_type);
+      if (reqType && propType && reqType !== propType && !(reqType.includes('apartment') && propType.includes('daire'))) continue;
+      if (reqType && propType) { score += 20; reasons.push('Gayrimenkul türü uygun'); }
+      const location = norm([property.district, property.address].join(' '));
+      const wantedLocation = norm([req.city, req.district, req.neighborhood].filter(Boolean).join(' '));
+      if (wantedLocation) {
+        const tokens = wantedLocation.split(/[ ,]+/).filter((x: string) => x.length > 2);
+        const matched = tokens.filter((token: string) => location.includes(token));
+        if (matched.length === 0) continue;
+        score += Math.round(30 * matched.length / tokens.length); reasons.push('Konum eşleşiyor');
+      }
+      const price = Number(property.price || 0);
+      if (req.max_price != null && price > Number(req.max_price)) continue;
+      if (req.min_price != null && price < Number(req.min_price)) continue;
+      if (req.max_price != null || req.min_price != null) { score += 15; reasons.push('Bütçe uygun'); }
+      const wantedRooms = Array.isArray(req.rooms) ? req.rooms.map(norm) : [];
+      if (wantedRooms.length && !wantedRooms.some((room: string) => norm(property.rooms).includes(room))) continue;
+      if (wantedRooms.length) { score += 10; reasons.push('Oda sayısı uygun'); }
+      rows.push({ office_id: officeId, customer_id: customerId, property_id: property.id, status: 'new', match_kind: score >= 75 ? 'exact' : 'alternative', match_score: Math.min(100, score), match_reasons: reasons });
+    }
+  }
+  if (rows.length) {
+    const { error } = await db.from('matches').insert(rows);
+    if (error) throw error;
+  }
+};
 export const addRequirementForSelectedCustomer = async (deps: any) => {
     const { selectedCustomer, requirementMaxPrice, requirementDistrict, requirementCity, requirementRooms, setCustomerEditBusy, officeId, requirementIntent, requirementType, setCustomerRequirements, loadMatches, loadCustomers, setRequirementIntent, setRequirementType, setRequirementCity, setRequirementDistrict, setRequirementMaxPrice, setRequirementRooms } = deps;
     if (!selectedCustomer) return;
@@ -172,10 +219,9 @@ export const addRequirementForSelectedCustomer = async (deps: any) => {
       }).select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,must_have,notes,is_active,created_at').single();
       if (error) throw error;
       setCustomerRequirements((current: any[]) => [data, ...current]);
-      const { error: matchingError } = await firebaseClient.functions.invoke('evaluate-matches', { body: { officeId, customerId: selectedCustomer.id } });
+      await rebuildCustomerMatches(officeId, selectedCustomer.id);
       await loadMatches(officeId);
       await loadCustomers(officeId);
-      if (matchingError) Alert.alert('Eşleştirme beklemede', 'Talep kaydedildi ancak otomatik eşleştirme çalışmadı. Edge Function ve migration kurulumu kontrol edilmeli.');
       setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla');
       setRequirementDistrict(''); setRequirementMaxPrice(''); setRequirementRooms('');
       Alert.alert('Talep eklendi', 'Müşteriye yeni arama talebi kaydedildi.');
