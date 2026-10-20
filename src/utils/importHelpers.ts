@@ -7,3 +7,5 @@ export const parseSemicolonCsvLine = (line: string) => {
   for (let i = 0; i < line.length; i++) { const char = line[i]; if (char === '"' && quoted && line[i + 1] === '"') { value += '"'; i++; } else if (char === '"') quoted = !quoted; else if (char === ';' && !quoted) { values.push(value); value = ''; } else value += char; }
   values.push(value); return values.map(v => v.trim());
 };
+
+export const escapeCsvCell = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
