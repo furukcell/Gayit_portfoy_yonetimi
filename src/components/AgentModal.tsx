@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, SafeAreaView, View, Pressable, ScrollView, Text, TextInput } from 'react-native';
+import { Modal, View, Pressable, ScrollView, Text, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { palette, styles } from '../theme/appStyles';
 
