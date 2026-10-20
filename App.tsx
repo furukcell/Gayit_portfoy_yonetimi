@@ -6,7 +6,7 @@ import { Stat, Feature } from './src/components/DashboardPrimitives';
 import type { Role, Tab, Customer, PropertyStatus, PropertyPhoto, Property } from './src/types/property';
 import { escapeCsvCell as escapeCsv, findImportColumn as find, parseSemicolonCsvLine as parseLine } from './src/utils/importHelpers';
 import PropertyRow from './src/components/PropertyRow';
-import CustomersScreen from './src/screens/CustomersScreen';
+import { CustomersScreen } from './src/screens/CustomersScreen';
 import TeamScreen from './src/screens/TeamScreen';
 import StatsScreen from './src/screens/StatsScreen';
 import HomeDashboardScreen from './src/screens/HomeDashboardScreen';
@@ -47,6 +47,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as NavigationBar from 'expo-navigation-bar';
 import SuperadminPanel from './src/SuperadminPanel';
+
+
+const money = (amount: number) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(Number(amount) || 0);
+const propertyTypeLabel = (type?: string) => ({ apartment: 'Daire', villa: 'Villa', land: 'Arsa', commercial: 'İş yeri', house: 'Müstakil ev', other: 'Diğer' }[type || ''] || type || 'Gayrimenkul');
+const htmlEscape = (value: unknown) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const shareText = (p: Property) => `🏡 ${p.title}\n${p.address}\n${money(p.price)}\n${p.kind} · ${propertyTypeLabel(p.propertyType)}\n\nGAYIT Portföy Yönetimi`;
 
 export default function App() {
   useEffect(() => {
@@ -91,6 +97,9 @@ export default function App() {
     setLegalReady, setLegalAccepted, setLegalGateBusy, setLegalDocument,
   });
 
+  let loadProperties: (targetOfficeId: string) => Promise<any> = async () => {};
+  let loadPropertyPhotos: (propertyId: string) => Promise<any> = async () => {};
+
   const roleProperties = properties;
   const visibleProperties = useVisibleProperties({
     properties, search, minPriceFilter, maxPriceFilter, statusFilter, quickTypeFilter,
@@ -129,7 +138,7 @@ export default function App() {
     try { await Linking.openURL(url); } catch { await Share.share({ message: shareText(p) }); }
   };
   const propertyPhotoDependencies = { selected, officeId, propertyPhotos, photosBusy, setPhotosBusy, setPropertyPhotos };
-  const loadPropertyPhotos = async (propertyId: string) => loadPropertyPhotosService(propertyId, propertyPhotoDependencies);
+  loadPropertyPhotos = async (propertyId: string) => loadPropertyPhotosService(propertyId, propertyPhotoDependencies);
   const addPropertyPhoto = async () => addPropertyPhotoService(propertyPhotoDependencies);
   const movePropertyPhoto = async (photo: PropertyPhoto, direction: -1 | 1) => movePropertyPhotoService(photo, direction, propertyPhotoDependencies);
   const removePropertyPhoto = async (photo: PropertyPhoto) => removePropertyPhotoService(photo, propertyPhotoDependencies);
@@ -145,12 +154,17 @@ export default function App() {
     setPropertiesLoading, setProperties, setCustomersLoading, setCustomers,
     setMatchesLoading, setMatches, setNotificationsLoading, setNotifications, setTeamMembers,
   };
-  const loadProperties = async (targetOfficeId: string) => loadPropertiesService(targetOfficeId, officeDataDependencies);
+  loadProperties = async (targetOfficeId: string) => loadPropertiesService(targetOfficeId, officeDataDependencies);
   const loadCustomers = async (targetOfficeId: string) => loadCustomersService(targetOfficeId, officeDataDependencies);
   const loadMatches = async (targetOfficeId: string) => loadMatchesService(targetOfficeId, officeDataDependencies);
   const loadNotifications = async (targetOfficeId: string) => loadNotificationsService(targetOfficeId, officeDataDependencies);
   const markNotificationRead = async (notificationId: string) => markNotificationReadService(notificationId, officeDataDependencies);
   const loadTeamMembers = async (targetOfficeId: string) => loadTeamMembersService(targetOfficeId, officeDataDependencies);
+
+  useRestoreSession({
+    setAuthBusy, setAuthError, setRole, setOfficeId, loadProperties, loadCustomers,
+    loadMatches, loadNotifications, loadTeamMembers, setMustChangePassword, setAuthenticated,
+  });
 
   const toggleAgentStatus = (person: {id:string; name:string; role:string; status:string}) => toggleAgentStatusService(person, { officeId, setTeamStatusBusyId, loadTeamMembers });
 
@@ -177,11 +191,6 @@ export default function App() {
   const addRequirementForSelectedCustomer = async () => addRequirementForSelectedCustomerService(customerActionDependencies);
   const updateCustomer = async () => updateCustomerService(customerActionDependencies);
   const saveCustomer = async () => saveCustomerService(customerActionDependencies);
-
-  useRestoreSession({
-    setAuthBusy, setAuthError, setRole, setOfficeId, loadProperties, loadCustomers,
-    loadMatches, loadNotifications, loadTeamMembers, setMustChangePassword, setAuthenticated,
-  });
 
   const accountActionDependencies = {
     setAuthBusy, setAuthError, loginUsername, loginPassword, setRole, setAuthenticated, setLoginPassword, setOfficeId,
@@ -256,8 +265,6 @@ export default function App() {
         setLegalAcceptTerms={setLegalAcceptTerms}
         legalGateBusy={legalGateBusy}
         confirmLegalAcceptance={confirmLegalAcceptance}
-        styles={styles}
-        palette={palette}
       />
       <LegalDocumentModal legalDocument={legalDocument} setLegalDocument={setLegalDocument} styles={styles} palette={palette} />
 
@@ -285,7 +292,7 @@ export default function App() {
 
       <CustomerCreateModal customerModalOpen={customerModalOpen} setCustomerModalOpen={setCustomerModalOpen} customerName={customerName} setCustomerName={setCustomerName} customerPhone={customerPhone} setCustomerPhone={setCustomerPhone} customerRoles={customerRoles} setCustomerRoles={setCustomerRoles} requirementIntent={requirementIntent} setRequirementIntent={setRequirementIntent} requirementType={requirementType} setRequirementType={setRequirementType} requirementCity={requirementCity} setRequirementCity={setRequirementCity} requirementDistrict={requirementDistrict} setRequirementDistrict={setRequirementDistrict} requirementMaxPrice={requirementMaxPrice} setRequirementMaxPrice={setRequirementMaxPrice} requirementRooms={requirementRooms} setRequirementRooms={setRequirementRooms} customerNotes={customerNotes} setCustomerNotes={setCustomerNotes} customerBusy={customerBusy} saveCustomer={saveCustomer} />
 
-      <CustomerDetailModal customerDetailOpen={customerDetailOpen} setCustomerDetailOpen={setCustomerDetailOpen} selectedCustomer={selectedCustomer} editCustomerName={editCustomerName} setEditCustomerName={setEditCustomerName} editCustomerPhone={editCustomerPhone} setEditCustomerPhone={setEditCustomerPhone} editFollowUpAt={editFollowUpAt} setEditFollowUpAt={setEditFollowUpAt} editCustomerNotes={editCustomerNotes} setEditCustomerNotes={setEditCustomerNotes} customerEditBusy={customerEditBusy} updateCustomer={updateCustomer} appointmentTitle={appointmentTitle} setAppointmentTitle={setAppointmentTitle} appointmentStartsAt={appointmentStartsAt} setAppointmentStartsAt={setAppointmentStartsAt} appointmentNotes={appointmentNotes} setAppointmentNotes={setAppointmentNotes} appointmentBusy={appointmentBusy} addCustomerAppointment={addCustomerAppointment} customerAppointments={customerAppointments} activityType={activityType} setActivityType={setActivityType} activitySummary={activitySummary} setActivitySummary={setActivitySummary} activityBusy={activityBusy} addCustomerActivity={addCustomerActivity} properties={properties} offerPropertyId={offerPropertyId} setOfferPropertyId={setOfferPropertyId} offerAmount={offerAmount} setOfferAmount={setOfferAmount} offerStatus={offerStatus} setOfferStatus={setOfferStatus} offerNotes={offerNotes} setOfferNotes={setOfferNotes} offerBusy={offerBusy} addCustomerOffer={addCustomerOffer} customerOffers={customerOffers} updateOfferStatus={updateOfferStatus} customerRequirementsLoading={customerRequirementsLoading} customerRequirements={customerRequirements} requirementIntent={requirementIntent} setRequirementIntent={setRequirementIntent} requirementType={requirementType} setRequirementType={setRequirementType} requirementCity={requirementCity} setRequirementCity={setRequirementCity} requirementDistrict={requirementDistrict} setRequirementDistrict={setRequirementDistrict} requirementMaxPrice={requirementMaxPrice} setRequirementMaxPrice={setRequirementMaxPrice} requirementRooms={requirementRooms} setRequirementRooms={setRequirementRooms} addRequirementForSelectedCustomer={addRequirementForSelectedCustomer} money={money} />
+      <CustomerDetailModal customerDetailOpen={customerDetailOpen} setCustomerDetailOpen={setCustomerDetailOpen} selectedCustomer={selectedCustomer} editCustomerName={editCustomerName} setEditCustomerName={setEditCustomerName} editCustomerPhone={editCustomerPhone} setEditCustomerPhone={setEditCustomerPhone} editFollowUpAt={editFollowUpAt} setEditFollowUpAt={setEditFollowUpAt} editCustomerNotes={editCustomerNotes} setEditCustomerNotes={setEditCustomerNotes} customerEditBusy={customerEditBusy} updateCustomer={updateCustomer} appointmentTitle={appointmentTitle} setAppointmentTitle={setAppointmentTitle} appointmentStartsAt={appointmentStartsAt} setAppointmentStartsAt={setAppointmentStartsAt} appointmentNotes={appointmentNotes} setAppointmentNotes={setAppointmentNotes} appointmentBusy={appointmentBusy} addCustomerAppointment={addCustomerAppointment} customerAppointments={customerAppointments} activityType={activityType} setActivityType={setActivityType} activitySummary={activitySummary} setActivitySummary={setActivitySummary} activityBusy={activityBusy} addCustomerActivity={addCustomerActivity} properties={properties} offerPropertyId={offerPropertyId} setOfferPropertyId={setOfferPropertyId} offerAmount={offerAmount} setOfferAmount={setOfferAmount} offerStatus={offerStatus} setOfferStatus={setOfferStatus} offerNotes={offerNotes} setOfferNotes={setOfferNotes} offerBusy={offerBusy} addCustomerOffer={addCustomerOffer} customerOffers={customerOffers} updateOfferStatus={updateOfferStatus} customerRequirementsLoading={customerRequirementsLoading} customerRequirements={customerRequirements} customerActivities={customerActivities} requirementIntent={requirementIntent} setRequirementIntent={setRequirementIntent} requirementType={requirementType} setRequirementType={setRequirementType} requirementCity={requirementCity} setRequirementCity={setRequirementCity} requirementDistrict={requirementDistrict} setRequirementDistrict={setRequirementDistrict} requirementMaxPrice={requirementMaxPrice} setRequirementMaxPrice={setRequirementMaxPrice} requirementRooms={requirementRooms} setRequirementRooms={setRequirementRooms} addRequirementForSelectedCustomer={addRequirementForSelectedCustomer} money={money} />
 
       <NotificationsModal notificationsOpen={notificationsOpen} setNotificationsOpen={setNotificationsOpen} notificationsLoading={notificationsLoading} notifications={notifications} markNotificationRead={markNotificationRead} />
 
