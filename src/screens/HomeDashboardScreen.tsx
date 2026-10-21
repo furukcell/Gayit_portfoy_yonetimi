@@ -65,7 +65,7 @@ export default function HomeDashboardScreen(props: any) {
   const miniStat = (icon: keyof typeof Ionicons.glyphMap, label: string, value: string, hint: string, onPress: () => void) => (
     <Pressable onPress={onPress} style={{ flex: 1, minWidth: 0, padding: 9, borderRadius: 16, backgroundColor: palette.white, borderWidth: 1, borderColor: palette.line, marginBottom: 4 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: palette.goldSoft, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#F3CC79', alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name={icon} size={19} color={palette.navy} />
         </View>
         <Ionicons name="arrow-up-outline" size={16} color={palette.muted} />
@@ -80,13 +80,13 @@ export default function HomeDashboardScreen(props: any) {
     const date = new Date(item.starts_at);
     const customer = customers.find((entry: any) => entry.id === item.customer_id);
     return (
-      <Pressable key={item.id} onPress={() => customer ? openCustomerDetail(customer) : setTab('agenda')} style={{ flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: palette.line }}>
+      <Pressable key={item.id} onPress={() => customer ? openCustomerDetail(customer) : setTab('agenda')} style={{ flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#31485E' }}>
         <View style={{ width: 48, alignItems: 'center', paddingVertical: 7, borderRadius: 12, backgroundColor: palette.goldSoft }}>
-          <Text style={{ fontSize: 14, fontWeight: '900', color: palette.navy }}>{pad(date.getHours())}:{pad(date.getMinutes())}</Text>
+          <Text style={{ fontSize: 14, fontWeight: '900', color: '#10263B' }}>{pad(date.getHours())}:{pad(date.getMinutes())}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '800', color: palette.navy }}>{item.title || 'Randevu'}</Text>
-          <Text numberOfLines={1} style={{ fontSize: 11, color: palette.muted, marginTop: 3 }}>{customer?.fullName || item.notes || 'Ajanda kaydı'}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>{item.title || 'Randevu'}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 11, color: '#D0DCE7', marginTop: 3 }}>{customer?.fullName || item.notes || 'Ajanda kaydı'}</Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={palette.muted} />
       </Pressable>
@@ -119,19 +119,19 @@ export default function HomeDashboardScreen(props: any) {
         <Ionicons name="chevron-forward" size={20} color={palette.gold} />
       </Pressable>
 
-      <View style={{ backgroundColor: palette.white, borderRadius: 20, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 15, paddingTop: 15, paddingBottom: 5, marginBottom: 17 }}>
+      <View style={{ backgroundColor: '#10283E', borderRadius: 22, borderWidth: 1, borderColor: '#263F55', paddingHorizontal: 15, paddingTop: 15, paddingBottom: 5, marginBottom: 17 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <View>
-            <Text style={{ fontSize: 17, fontWeight: '900', color: palette.navy }}>Günün programı</Text>
-            <Text style={{ fontSize: 11, color: palette.muted, marginTop: 3 }}>Saat sırasına göre yaklaşan görüşmeler</Text>
+            <Text style={{ fontSize: 17, fontWeight: '900', color: '#FFFFFF' }}>Günün programı</Text>
+            <Text style={{ fontSize: 11, color: '#D0DCE7', marginTop: 3 }}>Saat sırasına göre yaklaşan görüşmeler</Text>
           </View>
-          <Pressable onPress={() => setTab('agenda')} style={{ padding: 7 }}><Text style={{ fontSize: 12, fontWeight: '800', color: palette.gold }}>Tümü</Text></Pressable>
+          <Pressable onPress={() => setTab('agenda')} style={{ padding: 7 }}><Text style={{ fontSize: 12, fontWeight: '800', color: '#F3CC79' }}>Tümü</Text></Pressable>
         </View>
         {todaysAppointments.slice(0, 3).map(appointmentRow)}
         {!todaysAppointments.length && <View style={{ paddingVertical: 18, alignItems: 'center' }}>
           <Ionicons name="calendar-clear-outline" size={25} color={palette.muted} />
-          <Text style={{ fontSize: 12, fontWeight: '800', color: palette.navy, marginTop: 7 }}>{appointmentsLoading ? 'Ajanda yükleniyor…' : 'Bugün planlanmış görüşme yok'}</Text>
-          <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4, textAlign: 'center' }}>Yeni bir iş veya müşteri randevusu ekleyebilirsin.</Text>
+          <Text style={{ fontSize: 12, fontWeight: '800', color: '#FFFFFF', marginTop: 7 }}>{appointmentsLoading ? 'Ajanda yükleniyor…' : 'Bugün planlanmış görüşme yok'}</Text>
+          <Text style={{ fontSize: 11, color: '#D0DCE7', marginTop: 4, textAlign: 'center' }}>Yeni bir iş veya müşteri randevusu ekleyebilirsin.</Text>
           <Pressable onPress={() => setTab('agenda')} style={{ marginTop: 11, backgroundColor: palette.goldSoft, paddingHorizontal: 13, paddingVertical: 9, borderRadius: 11 }}><Text style={{ fontSize: 12, fontWeight: '900', color: palette.navy }}>Ajandaya git</Text></Pressable>
         </View>}
         {!!todayFollowUps.length && <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: palette.line }}>
