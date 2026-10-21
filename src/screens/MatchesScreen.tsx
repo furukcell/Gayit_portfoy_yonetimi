@@ -1,11 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { Linking, Modal, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, Text, View, ActivityIndicator, Alert } from 'react-native';
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
 import { Ionicons } from '@expo/vector-icons';
 import BrandMark from '../components/BrandMark';
 
 export default function MatchesScreen(props: any) {
   const { styles, palette, matches, matchesLoading, money } = props;
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
+  const [sharingImage, setSharingImage] = useState(false);
+  const shareCardRef = React.useRef<View>(null);
   const groupedCustomers = useMemo(() => {
     const groups = new Map<string, any>();
     (matches || []).forEach((match: any) => {
@@ -25,28 +29,28 @@ export default function MatchesScreen(props: any) {
   }, [matches]);
 
   const shareMatches = async (group: any) => {
-    const lines = [
-      '🏡 GAYIT · MÜŞTERİYE UYGUN İLANLAR',
-      group.customer?.full_name || 'Müşteri',
-      '',
-      ...group.properties.map((m: any, i: number) => {
-        const p = m.properties || {};
-        const location = [p.district, p.neighborhood, p.city].filter(Boolean).join(' / ');
-        return [
-          `${i + 1}. ${p.title || 'İlan'}`,
-          location,
-          `${p.listing_type === 'rent' ? 'Kiralık' : 'Satılık'} · ${money(Number(p.price || 0))}`,
-          [p.rooms, p.area_m2 ? `${p.area_m2} m²` : null].filter(Boolean).join(' · '),
-          (m.match_reasons || []).join(' · '),
-        ].filter(Boolean).join('\n');
-      }),
-      '',
-      'GAYIT Portföy Yönetimi',
-    ];
+    if (sharingImage || !shareCardRef.current) return;
+    setSharingImage(true);
     try {
-      await Share.share({ title: 'Müşteri eşleşmeleri', message: lines.join('\n\n') });
-    } catch {
-      // Share sheet cancellation should not interrupt the screen.
+      const uri = await captureRef(shareCardRef, {
+        format: 'png',
+        quality: 1,
+        result: 'tmpfile',
+      });
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        Alert.alert('Paylaşım kullanılamıyor', 'Bu cihazda görsel paylaşımı desteklenmiyor.');
+        return;
+      }
+      await Sharing.shareAsync(uri, {
+        mimeType: 'image/png',
+        dialogTitle: 'Uygun ilan görselini paylaş',
+        UTI: 'public.png',
+      });
+    } catch (error: any) {
+      Alert.alert('Görsel oluşturulamadı', error?.message || 'İlan görseli hazırlanırken bir hata oluştu.');
+    } finally {
+      setSharingImage(false);
     }
   };
 
@@ -92,6 +96,41 @@ export default function MatchesScreen(props: any) {
         {matchesLoading && <Text style={styles.pageSub}>Eşleşmeler yükleniyor…</Text>}
       </ScrollView>
 
+      {selectedCustomer && (
+        <View
+          ref={shareCardRef}
+          collapsable={false}
+          pointerEvents="none"
+          style={{ position: 'absolute', left: -1200, top: 0, width: 380, backgroundColor: '#F3F6FA', padding: 20 }}
+        >
+          <View style={{ backgroundColor: '#10243A', borderRadius: 20, padding: 20, marginBottom: 14 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900', letterSpacing: 2 }}>GAYIT</Text>
+            <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', marginTop: 12 }}>Size uygun ilanlar</Text>
+            <Text style={{ color: '#C7D5E5', fontSize: 14, marginTop: 6 }}>{selectedCustomer.customer?.full_name || 'Müşteri'} için {selectedCustomer.properties.length} ilan bulundu</Text>
+          </View>
+          {selectedCustomer.properties.map((match: any, index: number) => {
+            const p = match.properties || {};
+            const exact = match.match_kind === 'exact';
+            const location = [p.district, p.neighborhood, p.city].filter(Boolean).join(' · ');
+            return (
+              <View key={match.id || p.id || index} style={{ backgroundColor: '#FFFFFF', borderRadius: 15, padding: 15, marginBottom: 10, borderWidth: 1, borderColor: '#DDE5EF' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <Text style={{ color: '#10243A', fontSize: 15, fontWeight: '900', flex: 1 }}>{index + 1}. {p.title || 'İlan'}</Text>
+                  <View style={{ backgroundColor: exact ? '#DDF7E8' : '#FFF0D5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 }}>
+                    <Text style={{ color: exact ? '#167447' : '#9A5B00', fontSize: 10, fontWeight: '900' }}>{exact ? 'TAM EŞLEŞME' : 'ALTERNATİF'}</Text>
+                  </View>
+                </View>
+                {!!location && <Text style={{ color: '#64748B', fontSize: 12, marginTop: 7 }}>{location}</Text>}
+                <Text style={{ color: '#1769AA', fontSize: 17, fontWeight: '900', marginTop: 8 }}>{p.listing_type === 'rent' ? 'Kiralık' : 'Satılık'} · {money(Number(p.price || 0))}</Text>
+                {!!([p.rooms, p.area_m2 ? p.area_m2 + ' m²' : null].filter(Boolean).length) && <Text style={{ color: '#475569', fontSize: 12, marginTop: 4 }}>{[p.rooms, p.area_m2 ? p.area_m2 + ' m²' : null].filter(Boolean).join(' · ')}</Text>}
+                {!!(match.match_reasons || []).length && <Text style={{ color: '#64748B', fontSize: 11, marginTop: 8 }}>{match.match_reasons.join(' · ')}</Text>}
+              </View>
+            );
+          })}
+          <Text style={{ color: '#64748B', fontSize: 11, textAlign: 'center', marginTop: 6 }}>GAYIT · Portföy Yönetimi</Text>
+        </View>
+      )}
+
       <Modal visible={!!selectedCustomer} transparent animationType="slide" onRequestClose={() => setSelectedCustomer(null)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: '#0007' }}>
           <View style={{ backgroundColor: palette.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', paddingTop: 18, paddingHorizontal: 18, paddingBottom: 0, flexShrink: 1 }}>
@@ -110,7 +149,7 @@ export default function MatchesScreen(props: any) {
                 <Ionicons name="logo-whatsapp" size={18} color="#fff"/><Text style={{ color: '#fff', fontWeight: '800' }}>WhatsApp</Text>
               </Pressable>
               <Pressable onPress={() => selectedCustomer && shareMatches(selectedCustomer)} style={{ flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: palette.navy, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}>
-                <Ionicons name="share-social-outline" size={17} color="#fff"/><Text style={{ color: '#fff', fontWeight: '800' }}>Paylaş</Text>
+                {sharingImage ? <ActivityIndicator color="#fff" /> : <Ionicons name="image-outline" size={17} color="#fff"/>}<Text style={{ color: '#fff', fontWeight: '800' }}>{sharingImage ? 'Hazırlanıyor' : 'Görsel paylaş'}</Text>
               </Pressable>
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator contentContainerStyle={{ paddingBottom: 30, gap: 10 }}>
