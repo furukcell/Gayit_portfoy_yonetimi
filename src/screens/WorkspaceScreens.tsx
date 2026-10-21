@@ -19,7 +19,7 @@ export default function WorkspaceScreens(props: any) {
     customersLoading, customerSearch, setCustomerSearch, setCustomerModalOpen, matches, matchesLoading, setLegalDocument,
     superadminOfficeMode, setSuperadminOfficeMode, setRole, setOfficeId, setNotificationsOpen, notifications, loadNotifications,
     officeId, loadRecentViews, setCsvImportOpen, openProfile, setOfficeBrandingOpen, exportPortfolioCsv, setTransactionPropertyId, setTransactionModalOpen,
-    handleSignOut, teamStatusBusyId, setAgentModalOpen, toggleAgentStatus, sharePortfolioReport, officeId } = props;
+    handleSignOut, teamStatusBusyId, setAgentModalOpen, toggleAgentStatus, sharePortfolioReport } = props;
   return (
     <View style={styles.body}>
             {tab === 'home' && <HomeDashboardScreen styles={styles} palette={palette} role={role} setTab={setTab} customers={customers} openCustomerDetail={openCustomerDetail} properties={properties} roleProperties={roleProperties} teamMembers={teamMembers} money={money} openProperty={openProperty} />}
