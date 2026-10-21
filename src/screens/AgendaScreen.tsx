@@ -7,12 +7,15 @@ import { getFirebaseAuth } from '../lib/firebase';
 const pad=(n:number)=>String(n).padStart(2,'0');
 const toLocalInput=(date:Date)=>`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 const parseLocal=(value:string)=>new Date(value.trim().replace(' ','T')+(value.trim().length===16?':00':''));
+const datePart=(value:string)=>value.slice(0,10);
+const timePart=(value:string)=>value.slice(11,16);
 
 export default function AgendaScreen({styles,palette,officeId,customers,openCustomerDetail}:any) {
   const [items,setItems]=useState<any[]>([]);
   const [loading,setLoading]=useState(false);
   const [title,setTitle]=useState('');
   const [startsAt,setStartsAt]=useState(toLocalInput(new Date(Date.now()+60*60*1000)));
+  const [calendarMonth,setCalendarMonth]=useState(()=>{const d=parseLocal(toLocalInput(new Date(Date.now()+60*60*1000)));return new Date(d.getFullYear(),d.getMonth(),1);});
   const [notes,setNotes]=useState('');
   const [customerId,setCustomerId]=useState('');
   const [showForm,setShowForm]=useState(false);
@@ -81,8 +84,29 @@ export default function AgendaScreen({styles,palette,officeId,customers,openCust
     {showForm&&<View style={{padding:15,borderRadius:16,borderWidth:1,borderColor:palette.line,backgroundColor:palette.white,marginBottom:16,gap:10}}>
       <Text style={styles.sectionTitle}>Ajandaya kayıt ekle</Text>
       <TextInput value={title} onChangeText={setTitle} placeholder="İş / görüşme başlığı" placeholderTextColor={palette.muted} style={{borderWidth:1,borderColor:palette.line,borderRadius:10,padding:12,color:palette.ink}}/>
-      <Text style={{fontSize:11,color:palette.muted}}>Tarih ve saat (yerel saat)</Text>
-      <TextInput value={startsAt} onChangeText={setStartsAt} placeholder="2026-10-21 14:30" placeholderTextColor={palette.muted} style={{borderWidth:1,borderColor:palette.line,borderRadius:10,padding:12,color:palette.ink}}/>
+      <Text style={{fontSize:12,fontWeight:'800',color:palette.ink}}>Tarih seç</Text>
+      <View style={{borderWidth:1,borderColor:palette.line,borderRadius:14,padding:12}}>
+        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <Pressable accessibilityLabel="Önceki ay" onPress={()=>setCalendarMonth(m=>new Date(m.getFullYear(),m.getMonth()-1,1))} style={{padding:8,borderRadius:9,backgroundColor:palette.goldSoft}}><Ionicons name="chevron-back" size={20} color={palette.navy}/></Pressable>
+          <Text style={{fontSize:15,fontWeight:'900',color:palette.ink}}>{calendarMonth.toLocaleDateString('tr-TR',{month:'long',year:'numeric'})}</Text>
+          <Pressable accessibilityLabel="Sonraki ay" onPress={()=>setCalendarMonth(m=>new Date(m.getFullYear(),m.getMonth()+1,1))} style={{padding:8,borderRadius:9,backgroundColor:palette.goldSoft}}><Ionicons name="chevron-forward" size={20} color={palette.navy}/></Pressable>
+        </View>
+        <View style={{flexDirection:'row',marginBottom:6}}>{['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].map(day=><Text key={day} style={{width:'14.2857%',textAlign:'center',fontSize:10,fontWeight:'800',color:palette.muted}}>{day}</Text>)}</View>
+        <View style={{flexDirection:'row',flexWrap:'wrap'}}>
+          {Array.from({length:(calendarMonth.getDay()+6)%7},(_,i)=><View key={'blank-'+i} style={{width:'14.2857%',height:40}} />)}
+          {Array.from({length:new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,0).getDate()},(_,i)=>i+1).map(day=>{
+            const chosen=datePart(startsAt)===`${calendarMonth.getFullYear()}-${pad(calendarMonth.getMonth()+1)}-${pad(day)}`;
+            const todayDate=new Date();
+            const isToday=day===todayDate.getDate()&&calendarMonth.getMonth()===todayDate.getMonth()&&calendarMonth.getFullYear()===todayDate.getFullYear();
+            return <Pressable key={day} onPress={()=>setStartsAt(`${calendarMonth.getFullYear()}-${pad(calendarMonth.getMonth()+1)}-${pad(day)} ${timePart(startsAt)||'09:00'}`)} style={{width:'14.2857%',height:40,alignItems:'center',justifyContent:'center'}}><View style={{width:32,height:32,borderRadius:10,alignItems:'center',justifyContent:'center',backgroundColor:chosen?palette.navy:isToday?palette.goldSoft:'transparent',borderWidth:isToday&&!chosen?1:0,borderColor:palette.gold}}><Text style={{fontSize:12,fontWeight:chosen||isToday?'900':'500',color:chosen?'#fff':palette.ink}}>{day}</Text></View></Pressable>;
+          })}
+        </View>
+        <Text style={{fontSize:11,color:palette.muted,marginTop:8}}>Seçilen tarih: {parseLocal(startsAt).toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'})}</Text>
+      </View>
+      <Text style={{fontSize:12,fontWeight:'800',color:palette.ink,marginTop:2}}>Saat seç</Text>
+      <View style={{flexDirection:'row',gap:12}}>
+        {([{label:'Saat',value:timePart(startsAt).split(':')[0],values:Array.from({length:24},(_,i)=>pad(i)),key:'hour'},{label:'Dakika',value:timePart(startsAt).split(':')[1],values:['00','15','30','45'],key:'minute'}] as any[]).map(part=><View key={part.key} style={{flex:1,gap:6}}><Text style={{fontSize:11,color:palette.muted}}>{part.label}</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:6}}>{part.values.map((v:string)=><Pressable key={v} onPress={()=>{const [h,m]=timePart(startsAt).split(':');setStartsAt(`${datePart(startsAt)} ${part.key==='hour'?v:h}:${part.key==='minute'?v:m}`)}} style={{minWidth:42,paddingVertical:10,paddingHorizontal:9,alignItems:'center',borderRadius:9,borderWidth:1,borderColor:part.value===v?palette.gold:palette.line,backgroundColor:part.value===v?palette.goldSoft:palette.white}}><Text style={{fontSize:12,fontWeight:part.value===v?'900':'600',color:palette.ink}}>{v}</Text></Pressable>)}</ScrollView></View>)}
+      </View>
       <Text style={{fontSize:11,color:palette.muted}}>Müşteriyle ilişkilendir (isteğe bağlı)</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:7}}>
         <Pressable onPress={()=>setCustomerId('')} style={{padding:9,borderRadius:9,borderWidth:1,borderColor:!customerId?palette.gold:palette.line,backgroundColor:!customerId?palette.goldSoft:palette.white}}><Text style={{fontSize:11,color:palette.ink}}>Genel iş</Text></Pressable>
