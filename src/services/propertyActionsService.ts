@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { uploadMediaFromUri } from '../lib/mediaStorage';
 import { getFirebaseClient } from '../lib/firebaseClient';
 import { getFirebaseAuth } from '../lib/firebase';
 import type { Property, PropertyStatus } from '../types/property';
@@ -122,19 +123,20 @@ export const uploadPendingPropertyPhotos = async (propertyId: string, deps: any)
     if (listError) throw new Error('Mevcut ilan fotoğrafları kontrol edilemedi: ' + listError.message);
     let sortOrder = (existing || []).length;
     for (const photo of pendingPhotoUris) {
-      const response = await fetch(photo.uri);
-      const blob = await response.blob();
-      const isPng = photo.mimeType === 'image/png' || (photo.fileName || '').toLowerCase().endsWith('.png');
-      const ext = isPng ? 'png' : 'jpg';
-      const storagePath = officeId + '/' + propertyId + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-      const { data: uploaded, error: uploadError } = await firebaseClient.storage.from('property-photos').upload(storagePath, blob, { contentType: isPng ? 'image/png' : 'image/jpeg', upsert: false });
-      if (uploadError) throw new Error('Fotoğraf depolamaya yüklenemedi: ' + (uploadError.message || 'sağlayıcı hatası'));
-      // Cloudinary returns a permanent HTTPS URL; save it so gallery/PDF can resolve it later.
-      const persistedPath = uploaded?.url || uploaded?.path || storagePath;
-      const { error: rowError } = await firebaseClient.from('property_photos').insert({ property_id: propertyId, office_id: officeId, storage_path: persistedPath, sort_order: sortOrder });
+      const uploaded = await uploadMediaFromUri(photo.uri, {
+        folder: `gayit/${officeId}/properties/${propertyId}`,
+        fileName: photo.fileName || `photo-${Date.now()}.jpg`,
+        mimeType: photo.mimeType || undefined,
+      });
+      const persistedPath = uploaded.url;
+      const { error: rowError } = await firebaseClient.from('property_photos').insert({
+        property_id: propertyId,
+        office_id: officeId,
+        storage_path: persistedPath,
+        sort_order: sortOrder,
+      });
       if (rowError) {
-        if (!/^https?:\/\//i.test(persistedPath)) await firebaseClient.storage.from('property-photos').remove([persistedPath]);
-        throw new Error('Fotoğraf kaydı oluşturulamadı: ' + (rowError.message || 'veritabanı hatası'));
+        throw new Error('Fotoğraf yüklendi ancak veritabanına kaydedilemedi: ' + (rowError.message || 'veritabanı hatası') + '. Fotoğraf Cloudinary üzerinde kalmış olabilir.');
       }
       sortOrder += 1;
     }
