@@ -122,11 +122,11 @@ export default function HomeDashboardScreen(props: any) {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <View>
             <Text style={{ fontSize: 17, fontWeight: '900', color: '#FFFFFF' }}>Günün programı</Text>
-            <Text style={{ fontSize: 11, color: '#D0DCE7', marginTop: 3 }}>Saat sırasına göre yaklaşan görüşmeler</Text>
+            <Text style={{ fontSize: 11, color: '#D0DCE7', marginTop: 3 }}>Bugünkü tüm işler · saat sırasına göre</Text>
           </View>
           <Pressable onPress={() => setTab('agenda')} style={{ padding: 7 }}><Text style={{ fontSize: 12, fontWeight: '800', color: '#F3CC79' }}>Tümü</Text></Pressable>
         </View>
-        {todaysAppointments.slice(0, 3).map(appointmentRow)}
+        {todaysAppointments.map(appointmentRow)}
         {!todaysAppointments.length && <View style={{ paddingVertical: 18, alignItems: 'center' }}>
           <Ionicons name="calendar-clear-outline" size={25} color={palette.muted} />
           <Text style={{ fontSize: 12, fontWeight: '800', color: '#FFFFFF', marginTop: 7 }}>{appointmentsLoading ? 'Ajanda yükleniyor…' : 'Bugün planlanmış görüşme yok'}</Text>
