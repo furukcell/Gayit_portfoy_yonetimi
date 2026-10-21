@@ -2,7 +2,7 @@
 
 GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve satış operasyonlarını tek mobil uygulamada yönetmesi için geliştirilen Android/iOS uygulamasıdır. Genel kullanıma açık bir ilan pazaryeri değil, emlak ofislerinin iç operasyon aracıdır.
 
-> **Durum notu (20 Ekim 2026):** Bu README, repodaki uygulama kodunu ve yapılandırma dosyalarını özetler. Bir özelliğin kodda bulunması canlı Firebase projesinde kuralların yayımlandığı veya gerçek cihazda başarıyla test edildiği anlamına gelmez.
+> **Durum notu (21 Ekim 2026):** Bu README, repodaki uygulama kodunu ve yapılandırma dosyalarını özetler. Bir özelliğin kodda bulunması canlı Firebase projesinde kuralların yayımlandığı veya gerçek cihazda başarıyla test edildiği anlamına gelmez.
 
 ## İçindekiler
 - [Kullanıcı rolleri](#kullanıcı-rolleri)
@@ -38,6 +38,8 @@ GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve 
 - Telefon, WhatsApp, toplantı, yer gösterme ve not aktivitesiyle görüşme geçmişi tutma.
 - Müşteriye randevu ekleme ve geçmiş randevuları listeleme.
 - Ana sayfada bugün ve gecikmiş takipleri gösterme.
+- Müşteriyle ilişkilendirilebilen tarih-saat bazlı ajanda kaydı; başlık, not, müşteri bağlantısı ve planlandı/geçmiş durumunu gösterme.
+- Ajandada aylık takvimden gün seçme ve saat girme; günlük kayıtlar ile yaklaşan işleri listeleme.
 
 ### 3. Portföy–müşteri eşleştirme
 - Tam ve alternatif eşleşmeleri ayrı gruplarda gösterme.
@@ -58,13 +60,20 @@ GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve 
 - Süperadmin paneli ve ofis bağlamına geçiş akışı.
 - Danışman hesabı oluşturma kodu ücretli Cloud Functions kullanmadan Firebase Authentication üzerinden ayrı bir Firebase uygulama oturumu açmayı hedefler. Bunun çalışması için Firebase Authentication sağlayıcısı etkin olmalı, Firestore rules canlı projeye yayımlanmalı ve hesap oluşturma izinleri test edilmelidir.
 
-### 6. Performans ve raporlama
+### 6. Ana sayfa ve günlük planlama
+- Saat dilimine göre otomatik karşılama mesajı: günaydın, iyi günler, iyi akşamlar veya iyi geceler.
+- Kompakt ofis özeti: portföy, aktif müşteri, bugünkü randevu ve müşteri takip sayıları.
+- Günün programı, saat sıralı yaklaşan görüşmeler ve müşteri takipleri.
+- Portföy özeti: aktif, satılık ve kiralık kayıtlar ile son eklenen ilanlara hızlı erişim.
+- Ana sayfa ajanda kartı ve tam ajanda ekranı aynı `appointments` kayıt kaynağını kullanacak şekilde yapılandırılmıştır. Canlı veritabanı erişimi ve müşteri randevularının otomatik eşleşmesi gerçek ortamda ayrıca doğrulanmalıdır.
+
+### 7. Performans ve raporlama
 - Portföy durum adetleri, aktif müşteri sayısı, bugün/geciken takipler ve önümüzdeki 7 günlük takip özeti.
 - Satış/kiralama kayıtlarında ofis ve danışman komisyonlarını saklama.
 - Portföy verisini CSV olarak paylaşma ve özet rapor akışları.
 - Raporların doğruluğu mevcut veri kayıtlarının eksiksizliğine bağlıdır; kaydedilmemiş işlem veya ölçülmeyen görüntülenme sayıları varsayılmamalıdır.
 
-### 7. Bildirimler ve medya
+### 8. Bildirimler ve medya
 - Uygulama içi bildirim listesi ve okundu işaretleme akışı.
 - Şu anki medya yükleme sağlayıcısı Cloudinary'dir; portföy fotoğrafları ve avatarlar `gayit_portfoy` unsigned upload preset'i ile yüklenir.
 - Firebase Storage kodu ve yapılandırması silinmemiştir. İleride Firebase Storage'a geçiş için korunur; uygulama kodu sağlayıcı adaptörü üzerinden çalışmalıdır.
@@ -72,6 +81,10 @@ GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve 
 - PDF üretiminde kayıtlı fotoğraf URL'leri kullanılır; URL türüne göre erişim davranışı değişebilir.
 
 ## Son geliştirmeler
+- Ana sayfa yenilendi: daha kompakt KPI kartları, günün programı, takip özeti, portföy dağılımı ve son eklenen ilanlar.
+- Ana sayfa karşılama metni cihazın yerel saatine göre otomatik değişir.
+- Ajanda ekranında aylık takvim, gün/saat seçimi, yeni iş kaydı ve müşteri ilişkilendirme alanları.
+- İlan PDF sunumunda ilan detayları ile fotoğrafları birlikte sunma düzenlemesi; fotoğraf yükleme ve PDF fotoğraf erişimi gerçek cihazda ayrıca doğrulanmalıdır.
 - Firebase Auth oturum kalıcılığı için AsyncStorage tabanlı persistence düzenlemesi.
 - Uygulama açılışında `assets/images/splash.png` görseli ve uygulama kodunda animasyonlu, altın renkli dönen yükleme göstergesi.
 - Danışman oluşturma akışının Cloud Functions olmadan çalışması için istemci tarafı Firebase Authentication + Firestore yazma yolu.
@@ -133,7 +146,7 @@ Cloudinary panelinde `gayit_portfoy` preset'i unsigned modda olmalıdır. Güven
 - `firestore.rules` ve `storage.rules` dosyaları repoda mevcuttur. Dosyaların repoda olması, canlı Firebase projesine yayımlandıklarını kanıtlamaz.
 
 ## Bilinen sınırlamalar ve sonraki işler
-1. Cloudinary preset ve medya adaptörü gerçek cihazda fotoğraf yükleme/görüntüleme akışlarıyla test edilmeli; unsigned upload için Cloudinary kullanım/limitleri takip edilmeli.
+1. Cloudinary preset ve medya adaptörü gerçek cihazda fotoğraf yükleme/görüntüleme akışlarıyla test edilmeli; unsigned upload için Cloudinary kullanım/limitleri takip edilmeli. Android'de `Unsupported FormDataPart implementation` hatası görüldüğü için yükleme düzeltmesi gerçek APK'da doğrulanmadan başarılı kabul edilmemeli.
 2. Firebase Storage kodu kaldırılmadı. İleride `EXPO_PUBLIC_MEDIA_PROVIDER=firebase` gibi açık bir sağlayıcı seçimiyle Firebase Storage'a dönüş planlanmalı; mevcut Cloudinary URL'leri için veri taşıma planı hazırlanmalı.
 3. Firebase Authentication ve Firestore canlı projede yapılandırılmalı; ofisler arası veri izolasyonu ve rol izinleri için pozitif/negatif yetki testleri çalıştırılmalı.
 4. Danışman oluşturma, oturum kalıcılığı, şifre değiştirme ve devre dışı bırakılan hesabın erişimi gerçek cihazda doğrulanmalı.
