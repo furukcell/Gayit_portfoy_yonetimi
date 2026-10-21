@@ -4,6 +4,9 @@
  * Firebase Storage remains available in firebase.ts/firebaseClient.ts for a
  * future provider switch. Do not put Cloudinary API secrets in the mobile app.
  */
+import { fetch as expoFetch } from 'expo/fetch';
+import { File } from 'expo-file-system';
+
 const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
@@ -21,28 +24,23 @@ export async function uploadMediaFromUri(
     throw new Error('Cloudinary ayarları eksik. Uygulama EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ve EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET değerlerini alamıyor.');
   }
 
-  // React Native's FormData supports a native file descriptor. Fetching a local
-  // content:// URI and converting it to Blob is inconsistent across Android
-  // vendors, so upload the picker URI directly instead.
+  // Use Expo's standards-based File/FormData implementation. React Native's
+  // global FormData rejects { uri, name, type } parts on this runtime.
   const inferredType = options?.mimeType || 'image/jpeg';
   const fileName = options?.fileName || `photo.${inferredType.includes('png') ? 'png' : inferredType.includes('webp') ? 'webp' : 'jpg'}`;
-  const form = new FormData();
-  form.append('file', {
-    uri,
-    name: fileName,
-    type: inferredType,
-  } as any);
-  form.append('upload_preset', UPLOAD_PRESET);
-  if (options?.folder) form.append('folder', options.folder);
-
   let response: Response;
   try {
-    response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+    const file = new File(uri);
+    const form = new FormData();
+    form.append('file', file, fileName);
+    form.append('upload_preset', UPLOAD_PRESET);
+    if (options?.folder) form.append('folder', options.folder);
+    response = await expoFetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
       method: 'POST',
       body: form,
     });
   } catch (error: any) {
-    throw new Error(`Cloudinary bağlantı hatası: ${error?.message || 'Ağa bağlanılamadı.'}`);
+    throw new Error(`Cloudinary bağlantı/yükleme hatası: ${error?.message || 'Dosya hazırlanamadı veya ağa bağlanılamadı.'}`);
   }
 
   let result: any;
