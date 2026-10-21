@@ -43,23 +43,18 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
         .select('storage_path,sort_order').eq('property_id', p.id).order('sort_order', { ascending: true }).limit(12);
       if (photoError) throw new Error('İlan fotoğrafları alınamadı.');
       const photosForPdf = await Promise.all((photoRows || []).map(async (photo: any) => {
+        const storedPath = String(photo.storage_path || '');
+        if (/^https?:\\/\\//i.test(storedPath)) return storedPath;
         const { data, error } = await firebaseClient.storage.from('property-photos')
-          .createSignedUrl(photo.storage_path, 60 * 60);
-        if (error) throw new Error('Bir ilan fotoğrafı açılamadı.');
+          .createSignedUrl(storedPath, 60 * 60);
+        if (error || !data?.signedUrl) throw new Error('Bir ilan fotoğrafı açılamadı.');
         return data.signedUrl as string;
       }));
-      const heroPhoto = photosForPdf[0];
-      const galleryPhotos = photosForPdf.slice(1, 5);
-      const heroHtml = heroPhoto
-        ? '<img class="photo-featured" src="' + heroPhoto + '" alt="Gayrimenkul fotoğrafı" />'
-        : '<div class="photo-placeholder"><span>GAYIT</span><small>GAYRİMENKUL PORTFÖYÜ</small></div>';
-      const galleryHtml = galleryPhotos.map((url, index) =>
-        '<div class="thumb"><img src="' + url + '" alt="İlan fotoğrafı ' + (index + 2) + '" /></div>'
-      ).join('');
-      const photoLayoutHtml = '<section class="photo-layout"><div class="photo-main">' + heroHtml + '</div>' +
-        (galleryPhotos.length ? '<div class="photo-thumbs">' + galleryHtml + '</div>' : '') +
-        (photosForPdf.length > 5 ? '<div class="photo-count">+' + (photosForPdf.length - 5) + ' fotoğraf daha</div>' : '') +
-        '</section>';
+      const photoLayoutHtml = photosForPdf.length
+        ? '<section class="photo-layout"><h2>İlan fotoğrafları</h2><div class="photo-gallery">' +
+          photosForPdf.map((url, index) => '<div class="photo-large"><img src="' + url + '" alt="İlan fotoğrafı ' + (index + 1) + '" /></div>').join('') +
+          '</div></section>'
+        : '';
       const locationParts = (p.address || '').split(',').map((part: string) => part.trim()).filter(Boolean);
       const locationShort = locationParts.slice(-2).join(' / ');
       const code = htmlEscape(String(p.id || '').slice(0, 18).toUpperCase());
@@ -68,68 +63,68 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       <style>
       @page{size:A4;margin:0}
       *{box-sizing:border-box}
-      html,body{margin:0;padding:0;background:#eaf0f5;color:#10263a;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      body{font-size:9pt;line-height:1.38}
-      .sheet{width:210mm;height:297mm;padding:7mm 9mm 0;margin:0 auto;position:relative;overflow:hidden;background:linear-gradient(145deg,#ffffff 0%,#f6f8fc 58%,#edf3f8 100%)}
-      .masthead{display:flex;align-items:center;justify-content:space-between;gap:6mm;margin-bottom:4mm}
+      html,body{margin:0;padding:0;background:#fff;color:#10263a;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{font-size:8pt;line-height:1.25}
+      .sheet{width:210mm;min-height:297mm;padding:6mm 7mm;margin:0 auto;position:relative;overflow:hidden;background:#fff;border:1.5px solid #10283f}
+      .masthead{display:flex;align-items:center;justify-content:space-between;gap:4mm;margin-bottom:2mm}
       .brand{display:flex;align-items:center;gap:2.5mm;min-width:0}
       .logo{width:13mm;height:13mm;border-radius:3mm;background:#d3aa62;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18pt;font-weight:bold;overflow:hidden;flex-shrink:0}.logo img{width:100%;height:100%;object-fit:contain;background:#fff}
-      .brand-name{font-size:22pt;line-height:1;font-weight:800;letter-spacing:.4px;color:#10283f}
+      .brand-name{font-size:18pt;line-height:1;font-weight:800;letter-spacing:.4px;color:#10283f}
       .brand-sub{font-size:7.5pt;letter-spacing:1.5px;color:#728397;margin-top:1mm}
       .motto{text-align:right;font-size:8pt;line-height:1.45;color:#10283f;white-space:nowrap}
       .codebox{border-left:1px solid #cdd5de;padding-left:4mm;margin-left:4mm;text-align:right;min-width:31mm}
       .codebox small{display:block;color:#8190a0;font-size:7pt;margin-bottom:1mm}
       .codebox strong{font-size:8pt;overflow-wrap:anywhere}
-      .hero-row{display:grid;grid-template-columns:1.12fr 1fr;gap:3mm;height:79mm}
+      .hero-row{display:grid;grid-template-columns:1.12fr 1fr;gap:2mm;height:auto;min-height:58mm}
       .hero-visual{position:relative;border-radius:3mm;overflow:hidden;background:#e9eef2;min-width:0}
       .photo-featured{width:100%;height:100%;object-fit:cover;display:block}
       .photo-placeholder{height:100%;min-height:65mm;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#dce5eb,#f5f7f8);color:#10283f}
       .photo-placeholder span{font-size:25pt;font-weight:800;letter-spacing:2px}.photo-placeholder small{letter-spacing:2px;color:#78899a}
-      .featured-panel{border-radius:3mm;background:#f0f3fb;padding:3.2mm;min-width:0}
+      .featured-panel{border-radius:2mm;background:#f0f3fb;padding:2mm;min-width:0}
       .featured-title{font-size:11pt;font-weight:800;color:#10283f;margin:0 0 3mm}
       .featured-items{display:grid;grid-template-columns:1fr 1fr;gap:1.5mm}
-      .featured-item{background:rgba(255,255,255,.94);border-left:1mm solid #d9b16a;border-radius:1.5mm;padding:1.8mm 2mm;font-size:7.5pt;min-width:0}
+      .featured-item{background:rgba(255,255,255,.94);border-left:1mm solid #d9b16a;border-radius:1mm;padding:1mm 1.5mm;font-size:7pt;min-width:0}
       .featured-item span{display:block;color:#718195;font-size:7pt;margin-bottom:1mm}
       .featured-item b{display:block;color:#10283f;font-size:9pt;overflow-wrap:anywhere}
-      .photo-layout{display:grid;grid-template-columns:1.6fr 1fr;gap:2.5mm;margin-top:3mm;position:relative;break-inside:avoid;page-break-inside:avoid;height:59mm;min-height:59mm}
-      .photo-main{height:59mm;overflow:hidden;border-radius:3mm;background:#e9eef2;min-width:0}
-      .photo-thumbs{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,1fr);gap:2mm;min-width:0;min-height:0}
+      .photo-layout{margin-top:2mm;break-inside:avoid;page-break-inside:avoid}.photo-layout h2{font-size:9pt;margin:0 0 1.5mm;color:#10283f}.photo-gallery{display:grid;grid-template-columns:1fr 1fr;gap:2mm}.photo-large{height:40mm;overflow:hidden;border:1px solid #d9b16a;border-radius:1.5mm;background:#eef2f5}.photo-large img{display:block;width:100%;height:100%;object-fit:cover}
+      .photo-main{display:none}
+      .photo-thumbs{display:none}
       .thumb{overflow:hidden;border-radius:2mm;background:#e8edf1;min-height:0}
       .thumb img{width:100%;height:100%;min-height:0;object-fit:cover;display:block}
-      .photo-count{position:absolute;right:2mm;bottom:2mm;background:rgba(12,35,54,.88);color:#fff;padding:1.5mm 2.5mm;border-radius:2mm;font-size:7pt}
-      .hero-info{background:#0c2336;color:#fff;border-radius:3mm;padding:4mm 4mm;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+      .photo-count{display:none}
+      .hero-info{background:#0c2336;color:#fff;border-radius:2mm;padding:2.5mm;display:flex;flex-direction:column;min-width:0;overflow:hidden}
       .status{align-self:flex-end;background:#d9b16a;color:#10283f;padding:1.5mm 3.5mm;border-radius:20px;font-size:7.5pt;font-weight:bold}
-      .hero-info h1{font-size:19pt;line-height:1.12;margin:3mm 0 2mm;overflow-wrap:anywhere}
+      .hero-info h1{font-size:15pt;line-height:1.08;margin:2mm 0 1mm;overflow-wrap:anywhere}
       .subtitle{font-size:8pt;color:#cbd7e0;min-height:8mm}
       .gold-line{width:15mm;height:1mm;background:#d9b16a;margin:3mm 0}
       .rent-label{font-size:8pt;color:#d4dde4}
-      .price{font-size:23pt;line-height:1.15;font-weight:800;color:#e4bd73;margin:1mm 0 3mm;overflow-wrap:anywhere}
+      .price{font-size:18pt;line-height:1.15;font-weight:800;color:#e4bd73;margin:1mm 0 3mm;overflow-wrap:anywhere}
       .price-caption{font-size:7pt;color:#b6c5d1}
       .mini-specs{display:grid;grid-template-columns:1fr 1fr;gap:2mm;margin-top:auto}
       .mini-spec{border:1px solid #315065;border-radius:2.5mm;padding:2.5mm 2mm;min-width:0}
       .mini-spec b{display:block;font-size:10pt;color:#fff}
       .mini-spec small{display:block;color:#bdcbd5;font-size:7pt;margin-top:1mm}
       
-      .content-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:3mm;margin-top:3mm;align-items:start}
-      .left-col,.right-col{display:flex;flex-direction:column;gap:3mm;min-width:0}
-      .panel{background:#f0f3fb;border:1px solid #e5eaf3;border-radius:2.5mm;padding:3mm;page-break-inside:avoid;break-inside:avoid}
+      .content-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:2mm;margin-top:2mm;align-items:start}
+      .left-col,.right-col{display:flex;flex-direction:column;gap:2mm;min-width:0}
+      .panel{background:#f0f3fb;border:1px solid #e5eaf3;border-radius:2mm;padding:2mm;page-break-inside:avoid;break-inside:avoid}
       .panel h2{font-size:10.5pt;margin:0 0 2.5mm;color:#10283f;display:flex;align-items:center;gap:2mm}
       .panel h2 .symbol{font-size:12pt;color:#bd8e42}
-      .description{font-size:8.5pt;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+      .description{font-size:7.5pt;line-height:1.25;white-space:pre-wrap;overflow-wrap:anywhere}
       .feature-list{display:grid;grid-template-columns:1fr 1fr;gap:1.5mm}
       .feature{background:#fff;border-radius:1.5mm;padding:2mm 2.5mm;display:flex;justify-content:space-between;align-items:center;gap:2mm;font-size:7.5pt}
       .feature span{color:#637386}.feature b{color:#10283f;text-align:right}
       .address-text{font-size:8.5pt;line-height:1.5;color:#53677b;overflow-wrap:anywhere}
-      .map-placeholder{height:20mm;border-radius:2mm;margin-top:3mm;overflow:hidden;background:#e6edf0;position:relative;display:flex;align-items:center;justify-content:center;text-align:center;color:#758899}
+      .map-placeholder{height:12mm;border-radius:2mm;margin-top:3mm;overflow:hidden;background:#e6edf0;position:relative;display:flex;align-items:center;justify-content:center;text-align:center;color:#758899}
       .map-lines{position:absolute;inset:0;background:linear-gradient(28deg,transparent 44%,#fff 45%,#fff 47%,transparent 48%),linear-gradient(145deg,transparent 35%,#fff 36%,#fff 39%,transparent 40%),linear-gradient(80deg,transparent 62%,#fff 63%,#fff 65%,transparent 66%);opacity:.9}
       .map-label{position:relative;background:#fffE;padding:2mm 4mm;border-radius:2mm;font-size:7.5pt}
       .map-pin{font-size:14pt;color:#c74e42}
-      .contact{display:grid;grid-template-columns:18mm 1fr;gap:3mm;align-items:center;background:#f0f3fb;border:1px solid #e5eaf3;border-radius:2.5mm;padding:2.5mm 3mm;margin-top:2.5mm;page-break-inside:avoid;break-inside:avoid}
-      .agent-mark{height:17mm;width:17mm;border-radius:2mm;background:#dce5eb;color:#10283f;display:flex;align-items:center;justify-content:center;font-size:17pt;font-weight:bold}
-      .agent-photo{height:17mm;width:17mm;border-radius:50%;object-fit:cover}.contact-label{font-size:7pt;letter-spacing:1.2px;color:#bd8e42;font-weight:bold}
+      .contact{display:grid;grid-template-columns:14mm 1fr;gap:2mm;align-items:center;background:#f0f3fb;border:1px solid #e5eaf3;border-radius:2.5mm;padding:2.5mm 3mm;margin-top:2.5mm;page-break-inside:avoid;break-inside:avoid}
+      .agent-mark{height:13mm;width:13mm;border-radius:2mm;background:#dce5eb;color:#10283f;display:flex;align-items:center;justify-content:center;font-size:17pt;font-weight:bold}
+      .agent-photo{height:13mm;width:13mm;border-radius:50%;object-fit:cover}.contact-label{font-size:7pt;letter-spacing:1.2px;color:#bd8e42;font-weight:bold}
       .agent-name{font-size:11pt;font-weight:bold;margin:1mm 0;color:#10283f}
       .contact-note{font-size:7.5pt;color:#627487}
-      .footer{margin:2.5mm -9mm 0;padding:3mm 9mm;background:#0c2336;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:4mm;border-top:2mm solid #d9b16a;page-break-inside:avoid;break-inside:avoid}
+      .footer{margin:2mm 0 0;padding:2mm 2mm;background:#0c2336;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:4mm;border-top:2mm solid #d9b16a;page-break-inside:avoid;break-inside:avoid}
       .footer-brand{font-size:13pt;font-weight:800;letter-spacing:.5px}.footer-sub{font-size:6.5pt;color:#9eb5c5;letter-spacing:1px}
       .footer-note{text-align:center;color:#d4dee6;font-size:7pt;flex:1}
       .footer-code{text-align:right;font-size:7pt;color:#d4dee6;overflow-wrap:anywhere;max-width:35mm}
@@ -154,7 +149,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       <article class="panel"><h2><span class="symbol">⌖</span> Yakın çevre</h2><div class="description">${htmlEscape(p.nearbyAmenities || 'Yakın çevre bilgisi belirtilmedi.')}</div></article></div>
       <div class="right-col"><article class="panel"><h2><span class="symbol">●</span> Konum</h2><div class="address-text">${htmlEscape(p.address)}</div><div class="map-placeholder"><div class="map-lines"></div><div class="map-label"><div class="map-pin">●</div>${htmlEscape(locationShort || 'Konum bilgisi')}</div></div><div class="muted" style="font-size:7pt;margin-top:2mm">Kesin konum için danışmanınızdan bilgi alabilirsiniz.</div></article></div></section>
       <section class="contact">${agentAvatarHtml}<div><div class="contact-label">DANIŞMAN</div><div class="agent-name">${htmlEscape(agentDisplayName)}</div><div class="contact-note">${agentPhone ? 'Telefon: ' + htmlEscape(agentPhone) : ''}${agentPhone && agentEmail ? ' · ' : ''}${agentEmail ? 'E-posta: ' + htmlEscape(agentEmail) : ''}${!agentPhone && !agentEmail ? 'Bu portföy hakkında detaylı bilgi ve gösterim için danışmanınızla iletişime geçebilirsiniz.' : ''}</div></div></section>
-      <footer class="footer"><div><div class="footer-brand">${htmlEscape(brandName)}</div><div class="footer-sub">${htmlEscape(brandSubtitle)}</div></div><div class="footer-note">Bu portföy ${htmlEscape(brandName)} tarafından hazırlanmıştır.</div><div class="footer-code">PORTFÖY KODU<br/><b>${code}</b></div></footer>
+      ${photoLayoutHtml}\n      <footer class="footer"><div><div class="footer-brand">${htmlEscape(brandName)}</div><div class="footer-sub">${htmlEscape(brandSubtitle)}</div></div><div class="footer-note">Bu portföy ${htmlEscape(brandName)} tarafından hazırlanmıştır.</div><div class="footer-code">PORTFÖY KODU<br/><b>${code}</b></div></footer>
       </main></body></html>`;
       const file = await Print.printToFileAsync({ html });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', dialogTitle: 'Gayrimenkul sunumunu paylaş' });
