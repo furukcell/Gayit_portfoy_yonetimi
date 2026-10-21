@@ -1,5 +1,5 @@
 export type Role = 'owner' | 'agent' | 'superadmin';
-export type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats';
+export type Tab = 'home' | 'portfolio' | 'customers' | 'matches' | 'more' | 'team' | 'stats' | 'agenda';
 export type Customer = { id: string; fullName: string; phone: string; roles: string[]; assignedAgent: string; notes: string; active: boolean; requirementCount: number; nextFollowUpAt: string | null; assignedAgentId: string };
 export type PropertyStatus = 'Aktif' | 'Opsiyonlu' | 'Satıldı' | 'Kiralandı' | 'Arşivde';
 export type PropertyPhoto = { id: string; storagePath: string; url: string; sortOrder: number };
