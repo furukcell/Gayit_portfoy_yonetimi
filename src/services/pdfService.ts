@@ -78,11 +78,11 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       .featured-item{background:#fff;border-left:1mm solid #d9b16a;border-radius:1.5mm;padding:2.5mm;font-size:8pt;min-width:0}
       .featured-item span{display:block;color:#718195;font-size:7pt;margin-bottom:1mm}
       .featured-item b{display:block;color:#10283f;font-size:9pt;overflow-wrap:anywhere}
-      .photo-layout{display:grid;grid-template-columns:1.6fr 1fr;gap:2.5mm;margin-top:4mm;position:relative;break-inside:avoid;page-break-inside:avoid}
-      .photo-main{height:67mm;overflow:hidden;border-radius:3mm;background:#e9eef2}
-      .photo-thumbs{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,1fr);gap:2mm;min-width:0}
+      .photo-layout{display:grid;grid-template-columns:1.6fr 1fr;gap:2.5mm;margin-top:4mm;position:relative;break-inside:avoid;page-break-inside:avoid;min-height:67mm}
+      .photo-main{height:67mm;overflow:hidden;border-radius:3mm;background:#e9eef2;min-width:0}
+      .photo-thumbs{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,1fr);gap:2mm;min-width:0;min-height:0}
       .thumb{overflow:hidden;border-radius:2mm;background:#e8edf1;min-height:0}
-      .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+      .thumb img{width:100%;height:100%;min-height:0;object-fit:cover;display:block}
       .photo-count{position:absolute;right:2mm;bottom:2mm;background:rgba(12,35,54,.88);color:#fff;padding:1.5mm 2.5mm;border-radius:2mm;font-size:7pt}
       .hero-info{background:#0c2336;color:#fff;border-radius:3mm;padding:5mm 4.5mm;display:flex;flex-direction:column;min-width:0;overflow:hidden}
       .status{align-self:flex-end;background:#d9b16a;color:#10283f;padding:1.5mm 3.5mm;border-radius:20px;font-size:7.5pt;font-weight:bold}
@@ -97,7 +97,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       .mini-spec b{display:block;font-size:10pt;color:#fff}
       .mini-spec small{display:block;color:#bdcbd5;font-size:7pt;margin-top:1mm}
       
-      .content-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:3.5mm;margin-top:4mm}
+      .content-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:3.5mm;margin-top:4mm;align-items:start}
       .left-col,.right-col{display:flex;flex-direction:column;gap:3mm;min-width:0}
       .panel{background:#f3f6f9;border-radius:2.5mm;padding:4mm;page-break-inside:avoid;break-inside:avoid}
       .panel h2{font-size:10.5pt;margin:0 0 2.5mm;color:#10283f;display:flex;align-items:center;gap:2mm}
@@ -116,7 +116,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       .agent-photo{height:17mm;width:17mm;border-radius:50%;object-fit:cover}.contact-label{font-size:7pt;letter-spacing:1.2px;color:#bd8e42;font-weight:bold}
       .agent-name{font-size:11pt;font-weight:bold;margin:1mm 0;color:#10283f}
       .contact-note{font-size:7.5pt;color:#627487}
-      .footer{margin:4mm -9mm 0;padding:4mm 9mm;background:#0c2336;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:4mm;border-top:2mm solid #d9b16a}
+      .footer{margin:4mm -9mm 0;padding:4mm 9mm;background:#0c2336;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:4mm;border-top:2mm solid #d9b16a;page-break-inside:avoid;break-inside:avoid}
       .footer-brand{font-size:13pt;font-weight:800;letter-spacing:.5px}.footer-sub{font-size:6.5pt;color:#9eb5c5;letter-spacing:1px}
       .footer-note{text-align:center;color:#d4dee6;font-size:7pt;flex:1}
       .footer-code{text-align:right;font-size:7pt;color:#d4dee6;overflow-wrap:anywhere;max-width:35mm}
