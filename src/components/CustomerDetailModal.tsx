@@ -104,11 +104,12 @@ export default function CustomerDetailModal(props: Props) {
               </ScrollView>
               <Modal visible={appointmentModalOpen} transparent animationType="slide" onRequestClose={() => setAppointmentModalOpen(false)}>
                 <View style={{flex:1,justifyContent:'flex-end',backgroundColor:'#0006'}}>
-                  <View style={{backgroundColor:palette.bg,borderTopLeftRadius:24,borderTopRightRadius:24,maxHeight:'92%',padding:20}}>
+                  <View style={{backgroundColor:palette.bg,borderTopLeftRadius:24,borderTopRightRadius:24,maxHeight:'92%',paddingTop:20,paddingHorizontal:20,paddingBottom:0,flexShrink:1}}>
                     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
                       <Text style={styles.modalHeaderTitle}>Randevu oluştur</Text>
                       <Pressable onPress={() => setAppointmentModalOpen(false)} style={styles.roundButton}><Ionicons name="close" size={21} color={palette.navy}/></Pressable>
                     </View>
+                    <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator contentContainerStyle={{paddingBottom:28}}>
                     <Text style={styles.pageSub}>{selectedCustomer?.fullName || 'Müşteri'} için tarih ve saat seç.</Text>
                     <Text style={styles.fieldLabel}>Randevu başlığı</Text>
                     <TextInput value={appointmentTitle} onChangeText={setAppointmentTitle} style={styles.input} placeholder="Müşteri görüşmesi" placeholderTextColor={palette.muted}/>
@@ -129,6 +130,7 @@ export default function CustomerDetailModal(props: Props) {
                     <Text style={styles.fieldLabel}>Not (isteğe bağlı)</Text>
                     <TextInput value={appointmentNotes} onChangeText={setAppointmentNotes} style={styles.input} placeholder="Görüşme ayrıntısı" placeholderTextColor={palette.muted}/>
                     <Pressable disabled={appointmentBusy} onPress={async()=>{const saved = await addCustomerAppointment(); if(saved) setAppointmentModalOpen(false);}} style={[styles.saveButton,appointmentBusy&&{opacity:0.6}]}><Text style={styles.saveButtonText}>{appointmentBusy?'Kaydediliyor...':'Randevuyu kaydet'}</Text><Ionicons name="checkmark-circle-outline" size={21} color="#fff"/></Pressable>
+                    </ScrollView>
                   </View>
                 </View>
               </Modal>
