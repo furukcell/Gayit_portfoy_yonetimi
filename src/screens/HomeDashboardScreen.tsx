@@ -72,7 +72,6 @@ export default function HomeDashboardScreen(props: any) {
       </View>
       <Text style={{ fontSize: 23, fontWeight: '900', color: palette.navy }}>{value}</Text>
       <Text style={{ fontSize: 10, fontWeight: '800', color: palette.muted, marginTop: 3 }}>{label}</Text>
-      <Text style={{ fontSize: 0, color: palette.muted, marginTop: 0 }}>{hint}</Text>
     </Pressable>
   );
 
