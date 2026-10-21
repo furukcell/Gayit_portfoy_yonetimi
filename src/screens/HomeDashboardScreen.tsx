@@ -38,6 +38,14 @@ export default function HomeDashboardScreen(props: any) {
   useEffect(() => { void loadAppointments(); }, [loadAppointments]);
 
   const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour >= 5 && hour < 12
+    ? 'Günaydın, hazır mısın?'
+    : hour >= 12 && hour < 18
+      ? 'İyi günler, hazır mısın?'
+      : hour >= 18 && hour < 23
+        ? 'İyi akşamlar, hazır mısın?'
+        : 'İyi geceler, hazır mısın?';
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const tomorrowStart = todayStart + 24 * 60 * 60 * 1000;
   const todaysAppointments = useMemo(() => appointments
@@ -89,7 +97,7 @@ export default function HomeDashboardScreen(props: any) {
     <ScrollView contentContainerStyle={[styles.page, { paddingTop: 8, paddingBottom: 28 }]} showsVerticalScrollIndicator={false}>
       <View style={{ marginBottom: 18 }}>
         <Text style={[styles.eyebrow, { letterSpacing: 2, marginBottom: 7 }]}>{role === 'owner' ? 'OFİS YÖNETİMİ' : 'ÇALIŞMA ALANIM'}</Text>
-        <Text style={[styles.pageTitle, { fontSize: 31, marginBottom: 5 }]}>{role === 'owner' ? 'Günaydın, hazır mısın?' : 'Günlük çalışma alanın'}</Text>
+        <Text style={[styles.pageTitle, { fontSize: 31, marginBottom: 5 }]}>{role === 'owner' ? greeting : 'Günlük çalışma alanın'}</Text>
         <Text style={[styles.pageSub, { fontSize: 13 }]}>{now.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })} · Ofisinin bugünkü özeti</Text>
       </View>
 
