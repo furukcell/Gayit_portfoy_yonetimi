@@ -7,6 +7,7 @@ import MatchesScreen from './MatchesScreen';
 import MoreScreen from './MoreScreen';
 import TeamScreen from './TeamScreen';
 import StatsScreen from './StatsScreen';
+import AgendaScreen from './AgendaScreen';
 
 export default function WorkspaceScreens(props: any) {
   const { tab, styles, palette, role, setTab, customers, openCustomerDetail, properties, roleProperties, teamMembers, money, openProperty,
@@ -18,7 +19,7 @@ export default function WorkspaceScreens(props: any) {
     customersLoading, customerSearch, setCustomerSearch, setCustomerModalOpen, matches, matchesLoading, setLegalDocument,
     superadminOfficeMode, setSuperadminOfficeMode, setRole, setOfficeId, setNotificationsOpen, notifications, loadNotifications,
     officeId, loadRecentViews, setCsvImportOpen, openProfile, setOfficeBrandingOpen, exportPortfolioCsv, setTransactionPropertyId, setTransactionModalOpen,
-    handleSignOut, teamStatusBusyId, setAgentModalOpen, toggleAgentStatus, sharePortfolioReport } = props;
+    handleSignOut, teamStatusBusyId, setAgentModalOpen, toggleAgentStatus, sharePortfolioReport, officeId } = props;
   return (
     <View style={styles.body}>
             {tab === 'home' && <HomeDashboardScreen styles={styles} palette={palette} role={role} setTab={setTab} customers={customers} openCustomerDetail={openCustomerDetail} properties={properties} roleProperties={roleProperties} teamMembers={teamMembers} money={money} openProperty={openProperty} />}
@@ -36,6 +37,7 @@ export default function WorkspaceScreens(props: any) {
               openAddCustomer={() => setCustomerModalOpen(true)}
             />
     
+            {tab === 'agenda' && <AgendaScreen styles={styles} palette={palette} officeId={officeId} customers={customers} openCustomerDetail={openCustomerDetail} />}
             {tab === 'matches' && <MatchesScreen styles={styles} palette={palette} matches={matches} matchesLoading={matchesLoading} money={money} />}
     
             {tab === 'more' && <MoreScreen styles={styles} palette={palette} setLegalDocument={setLegalDocument} superadminOfficeMode={superadminOfficeMode} setSuperadminOfficeMode={setSuperadminOfficeMode} setRole={setRole} setTab={setTab} setOfficeId={setOfficeId} role={role} setNotificationsOpen={setNotificationsOpen} notifications={notifications} loadNotifications={loadNotifications} officeId={officeId} setRecentOnly={setRecentOnly} setFavoritesOnly={setFavoritesOnly} loadRecentViews={loadRecentViews} setCsvImportOpen={setCsvImportOpen} openProfile={openProfile} setOfficeBrandingOpen={setOfficeBrandingOpen} exportPortfolioCsv={exportPortfolioCsv} setTransactionPropertyId={setTransactionPropertyId} properties={properties} setTransactionModalOpen={setTransactionModalOpen} handleSignOut={handleSignOut} />}
