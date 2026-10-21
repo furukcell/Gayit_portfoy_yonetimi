@@ -21,6 +21,19 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       const firebaseClient = getFirebaseClient();
       const uid = getFirebaseAuth().currentUser?.uid;
       const { data: profile } = uid ? await firebaseClient.from('profiles').select('full_name,phone,email,avatar_path').eq('id', uid).maybeSingle() : { data: null as any };
+      let officeName = '';
+      let officeLogoUrl: string | null = null;
+      if (uid) {
+        const { data: membership } = await firebaseClient.from('office_members').select('office_id').eq('user_id', uid).eq('status', 'active').limit(1).maybeSingle();
+        if (membership?.office_id) {
+          const { data: office } = await firebaseClient.from('offices').select('name,logo_url').eq('id', membership.office_id).maybeSingle();
+          officeName = String(office?.name || '').trim();
+          officeLogoUrl = office?.logo_url || null;
+        }
+      }
+      const brandName = officeName || 'GAYIT';
+      const brandSubtitle = officeName ? 'GAYRİMENKUL' : 'GAYRİMENKUL SUNUMU';
+      const brandMark = officeLogoUrl ? `<img src="${htmlEscape(officeLogoUrl)}" alt="${htmlEscape(brandName)}" />` : '⌂';
       let agentAvatarUrl: string | null = null;
       if (profile?.avatar_path) { const { data: avatar } = await firebaseClient.storage.from('avatars').createSignedUrl(profile.avatar_path, 3600); agentAvatarUrl = avatar?.signedUrl || null; }
       const agentDisplayName = profile?.full_name || p.agent || 'GAYIT danışman ekibi';
@@ -60,7 +73,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       .sheet{width:210mm;min-height:297mm;padding:8mm 9mm 0;margin:0 auto;position:relative;background:#fff}
       .masthead{display:flex;align-items:center;justify-content:space-between;gap:6mm;margin-bottom:5mm}
       .brand{display:flex;align-items:center;gap:3mm;min-width:0}
-      .logo{width:13mm;height:13mm;border-radius:3mm;background:#d3aa62;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18pt;font-weight:bold}
+      .logo{width:13mm;height:13mm;border-radius:3mm;background:#d3aa62;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18pt;font-weight:bold;overflow:hidden;flex-shrink:0}.logo img{width:100%;height:100%;object-fit:contain;background:#fff}
       .brand-name{font-size:22pt;line-height:1;font-weight:800;letter-spacing:.4px;color:#10283f}
       .brand-sub{font-size:7.5pt;letter-spacing:1.5px;color:#728397;margin-top:1mm}
       .motto{text-align:right;font-size:8pt;line-height:1.45;color:#10283f;white-space:nowrap}
@@ -122,7 +135,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       .footer-code{text-align:right;font-size:7pt;color:#d4dee6;overflow-wrap:anywhere;max-width:35mm}
       @media print{.sheet{margin:0}.panel,.contact,.hero-row,.thumbs{break-inside:avoid}}
       </style></head><body><main class="sheet">
-      <header class="masthead"><div class="brand"><div class="logo">⌂</div><div><div class="brand-name">GAYIT</div><div class="brand-sub">GAYRİMENKUL SUNUMU</div></div></div><div class="motto">Doğru portföy,<br/>doğru müşteri.</div><div class="codebox"><small>PORTFÖY KODU</small><strong>${code}</strong></div></header>
+      <header class="masthead"><div class="brand"><div class="logo">${brandMark}</div><div><div class="brand-name">${htmlEscape(brandName)}</div><div class="brand-sub">${htmlEscape(brandSubtitle)}</div></div></div><div class="motto">Doğru portföy,<br/>doğru müşteri.</div><div class="codebox"><small>PORTFÖY KODU</small><strong>${code}</strong></div></header>
       <section class="hero-row"><div class="featured-panel"><div class="featured-title">✦ ÖNE ÇIKAN ÖZELLİKLER</div><div class="featured-items">
       <div class="featured-item"><span>Gayrimenkul tipi</span><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b></div>
       <div class="featured-item"><span>İşlem türü</span><b>${htmlEscape(p.kind)}</b></div>
@@ -141,7 +154,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       <article class="panel"><h2><span class="symbol">✦</span> Öne çıkan özellikler</h2><div class="feature-list"><div class="feature"><span>Alan</span><b>${htmlEscape(p.area || 'Belirtilmedi')}</b></div><div class="feature"><span>Oda sayısı</span><b>${htmlEscape(p.rooms || 'Belirtilmedi')}</b></div><div class="feature"><span>Emlak tipi</span><b>${htmlEscape(propertyTypeLabel(p.propertyType))}</b></div><div class="feature"><span>İşlem türü</span><b>${htmlEscape(p.kind)}</b></div><div class="feature"><span>Durum</span><b>${htmlEscape(p.status)}</b></div><div class="feature"><span>Bölge</span><b>${htmlEscape(p.district || locationShort || 'Belirtilmedi')}</b></div><div class="feature"><span>Bina yaşı</span><b>${htmlEscape(p.buildingAge ? p.buildingAge + ' yıl' : 'Belirtilmedi')}</b></div><div class="feature"><span>Bulunduğu kat</span><b>${htmlEscape(p.floorNumber || 'Belirtilmedi')}</b></div><div class="feature"><span>Toplam kat</span><b>${htmlEscape(p.totalFloors || 'Belirtilmedi')}</b></div><div class="feature"><span>Banyo</span><b>${htmlEscape(p.bathrooms || 'Belirtilmedi')}</b></div><div class="feature"><span>Balkon</span><b>${htmlEscape(p.balcony || 'Belirtilmedi')}</b></div><div class="feature"><span>Otopark</span><b>${htmlEscape(p.parking || 'Belirtilmedi')}</b></div><div class="feature"><span>Isıtma</span><b>${htmlEscape(p.heating || 'Belirtilmedi')}</b></div><div class="feature"><span>Soğutma</span><b>${htmlEscape(p.cooling || 'Belirtilmedi')}</b></div><div class="feature"><span>İskan</span><b>${htmlEscape(p.occupancyPermit || 'Belirtilmedi')}</b></div><div class="feature"><span>Asansör</span><b>${htmlEscape(p.elevator || 'Belirtilmedi')}</b></div></div></article><article class="panel"><h2><span class="symbol">⌖</span> Yakın çevre</h2><div class="description">${htmlEscape(p.nearbyAmenities || 'Yakın çevre bilgisi belirtilmedi.')}</div></article></div>
       <div class="right-col"><article class="panel"><h2><span class="symbol">●</span> Konum</h2><div class="address-text">${htmlEscape(p.address)}</div><div class="map-placeholder"><div class="map-lines"></div><div class="map-label"><div class="map-pin">●</div>${htmlEscape(locationShort || 'Konum bilgisi')}</div></div><div class="muted" style="font-size:7pt;margin-top:2mm">Kesin konum için danışmanınızdan bilgi alabilirsiniz.</div></article></div></section>
       <section class="contact">${agentAvatarHtml}<div><div class="contact-label">DANIŞMAN</div><div class="agent-name">${htmlEscape(agentDisplayName)}</div><div class="contact-note">${agentPhone ? 'Telefon: ' + htmlEscape(agentPhone) : ''}${agentPhone && agentEmail ? ' · ' : ''}${agentEmail ? 'E-posta: ' + htmlEscape(agentEmail) : ''}${!agentPhone && !agentEmail ? 'Bu portföy hakkında detaylı bilgi ve gösterim için danışmanınızla iletişime geçebilirsiniz.' : ''}</div></div></section>
-      <footer class="footer"><div><div class="footer-brand">⌂ GAYIT</div><div class="footer-sub">GAYRİMENKUL SUNUMU</div></div><div class="footer-note">Bu portföy GAYIT Portföy Yönetimi ile oluşturulmuştur.</div><div class="footer-code">PORTFÖY KODU<br/><b>${code}</b></div></footer>
+      <footer class="footer"><div><div class="footer-brand">${htmlEscape(brandName)}</div><div class="footer-sub">${htmlEscape(brandSubtitle)}</div></div><div class="footer-note">Bu portföy ${htmlEscape(brandName)} tarafından hazırlanmıştır.</div><div class="footer-code">PORTFÖY KODU<br/><b>${code}</b></div></footer>
       </main></body></html>`;
       const file = await Print.printToFileAsync({ html });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', dialogTitle: 'Gayrimenkul sunumunu paylaş' });
