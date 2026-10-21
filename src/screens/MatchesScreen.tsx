@@ -9,7 +9,7 @@ export default function MatchesScreen(props: any) {
   const { styles, palette, matches, matchesLoading, money } = props;
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   const [sharingImage, setSharingImage] = useState(false);
-  const shareCardRef = React.useRef<View>(null);
+  const shareCardRef = React.useRef<any>(null);
   const groupedCustomers = useMemo(() => {
     const groups = new Map<string, any>();
     (matches || []).forEach((match: any) => {
