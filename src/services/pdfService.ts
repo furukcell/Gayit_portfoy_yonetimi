@@ -44,7 +44,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       if (photoError) throw new Error('İlan fotoğrafları alınamadı.');
       const photosForPdf = await Promise.all((photoRows || []).map(async (photo: any) => {
         const storedPath = String(photo.storage_path || '');
-        if (/^https?:\\/\\//i.test(storedPath)) return storedPath;
+        if (/^https?:\/\//i.test(storedPath)) return storedPath;
         const { data, error } = await firebaseClient.storage.from('property-photos')
           .createSignedUrl(storedPath, 60 * 60);
         if (error || !data?.signedUrl) throw new Error('Bir ilan fotoğrafı açılamadı.');
