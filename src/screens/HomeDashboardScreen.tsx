@@ -21,11 +21,11 @@ export default function HomeDashboardScreen(props: any) {
         .from('appointments')
         .select('id,title,starts_at,notes,customer_id,status')
         .eq('office_id', officeId)
-        .neq('status', 'cancelled')
         .order('starts_at', { ascending: true })
         .limit(200);
       if (error) throw error;
-      setAppointments(data || []);
+      // Ajanda ekranıyla aynı iptal filtresi: status alanı boş olan eski kayıtları da koru.
+      setAppointments((data || []).filter((item: any) => item.status !== 'cancelled'));
     } catch (error: any) {
       // Keep the dashboard usable if appointments are not configured for this office yet.
       console.warn('Dashboard appointments could not be loaded:', error?.message || error);
