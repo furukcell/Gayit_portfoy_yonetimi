@@ -40,10 +40,18 @@ export const loadProperties = async (targetOfficeId: string, deps: any) => {
       }));
       // Load the first sorted photo for each property so cards can show their cover image.
       if (mapped.length) {
-        const { data: photoRows, error: photoError } = await firebaseClient.from('property_photos')
-          .select('id,property_id,storage_path,sort_order')
-          .in('property_id', mapped.map((property: Property) => property.id));
-        if (!photoError && photoRows?.length) {
+        const propertyIds = mapped.map((property: Property) => property.id);
+        const photoRows: any[] = [];
+        let photoQueryFailed = false;
+        // Firestore-compatible adapter caps "in" filters at 30 IDs, so fetch in batches.
+        for (let offset = 0; offset < propertyIds.length; offset += 30) {
+          const { data: batch, error: photoError } = await firebaseClient.from('property_photos')
+            .select('id,property_id,storage_path,sort_order')
+            .in('property_id', propertyIds.slice(offset, offset + 30));
+          if (photoError) { photoQueryFailed = true; break; }
+          photoRows.push(...(batch || []));
+        }
+        if (!photoQueryFailed && photoRows.length) {
           const firstPhotoByProperty = new Map<string, any>();
           for (const photo of [...photoRows].sort((a: any, b: any) => Number(a.sort_order || 0) - Number(b.sort_order || 0))) {
             if (!firstPhotoByProperty.has(String(photo.property_id))) firstPhotoByProperty.set(String(photo.property_id), photo);
