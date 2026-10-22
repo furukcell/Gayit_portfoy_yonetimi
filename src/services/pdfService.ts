@@ -40,7 +40,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       const agentPhone = profile?.phone || '';
       const agentEmail = profile?.email || '';
       const { data: photoRows, error: photoError } = await firebaseClient.from('property_photos')
-        .select('storage_path,sort_order').eq('property_id', p.id).order('sort_order', { ascending: true }).limit(12);
+        .select('storage_path,sort_order').eq('property_id', p.id).order('sort_order', { ascending: true }).limit(4);
       if (photoError) throw new Error('İlan fotoğrafları alınamadı.');
       const photosForPdf = await Promise.all((photoRows || []).map(async (photo: any) => {
         const storedPath = String(photo.storage_path || '');
@@ -86,7 +86,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       .featured-item{background:rgba(255,255,255,.94);border-left:1mm solid #d9b16a;border-radius:1mm;padding:1mm 1.5mm;font-size:7pt;min-width:0}
       .featured-item span{display:block;color:#718195;font-size:7pt;margin-bottom:1mm}
       .featured-item b{display:block;color:#10283f;font-size:9pt;overflow-wrap:anywhere}
-      .photo-layout{margin-top:2mm;break-inside:avoid;page-break-inside:avoid}.photo-layout h2{font-size:9pt;margin:0 0 1.5mm;color:#10283f}.photo-gallery{display:grid;grid-template-columns:1fr 1fr;gap:2mm}.photo-large{height:40mm;overflow:hidden;border:1px solid #d9b16a;border-radius:1.5mm;background:#eef2f5}.photo-large img{display:block;width:100%;height:100%;object-fit:cover}
+      .photo-layout{margin-top:1.5mm;break-inside:avoid;page-break-inside:avoid}.photo-layout h2{font-size:8pt;margin:0 0 1mm;color:#10283f}.photo-gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5mm}.photo-large{height:25mm;overflow:hidden;border:1px solid #d9b16a;border-radius:1.5mm;background:#eef2f5}.photo-large img{display:block;width:100%;height:100%;object-fit:cover}
       .photo-main{display:none}
       .photo-thumbs{display:none}
       .thumb{overflow:hidden;border-radius:2mm;background:#e8edf1;min-height:0}
@@ -149,7 +149,7 @@ export const createPropertyPdf = async (p: Property, deps: PdfDependencies) => {
       <article class="panel"><h2><span class="symbol">⌖</span> Yakın çevre</h2><div class="description">${htmlEscape(p.nearbyAmenities || 'Yakın çevre bilgisi belirtilmedi.')}</div></article></div>
       <div class="right-col"><article class="panel"><h2><span class="symbol">●</span> Konum</h2><div class="address-text">${htmlEscape(p.address)}</div><div class="map-placeholder"><div class="map-lines"></div><div class="map-label"><div class="map-pin">●</div>${htmlEscape(locationShort || 'Konum bilgisi')}</div></div><div class="muted" style="font-size:7pt;margin-top:2mm">Kesin konum için danışmanınızdan bilgi alabilirsiniz.</div></article></div></section>
       <section class="contact">${agentAvatarHtml}<div><div class="contact-label">DANIŞMAN</div><div class="agent-name">${htmlEscape(agentDisplayName)}</div><div class="contact-note">${agentPhone ? 'Telefon: ' + htmlEscape(agentPhone) : ''}${agentPhone && agentEmail ? ' · ' : ''}${agentEmail ? 'E-posta: ' + htmlEscape(agentEmail) : ''}${!agentPhone && !agentEmail ? 'Bu portföy hakkında detaylı bilgi ve gösterim için danışmanınızla iletişime geçebilirsiniz.' : ''}</div></div></section>
-      ${photoLayoutHtml}\n      <footer class="footer"><div><div class="footer-brand">${htmlEscape(brandName)}</div><div class="footer-sub">${htmlEscape(brandSubtitle)}</div></div><div class="footer-note">Bu portföy ${htmlEscape(brandName)} tarafından hazırlanmıştır.</div><div class="footer-code">PORTFÖY KODU<br/><b>${code}</b></div></footer>
+      \n      <footer class="footer"><div><div class="footer-brand">${htmlEscape(brandName)}</div><div class="footer-sub">${htmlEscape(brandSubtitle)}</div></div><div class="footer-note">Bu portföy ${htmlEscape(brandName)} tarafından hazırlanmıştır.</div><div class="footer-code">PORTFÖY KODU<br/><b>${code}</b></div></footer>
       </main></body></html>`;
       const file = await Print.printToFileAsync({ html });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', dialogTitle: 'Gayrimenkul sunumunu paylaş' });
