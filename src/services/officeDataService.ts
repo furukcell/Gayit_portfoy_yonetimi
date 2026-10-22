@@ -60,7 +60,7 @@ export const loadProperties = async (targetOfficeId: string, deps: any) => {
             const photo = firstPhotoByProperty.get(property.id);
             if (!photo?.storage_path) return;
             const storedPath = String(photo.storage_path);
-            if (/^https?:\\/\\//i.test(storedPath)) property.coverPhotoUrl = storedPath;
+            if (storedPath.startsWith('http://') || storedPath.startsWith('https://')) property.coverPhotoUrl = storedPath;
             else {
               const { data: signed } = await firebaseClient.storage.from('property-photos').createSignedUrl(storedPath, 60 * 60);
               property.coverPhotoUrl = signed?.signedUrl || undefined;
