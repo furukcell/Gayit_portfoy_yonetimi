@@ -38,6 +38,28 @@ export const loadProperties = async (targetOfficeId: string, deps: any) => {
         floorNumber: row.floor_number == null ? '' : String(row.floor_number),
         totalFloors: row.total_floors == null ? '' : String(row.total_floors),
       }));
+      // Load the first sorted photo for each property so cards can show their cover image.
+      if (mapped.length) {
+        const { data: photoRows, error: photoError } = await firebaseClient.from('property_photos')
+          .select('id,property_id,storage_path,sort_order')
+          .in('property_id', mapped.map((property: Property) => property.id));
+        if (!photoError && photoRows?.length) {
+          const firstPhotoByProperty = new Map<string, any>();
+          for (const photo of [...photoRows].sort((a: any, b: any) => Number(a.sort_order || 0) - Number(b.sort_order || 0))) {
+            if (!firstPhotoByProperty.has(String(photo.property_id))) firstPhotoByProperty.set(String(photo.property_id), photo);
+          }
+          await Promise.all(mapped.map(async (property: Property) => {
+            const photo = firstPhotoByProperty.get(property.id);
+            if (!photo?.storage_path) return;
+            const storedPath = String(photo.storage_path);
+            if (/^https?:\\/\\//i.test(storedPath)) property.coverPhotoUrl = storedPath;
+            else {
+              const { data: signed } = await firebaseClient.storage.from('property-photos').createSignedUrl(storedPath, 60 * 60);
+              property.coverPhotoUrl = signed?.signedUrl || undefined;
+            }
+          }));
+        }
+      }
       setProperties(mapped);
     } finally {
       setPropertiesLoading(false);
