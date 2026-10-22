@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Pressable, ScrollView, Text, Image, Linking, Dimensions } from 'react-native';
+import { Modal, View, Pressable, ScrollView, Text, Image, Linking, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { palette, styles } from '../theme/appStyles';
@@ -32,7 +32,11 @@ export default function PropertyDetailModal(props: Props) {
             </ScrollView></SafeAreaView>}
             <Modal visible={viewerIndex !== null && orderedPhotos.length > 0} transparent animationType="fade" onRequestClose={()=>setViewerIndex(null)}>
               <View style={{flex:1,backgroundColor:'#05080D'}}>
-                <View style={{height:58,paddingHorizontal:16,flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><Text style={{color:'#fff',fontSize:14,fontWeight:'800'}}>{viewerIndex === null ? '' : `${viewerIndex+1} / ${orderedPhotos.length}`}</Text><Pressable onPress={()=>setViewerIndex(null)} hitSlop={12} style={{padding:8}}><Ionicons name="close" size={28} color="#fff"/></Pressable></View>
+                <StatusBar barStyle="light-content" backgroundColor="#05080D" />
+                <View style={{paddingTop: Math.max(12, (StatusBar.currentHeight || 0) + 8), minHeight: 76, paddingHorizontal:16, paddingBottom:10, flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                  <Text style={{color:'#fff',fontSize:14,fontWeight:'800'}}>{viewerIndex === null ? '' : `${viewerIndex+1} / ${orderedPhotos.length}`}</Text>
+                  <Pressable onPress={()=>setViewerIndex(null)} hitSlop={16} style={{width:44,height:44,borderRadius:22,backgroundColor:'rgba(255,255,255,0.14)',alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={28} color="#fff"/></Pressable>
+                </View>
                 <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentOffset={{x:(viewerIndex || 0) * Dimensions.get('window').width,y:0}} onMomentumScrollEnd={(event)=>setViewerIndex(Math.round(event.nativeEvent.contentOffset.x/event.nativeEvent.layoutMeasurement.width))}>
                   {orderedPhotos.map((photo:any)=><View key={photo.id} style={{width:Dimensions.get('window').width,flex:1,justifyContent:'center',alignItems:'center'}}><Image source={{uri:photo.url}} style={{width:'100%',height:'82%'}} resizeMode="contain"/></View>)}
                 </ScrollView>
