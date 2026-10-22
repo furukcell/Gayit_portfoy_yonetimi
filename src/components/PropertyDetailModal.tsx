@@ -6,13 +6,13 @@ import { palette, styles } from '../theme/appStyles';
 import { Feature } from './DashboardPrimitives';
 import type { PropertyStatus } from '../types/property';
 
-type Props = { deleteProperty: any; selected: any; setSelected: any; setPropertyPhotos: any; propertyPhotos: any; photosBusy: any; addPropertyPhoto: any; movePropertyPhoto: any; removePropertyPhoto: any; propertyTypeLabel: any; money: any; openPropertyEditor: any; archiveProperty: any; propertyStatusBusy: any; updatePropertyStatus: any; openMap: any; shareWhatsApp: any; createPdf: any; selectedOwnerContact: any };
+type Props = { loadPropertyPhotos: (propertyId: string) => Promise<any>; deleteProperty: any; selected: any; setSelected: any; setPropertyPhotos: any; propertyPhotos: any; photosBusy: any; addPropertyPhoto: any; movePropertyPhoto: any; removePropertyPhoto: any; propertyTypeLabel: any; money: any; openPropertyEditor: any; archiveProperty: any; propertyStatusBusy: any; updatePropertyStatus: any; openMap: any; shareWhatsApp: any; createPdf: any; selectedOwnerContact: any };
 
 export default function PropertyDetailModal(props: Props) {
-  const { deleteProperty, selected, setSelected, setPropertyPhotos, propertyPhotos, photosBusy, addPropertyPhoto, movePropertyPhoto, removePropertyPhoto, propertyTypeLabel, money, openPropertyEditor, archiveProperty, propertyStatusBusy, updatePropertyStatus, openMap, shareWhatsApp, createPdf, selectedOwnerContact } = props;
+  const { loadPropertyPhotos, deleteProperty, selected, setSelected, setPropertyPhotos, propertyPhotos, photosBusy, addPropertyPhoto, movePropertyPhoto, removePropertyPhoto, propertyTypeLabel, money, openPropertyEditor, archiveProperty, propertyStatusBusy, updatePropertyStatus, openMap, shareWhatsApp, createPdf, selectedOwnerContact } = props;
   const [viewerIndex, setViewerIndex] = React.useState<number | null>(null);
   const orderedPhotos = [...(propertyPhotos || [])].sort((a:any,b:any)=>a.sortOrder-b.sortOrder);
-  React.useEffect(() => { if (!selected) setViewerIndex(null); }, [selected]);
+  React.useEffect(() => { if (!selected) { setViewerIndex(null); return; } void loadPropertyPhotos(selected.id); }, [selected?.id, loadPropertyPhotos]);
   return (
           <Modal visible={!!selected} animationType="slide" onRequestClose={()=>{setViewerIndex(null);setSelected(null);setPropertyPhotos([]);}}>
             {selected && <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>{setViewerIndex(null);setSelected(null);setPropertyPhotos([]);}} style={styles.roundButton}><Ionicons name="chevron-down" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>İlan detayı</Text><Text style={styles.code}>{selected.id}</Text></View>
