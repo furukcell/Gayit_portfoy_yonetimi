@@ -12,7 +12,7 @@ export default function PropertyDetailModal(props: Props) {
   const { loadPropertyPhotos, deleteProperty, selected, setSelected, setPropertyPhotos, propertyPhotos, photosBusy, addPropertyPhoto, movePropertyPhoto, removePropertyPhoto, propertyTypeLabel, money, openPropertyEditor, archiveProperty, propertyStatusBusy, updatePropertyStatus, openMap, shareWhatsApp, createPdf, selectedOwnerContact } = props;
   const [viewerIndex, setViewerIndex] = React.useState<number | null>(null);
   const orderedPhotos = [...(propertyPhotos || [])].sort((a:any,b:any)=>a.sortOrder-b.sortOrder);
-  React.useEffect(() => { if (!selected) { setViewerIndex(null); return; } void loadPropertyPhotos(selected.id); }, [selected?.id, loadPropertyPhotos]);
+  React.useEffect(() => { if (!selected) { setViewerIndex(null); return; } void loadPropertyPhotos(selected.id); }, [selected?.id]);
   return (
           <Modal visible={!!selected} animationType="slide" onRequestClose={()=>{setViewerIndex(null);setSelected(null);setPropertyPhotos([]);}}>
             {selected && <SafeAreaView style={styles.modalSafe} edges={['top','left','right','bottom']}><View style={styles.modalHeader}><Pressable onPress={()=>{setViewerIndex(null);setSelected(null);setPropertyPhotos([]);}} style={styles.roundButton}><Ionicons name="chevron-down" size={22} color={palette.navy}/></Pressable><Text style={styles.modalHeaderTitle}>İlan detayı</Text><Text style={styles.code}>{selected.id}</Text></View>
