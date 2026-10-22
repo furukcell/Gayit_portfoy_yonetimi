@@ -110,23 +110,33 @@ export function getFirebaseClient(): any {
     storage: {from:(bucket:string)=>({
       upload:async(path:string,body:Blob,options?:any)=>{
         try {
-          const cloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
-          const uploadPreset = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+          const cloudName = String(process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || '').trim();
+          const uploadPreset = String(process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || '').trim();
           if (!cloudName || !uploadPreset) throw new Error('Cloudinary ayarları eksik. EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ve EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET değişkenlerini kontrol edin.');
+          // Reject accidental whitespace / copied URL values before calling Cloudinary.
+          if (!/^[a-zA-Z0-9_-]+$/.test(cloudName)) throw new Error('Cloudinary cloud name biçimi geçersiz.');
+          const endpoint = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
           const form = new FormData();
           form.append('file', body as any);
           form.append('upload_preset', uploadPreset);
           // Keep Firebase-style path organization as a Cloudinary folder/public ID.
-          const cleanPath = path.replace(/^\/+|\/+$/g, '').replace(/\.[^/.]+$/, '');
+          const cleanPath = path.replace(/^\\/+|\\/+$/g, '').replace(/\\.[^/.]+$/, '');
           if (cleanPath) {
             const parts = cleanPath.split('/');
             const fileName = parts.pop();
             if (parts.length) form.append('folder', parts.join('/'));
             if (fileName) form.append('public_id', fileName);
           }
-          const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, { method:'POST', body:form });
-          const result:any = await response.json();
-          if (!response.ok || !result.secure_url) throw new Error(result?.error?.message || 'Cloudinary medya yüklemesi başarısız.');
+          const response = await fetch(endpoint, { method:'POST', body:form });
+          const raw = await response.text();
+          let result:any;
+          try { result = raw ? JSON.parse(raw) : {}; }
+          catch { result = {error:{message:raw || 'Cloudinary boş veya geçersiz yanıt döndürdü.'}}; }
+          if (!response.ok || !result.secure_url) {
+            const message = result?.error?.message || 'Cloudinary medya yüklemesi başarısız.';
+            // Include status and endpoint host/path for diagnosis; never expose API secrets.
+            throw new Error(`Cloudinary yükleme hatası (${response.status}; cloud=${cloudName}; preset=${uploadPreset}): ${message}`);
+          }
           return {data:{path:result.secure_url, fullPath:result.public_id, url:result.secure_url, publicId:result.public_id, resourceType:result.resource_type},error:null};
         } catch(e:any) { return {data:null,error:err(e?.message || 'Cloudinary medya yüklemesi başarısız.')}; }
       },
