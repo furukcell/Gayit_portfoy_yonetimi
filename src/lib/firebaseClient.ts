@@ -120,7 +120,7 @@ export function getFirebaseClient(): any {
           form.append('file', body as any);
           form.append('upload_preset', uploadPreset);
           // Keep Firebase-style path organization as a Cloudinary folder/public ID.
-          const cleanPath = path.replace(/^\\/+|\\/+$/g, '').replace(/\\.[^/.]+$/, '');
+          const cleanPath = path.replace(/^\/+|\/+$/g, '').replace(/\.[^/.]+$/, '');
           if (cleanPath) {
             const parts = cleanPath.split('/');
             const fileName = parts.pop();
