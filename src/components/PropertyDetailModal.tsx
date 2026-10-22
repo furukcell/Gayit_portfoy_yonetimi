@@ -33,7 +33,7 @@ export default function PropertyDetailModal(props: Props) {
             </ScrollView></SafeAreaView>}
             <Modal visible={viewerIndex !== null && orderedPhotos.length > 0} transparent animationType="fade" onRequestClose={()=>setViewerIndex(null)}>
               <View style={{flex:1,backgroundColor:'#05080D'}}>
-                <StatusBar barStyle="light-content" backgroundColor="#05080D" />
+                <StatusBar barStyle="light-content" />
                 <View style={{paddingTop: Math.max(12, (StatusBar.currentHeight || 0) + 8), minHeight: 76, paddingHorizontal:16, paddingBottom:10, flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
                   <Text style={{color:'#fff',fontSize:14,fontWeight:'800'}}>{viewerIndex === null ? '' : `${viewerIndex+1} / ${orderedPhotos.length}`}</Text>
                   <Pressable onPress={()=>setViewerIndex(null)} hitSlop={16} style={{width:44,height:44,borderRadius:22,backgroundColor:'rgba(255,255,255,0.14)',alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={28} color="#fff"/></Pressable>
