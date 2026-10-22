@@ -23,7 +23,7 @@ export default function HomeDashboardScreen(props: any) {
         .eq('office_id', officeId)
         .neq('status', 'cancelled')
         .order('starts_at', { ascending: true })
-        .limit(100);
+        .limit(200);
       if (error) throw error;
       setAppointments(data || []);
     } catch (error: any) {
@@ -35,7 +35,12 @@ export default function HomeDashboardScreen(props: any) {
     }
   }, [officeId]);
 
-  useEffect(() => { void loadAppointments(); }, [loadAppointments]);
+  useEffect(() => {
+    void loadAppointments();
+    // Ajandaya yeni kayıt eklendiğinde ana ekrandaki günlük programı da güncel tut.
+    const refreshId = setInterval(() => { void loadAppointments(); }, 30000);
+    return () => clearInterval(refreshId);
+  }, [loadAppointments]);
 
   const now = new Date();
   const hour = now.getHours();
@@ -85,7 +90,8 @@ export default function HomeDashboardScreen(props: any) {
         </View>
         <View style={{ flex: 1 }}>
           <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>{item.title || 'Randevu'}</Text>
-          <Text numberOfLines={1} style={{ fontSize: 11, color: '#D0DCE7', marginTop: 3 }}>{customer?.fullName || item.notes || 'Ajanda kaydı'}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 11, color: '#D0DCE7', marginTop: 3 }}>{customer?.fullName || 'Ajanda kaydı'}</Text>
+          {!!item.notes && <Text numberOfLines={2} style={{ fontSize: 11, color: '#D0DCE7', marginTop: 3 }}>{item.notes}</Text>}
         </View>
         <Ionicons name="chevron-forward" size={16} color={palette.muted} />
       </Pressable>
@@ -106,17 +112,6 @@ export default function HomeDashboardScreen(props: any) {
         {miniStat('calendar-outline', 'Bugünkü randevu', String(todaysAppointments.length), 'Saatli görüşmeler', () => setTab('agenda'))}
         {miniStat('checkmark-done-outline', 'Müşteri takibi', String(todayFollowUps.length), 'Bugün ve gecikenler', () => setTab('customers'))}
       </View>
-
-      <Pressable onPress={() => setTab('agenda')} style={{ padding: 17, borderRadius: 22, backgroundColor: '#10283E', marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 13 }}>
-        <View style={{ width: 49, height: 49, borderRadius: 15, backgroundColor: '#FFFFFF18', alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="calendar" size={26} color={palette.gold} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 17, fontWeight: '900', color: '#FFFFFF' }}>Bugünün ajandası</Text>
-          <Text style={{ fontSize: 11, color: '#D0DCE7', marginTop: 4 }}>{todaysAppointments.length ? `${todaysAppointments.length} planlı görüşme · sıradaki ${pad(new Date((upcomingAppointments[0] || todaysAppointments[0]).starts_at).getHours())}:${pad(new Date((upcomingAppointments[0] || todaysAppointments[0]).starts_at).getMinutes())}` : 'Görüşmelerini ve günlük işlerini planla'}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={palette.gold} />
-      </Pressable>
 
       <View style={{ backgroundColor: '#10283E', borderRadius: 22, borderWidth: 1, borderColor: '#263F55', paddingHorizontal: 15, paddingTop: 15, paddingBottom: 5, marginBottom: 17 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
