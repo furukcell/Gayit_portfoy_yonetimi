@@ -11,6 +11,13 @@ type Props = { loadPropertyPhotos: (propertyId: string) => Promise<any>; deleteP
 export default function PropertyDetailModal(props: Props) {
   const { loadPropertyPhotos, deleteProperty, selected, setSelected, setPropertyPhotos, propertyPhotos, photosBusy, addPropertyPhoto, movePropertyPhoto, removePropertyPhoto, propertyTypeLabel, money, openPropertyEditor, archiveProperty, propertyStatusBusy, updatePropertyStatus, openMap, shareWhatsApp, createPdf, selectedOwnerContact } = props;
   const [viewerIndex, setViewerIndex] = React.useState<number | null>(null);
+  const [pdfBusy, setPdfBusy] = React.useState(false);
+  const handleCreatePdf = async () => {
+    if (pdfBusy || !selected) return;
+    setPdfBusy(true);
+    try { await createPdf(selected); }
+    finally { setPdfBusy(false); }
+  };
   const orderedPhotos = [...(propertyPhotos || [])].sort((a:any,b:any)=>a.sortOrder-b.sortOrder);
   React.useEffect(() => { if (!selected) { setViewerIndex(null); return; } void loadPropertyPhotos(selected.id); }, [selected?.id]);
   return (
@@ -27,7 +34,7 @@ export default function PropertyDetailModal(props: Props) {
               <Text style={styles.sectionTitle}>İlan durumunu yönet</Text><View style={styles.kindRow}>{(['Aktif','Opsiyonlu','Satıldı','Kiralandı'] as PropertyStatus[]).map(status=><Pressable key={status} disabled={propertyStatusBusy} onPress={()=>updatePropertyStatus(status)} style={[styles.kindButton,selected.status===status&&styles.kindButtonOn,propertyStatusBusy&&{opacity:0.55}]}><Text style={[styles.kindText,selected.status===status&&styles.kindTextOn]}>{propertyStatusBusy&&selected.status!==status?'Güncelleniyor…':status}</Text></Pressable>)}</View>
               <Text style={styles.sectionTitle}>Açıklama</Text><Text style={styles.description}>{selected.description || 'Açıklama eklenmemiş.'}</Text>
               <Text style={styles.sectionTitle}>Konum ve paylaşım</Text><Pressable style={styles.mapButton} onPress={()=>openMap(selected)}><Ionicons name="navigate-circle-outline" size={23} color="#fff"/><View style={{flex:1}}><Text style={styles.mapButtonTitle}>Google Maps'te yol tarifi</Text><Text style={styles.mapButtonSub}>Adresi haritada aç ve navigasyonu başlat</Text></View><Ionicons name="open-outline" size={18} color="#fff"/></Pressable>
-              <View style={styles.shareRow}><Pressable style={styles.whatsappButton} onPress={()=>shareWhatsApp(selected)}><Ionicons name="logo-whatsapp" size={21} color="#fff"/><Text style={styles.actionButtonText}>WhatsApp</Text></Pressable><Pressable style={styles.pdfButton} onPress={()=>createPdf(selected)}><Ionicons name="document-text-outline" size={21} color={palette.navy}/><Text style={styles.pdfButtonText}>PDF sunumu</Text></Pressable></View>
+              <View style={styles.shareRow}><Pressable style={styles.whatsappButton} onPress={()=>shareWhatsApp(selected)}><Ionicons name="logo-whatsapp" size={21} color="#fff"/><Text style={styles.actionButtonText}>WhatsApp</Text></Pressable><Pressable disabled={pdfBusy} style={[styles.pdfButton, pdfBusy && { opacity: 0.45 }]} onPress={handleCreatePdf}><Ionicons name={pdfBusy ? "hourglass-outline" : "document-text-outline"} size={21} color={palette.navy}/><Text style={styles.pdfButtonText}>{pdfBusy ? "PDF hazırlanıyor…" : "PDF sunumu"}</Text></Pressable></View>
               {!!selectedOwnerContact?.phone && <Pressable style={[styles.mapButton,{marginTop:12,backgroundColor:'#16805D'}]} onPress={()=>Linking.openURL('tel:'+selectedOwnerContact.phone.replace(/[^+0-9]/g,''))}><Ionicons name="call-outline" size={22} color="#fff"/><View style={{flex:1}}><Text style={styles.mapButtonTitle}>{selectedOwnerContact.name || 'Ev sahibi'}</Text><Text style={styles.mapButtonSub}>{selectedOwnerContact.phone} · Aramak için dokun</Text></View><Ionicons name="chevron-forward" size={18} color="#fff"/></Pressable>}
               <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={palette.muted}/><Text style={styles.noticeText}>PDF sunumu; ilan fotoğrafları, fiyat, temel özellikler ve danışman bilgisini içerir. Fotoğraflar ilan kaydından alınır.</Text></View>
             </ScrollView></SafeAreaView>}
