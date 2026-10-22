@@ -108,11 +108,11 @@ export const choosePropertyPhotos = async (deps: any) => {
     const { pendingPhotoUris, setPendingPhotoUris } = deps;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) { Alert.alert('Galeri izni gerekli', 'İlan fotoğrafı seçmek için galeri izni vermelisin.'); return; }
-    const remaining = Math.max(0, 12 - pendingPhotoUris.length);
-    if (remaining === 0) { Alert.alert('Fotoğraf sınırı', 'Bir ilana en fazla 12 fotoğraf ekleyebilirsin.'); return; }
+    const remaining = Math.max(0, 15 - pendingPhotoUris.length);
+    if (remaining === 0) { Alert.alert('Fotoğraf sınırı', 'Bir ilana en fazla 15 fotoğraf ekleyebilirsin.'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: remaining, quality: 0.82 });
     if (result.canceled) return;
-    setPendingPhotoUris((current: any[]) => [...current, ...result.assets.map(asset => ({ uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName }))].slice(0, 12));
+    setPendingPhotoUris((current: any[]) => { const known = new Set(current.map((photo: any) => photo.uri)); const added = result.assets.filter(asset => !known.has(asset.uri)).map(asset => ({ uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName })); return [...current, ...added].slice(0, 15); });
   };
 
 export const uploadPendingPropertyPhotos = async (propertyId: string, deps: any) => {
