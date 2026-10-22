@@ -39,27 +39,41 @@ export const loadPropertyPhotos = async (propertyId: string, deps: PhotoDependen
   };
 
 export const addPropertyPhoto = async (deps: PhotoDependencies) => {
-    const { selected, officeId, propertyPhotos, setPhotosBusy, setPropertyPhotos } = deps;
-    if (!selected) return;
+    const { selected, officeId, propertyPhotos, setPhotosBusy } = deps;
+    if (!selected || deps.photosBusy) return;
+    const remaining = Math.max(0, 15 - propertyPhotos.length);
+    if (remaining === 0) { Alert.alert('Fotoğraf sınırı', 'Bir ilana en fazla 15 fotoğraf ekleyebilirsin.'); return; }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) { Alert.alert('Galeri izni gerekli', 'İlan fotoğrafı seçmek için galeri izni vermelisin.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.85 });
-    if (result.canceled || !result.assets[0]) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: remaining, quality: 0.85,
+    });
+    if (result.canceled || !result.assets.length) return;
     setPhotosBusy(true);
     try {
-      const asset = result.assets[0];
-      const uploaded = await uploadMediaFromUri(asset.uri, { folder: `gayit/${officeId}/properties/${selected.id}`, fileName: `photo-${Date.now()}.jpg`, mimeType: asset.mimeType || undefined });
       const firebaseClient = getFirebaseClient();
-      // Store the Cloudinary secure URL; all photo features use the same provider.
-      const persistedPath = uploaded.url;
-      const { error: rowError } = await firebaseClient.from('property_photos').insert({ property_id: selected.id, office_id: officeId, storage_path: persistedPath, sort_order: propertyPhotos.length });
-      if (rowError) {
-        if (!/^https?:\/\//i.test(persistedPath)) await firebaseClient.storage.from('property-photos').remove([persistedPath]);
-        throw new Error(rowError.message || 'Fotoğrafın ilan kaydı oluşturulamadı.');
+      const existingUris = new Set(propertyPhotos.map(photo => photo.url));
+      const selectedAssets = result.assets.slice(0, remaining);
+      let sortOrder = propertyPhotos.length;
+      for (const asset of selectedAssets) {
+        const uploaded = await uploadMediaFromUri(asset.uri, {
+          folder: `gayit/${officeId}/properties/${selected.id}`,
+          fileName: asset.fileName || `photo-${Date.now()}-${sortOrder}.jpg`,
+          mimeType: asset.mimeType || undefined,
+        });
+        const persistedPath = uploaded.url;
+        if (existingUris.has(persistedPath)) continue;
+        const { error: rowError } = await firebaseClient.from('property_photos').insert({
+          property_id: selected.id, office_id: officeId, storage_path: persistedPath, sort_order: sortOrder,
+        });
+        if (rowError) throw new Error(rowError.message || 'Fotoğrafın ilan kaydı oluşturulamadı.');
+        existingUris.add(persistedPath);
+        sortOrder += 1;
       }
       await loadPropertyPhotos(selected.id, deps);
-    } catch (error: any) { Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : error?.message || 'Bilinmeyen yükleme hatası. Cloudinary ayarlarını ve Firestore erişim izinlerini kontrol edin.'); }
-    finally { setPhotosBusy(false); }
+    } catch (error: any) {
+      Alert.alert('Fotoğraf yüklenemedi', error instanceof Error ? error.message : error?.message || 'Bilinmeyen yükleme hatası.');
+    } finally { setPhotosBusy(false); }
   };
 
 export const movePropertyPhoto = async (photo: PropertyPhoto, direction: -1 | 1, deps: PhotoDependencies) => {
