@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getFirebaseClient } from '../lib/firebaseClient';
@@ -9,6 +11,48 @@ const toLocalInput=(date:Date)=>`${date.getFullYear()}-${pad(date.getMonth()+1)}
 const parseLocal=(value:string)=>new Date(value.trim().replace(' ','T')+(value.trim().length===16?':00':''));
 const datePart=(value:string)=>value.slice(0,10);
 const timePart=(value:string)=>value.slice(11,16);
+
+const reminderStorageKey=(officeId:string,appointmentId:string)=>'agenda-reminders:'+officeId+':'+appointmentId;
+
+const scheduleAppointmentReminders=async(officeId:string,item:any)=>{
+  if(!officeId||!item?.id||!item?.starts_at||item.status==='cancelled')return;
+  const startAt=new Date(item.starts_at).getTime();
+  if(!Number.isFinite(startAt)||startAt<=Date.now())return;
+  const storageKey=reminderStorageKey(officeId,String(item.id));
+  if(await AsyncStorage.getItem(storageKey))return;
+
+  let permission=await Notifications.getPermissionsAsync();
+  if(permission.status!=='granted')permission=await Notifications.requestPermissionsAsync();
+  if(permission.status!=='granted')return;
+
+  await Notifications.setNotificationChannelAsync('agenda-reminders',{
+    name:'Ajanda hatırlatmaları',
+    importance:Notifications.AndroidImportance.HIGH,
+    sound:'default'
+  });
+
+  const reminders=[60,30,15];
+  const notificationIds:string[]=[];
+  for(const minutes of reminders){
+    const fireAt=startAt-minutes*60*1000;
+    if(fireAt<=Date.now())continue;
+    const id=await Notifications.scheduleNotificationAsync({
+      content:{
+        title:'Ajanda hatırlatması',
+        body:'“'+(item.title||'Ajanda kaydı')+'” '+minutes+' dakika sonra başlayacak.',
+        sound:'default',
+        data:{appointmentId:String(item.id),officeId}
+      },
+      trigger:{
+        type:Notifications.SchedulableTriggerInputTypes.DATE,
+        date:new Date(fireAt),
+        channelId:'agenda-reminders'
+      }
+    });
+    notificationIds.push(id);
+  }
+  await AsyncStorage.setItem(storageKey,JSON.stringify(notificationIds));
+};
 
 export default function AgendaScreen({styles,palette,officeId,customers,openCustomerDetail}:any) {
   const [items,setItems]=useState<any[]>([]);
@@ -26,7 +70,12 @@ export default function AgendaScreen({styles,palette,officeId,customers,openCust
     try {
       const {data,error}=await getFirebaseClient().from('appointments').select('*').eq('office_id',officeId).order('starts_at',{ascending:true}).limit(200);
       if(error)throw error;
-      setItems((data||[]).filter((x:any)=>x.status!=='cancelled').sort((a:any,b:any)=>new Date(a.starts_at).getTime()-new Date(b.starts_at).getTime()));
+      const activeItems=(data||[]).filter((x:any)=>x.status!=='cancelled').sort((a:any,b:any)=>new Date(a.starts_at).getTime()-new Date(b.starts_at).getTime());
+      setItems(activeItems);
+      for(const appointment of activeItems){
+        try{await scheduleAppointmentReminders(String(officeId),appointment);}
+        catch(notificationError){console.warn('Ajanda bildirimi planlanamadı',notificationError);}
+      }
     } catch(e:any) { Alert.alert('Ajanda yüklenemedi',e?.message||'Randevular okunamadı.'); }
     finally {setLoading(false);}
   },[officeId]);
@@ -47,6 +96,8 @@ export default function AgendaScreen({styles,palette,officeId,customers,openCust
       }).select('*').single();
       if(error)throw error;
       setItems((prev:any[])=>[...prev,data].sort((a:any,b:any)=>new Date(a.starts_at).getTime()-new Date(b.starts_at).getTime()));
+      try{await scheduleAppointmentReminders(String(officeId),data);}
+      catch(notificationError){console.warn('Ajanda bildirimi planlanamadı',notificationError);}
       setTitle('');setNotes('');setCustomerId('');setShowForm(false);
       Alert.alert('Ajandaya eklendi','İş veya görüşme takvime kaydedildi.');
     }catch(e:any){Alert.alert('Kaydedilemedi',e?.message||'Ajanda kaydı oluşturulamadı.');}
