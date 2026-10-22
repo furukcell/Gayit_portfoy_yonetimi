@@ -26,7 +26,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#06172B"
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "extra": {
       "eas": {
