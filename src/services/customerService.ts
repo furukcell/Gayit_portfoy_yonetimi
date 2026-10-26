@@ -197,21 +197,28 @@ const rebuildCustomerMatches = async (officeId: string, customerId: string) => {
         reasons.push('Gayrimenkul türü uygun');
       }
 
-      // Property records currently expose district/address, not a reliable separate city field.
-      // Do not let a city-only requirement block every listing; use district/neighborhood when available.
       const propertyLocation = norm([property.city, property.district, property.neighborhood, property.address].filter(Boolean).join(' '));
-      const wantedArea = norm([req.district, req.neighborhood].filter(Boolean).join(' '));
-      if (wantedArea) {
-        const tokens = wantedArea.split(/[ ,]+/).filter((token: string) => token.length > 2);
-        const matchedTokens = tokens.filter((token: string) => propertyLocation.includes(token));
-        if (tokens.length && matchedTokens.length === 0) continue;
-        if (tokens.length) {
-          score += Math.round(30 * matchedTokens.length / tokens.length);
-          reasons.push(matchedTokens.length === tokens.length ? 'Konum uygun' : 'Konum kısmen uygun');
-        }
-      } else if (req.city) {
-        score += 15;
-        reasons.push('Şehir kriteri dikkate alındı');
+      const locationCriteria: Array<{ value: any; field: any; label: string }> = [
+        { value: req.city, field: property.city, label: 'İl' },
+        { value: req.district, field: property.district, label: 'İlçe' },
+        { value: req.neighborhood, field: property.neighborhood, label: 'Mahalle' },
+      ];
+      let matchedLocationCount = 0;
+      for (const criterion of locationCriteria) {
+        const wanted = norm(criterion.value);
+        if (!wanted) continue;
+        const actual = norm(criterion.field);
+        const matchesLocation = actual
+          ? actual === wanted || actual.includes(wanted) || wanted.includes(actual)
+          : propertyLocation.includes(wanted);
+        if (!matchesLocation) continue;
+        matchedLocationCount += 1;
+      }
+      const activeLocationCriteria = locationCriteria.filter((criterion) => norm(criterion.value)).length;
+      if (activeLocationCriteria > 0 && matchedLocationCount < activeLocationCriteria) continue;
+      if (matchedLocationCount > 0) {
+        score += Math.round(30 * matchedLocationCount / activeLocationCriteria);
+        reasons.push('İl / ilçe / mahalle uygun');
       }
 
       const price = Number(property.price || 0);
