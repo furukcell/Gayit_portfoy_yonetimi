@@ -157,7 +157,7 @@ const rebuildCustomerMatches = async (officeId: string, customerId: string) => {
   const db = getFirebaseClient();
   const [{ data: requirements, error: reqError }, { data: properties, error: propError }] = await Promise.all([
     db.from('customer_requirements').select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,is_active').eq('office_id', officeId).eq('customer_id', customerId).eq('is_active', true),
-    db.from('properties').select('id,title,price,listing_type,status,property_type,city,district,neighborhood,address,rooms,office_id').eq('office_id', officeId).in('status', ['active','optioned'])
+    db.from('properties').select('id,title,price,listing_type,status,property_type,city,district,neighborhood,address,rooms,area_m2,office_id').eq('office_id', officeId).in('status', ['active','optioned'])
   ]);
   if (reqError) throw reqError;
   if (propError) throw propError;
@@ -245,6 +245,14 @@ const rebuildCustomerMatches = async (officeId: string, customerId: string) => {
         }
       }
 
+      const propertyArea = Number(String((property as any).area_m2 ?? '').replace(/[^0-9.]/g, ''));
+      const minArea = req.min_area_m2 == null || req.min_area_m2 === '' ? null : Number(req.min_area_m2);
+      const maxArea = req.max_area_m2 == null || req.max_area_m2 === '' ? null : Number(req.max_area_m2);
+      const hasMinArea = minArea != null && Number.isFinite(minArea) && minArea > 0;
+      const hasMaxArea = maxArea != null && Number.isFinite(maxArea) && maxArea > 0;
+      if ((hasMinArea || hasMaxArea) && (!Number.isFinite(propertyArea) || propertyArea <= 0 || (hasMinArea && propertyArea < (minArea as number)) || (hasMaxArea && propertyArea > (maxArea as number)))) continue;
+      if (hasMinArea || hasMaxArea) { score += 10; reasons.push('Alan (m²) uygun'); }
+
       const wantedRooms = Array.isArray(req.rooms) ? req.rooms.map(norm).filter(Boolean) : [];
       if (wantedRooms.length && !wantedRooms.some((room: string) => norm(property.rooms).includes(room))) continue;
       if (wantedRooms.length) {
@@ -281,15 +289,21 @@ export const rebuildAllOfficeMatches = async (officeId: string) => {
 };
 
 export const addRequirementForSelectedCustomer = async (deps: any) => {
-    const { selectedCustomer, requirementMaxPrice, requirementDistrict, requirementNeighborhood, requirementCity, requirementRooms, setCustomerEditBusy, officeId, requirementIntent, requirementType, setCustomerRequirements, loadMatches, loadCustomers, setRequirementIntent, setRequirementType, setRequirementCity, setRequirementDistrict, setRequirementNeighborhood, setRequirementMaxPrice, setRequirementRooms } = deps;
+    const { selectedCustomer, requirementMinPrice, requirementMaxPrice, requirementMinArea, requirementMaxArea, requirementDistrict, requirementNeighborhood, requirementCity, requirementRooms, setCustomerEditBusy, officeId, requirementIntent, requirementType, setCustomerRequirements, loadMatches, loadCustomers, setRequirementIntent, setRequirementType, setRequirementCity, setRequirementDistrict, setRequirementNeighborhood, setRequirementMinPrice, setRequirementMaxPrice, setRequirementMinArea, setRequirementMaxArea, setRequirementRooms } = deps;
     if (!selectedCustomer) return;
+    const safeMinPrice = String(requirementMinPrice ?? '');
     const safeMaxPrice = String(requirementMaxPrice ?? '');
+    const safeMinArea = String(requirementMinArea ?? '');
+    const safeMaxArea = String(requirementMaxArea ?? '');
     const safeDistrict = String(requirementDistrict ?? '');
     const safeNeighborhood = String(requirementNeighborhood ?? '');
     const safeCity = String(requirementCity ?? '');
     const safeRooms = String(requirementRooms ?? '');
+    const minPrice = Number(safeMinPrice.replace(/[^0-9]/g, ''));
     const maxPrice = Number(safeMaxPrice.replace(/[^0-9]/g, ''));
-    if (!safeDistrict.trim() && !safeNeighborhood.trim() && !safeCity.trim() && !safeMaxPrice.trim() && !safeRooms.trim()) {
+    const minArea = Number(safeMinArea.replace(/[^0-9]/g, ''));
+    const maxArea = Number(safeMaxArea.replace(/[^0-9]/g, ''));
+    if (!safeDistrict.trim() && !safeNeighborhood.trim() && !safeCity.trim() && !safeMinPrice.trim() && !safeMaxPrice.trim() && !safeMinArea.trim() && !safeMaxArea.trim() && !safeRooms.trim()) {
       Alert.alert('Arama kriteri eksik', 'En azından konum, bütçe veya oda kriterlerinden birini gir.');
       return;
     }
@@ -299,7 +313,8 @@ export const addRequirementForSelectedCustomer = async (deps: any) => {
       const { data, error } = await firebaseClient.from('customer_requirements').insert({
         office_id: officeId, customer_id: selectedCustomer.id, intent: requirementIntent,
         property_type: requirementType, city: safeCity.trim(), district: safeDistrict.trim(), neighborhood: safeNeighborhood.trim(),
-        max_price: maxPrice > 0 ? maxPrice : null,
+        min_price: minPrice > 0 ? minPrice : null, max_price: maxPrice > 0 ? maxPrice : null,
+        min_area_m2: minArea > 0 ? minArea : null, max_area_m2: maxArea > 0 ? maxArea : null,
         rooms: safeRooms.trim() ? [safeRooms.trim()] : [], is_active: true,
       }).select('id,intent,property_type,city,district,neighborhood,min_price,max_price,min_area_m2,max_area_m2,rooms,must_have,notes,is_active,created_at').single();
       if (error) throw error;
@@ -308,7 +323,7 @@ export const addRequirementForSelectedCustomer = async (deps: any) => {
       await loadMatches(officeId);
       await loadCustomers(officeId);
       setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla');
-      setRequirementDistrict(''); setRequirementNeighborhood(''); setRequirementMaxPrice(''); setRequirementRooms('');
+      setRequirementDistrict(''); setRequirementNeighborhood(''); setRequirementMinPrice(''); setRequirementMaxPrice(''); setRequirementMinArea(''); setRequirementMaxArea(''); setRequirementRooms('');
       Alert.alert('Talep eklendi', 'Müşteriye yeni arama talebi kaydedildi.');
     } catch (error) {
       Alert.alert('Talep eklenemedi', error instanceof Error ? error.message : 'Arama talebi kaydedilemedi.');
@@ -375,7 +390,7 @@ export const deleteCustomer = async (deps: any) => {
 };
 
 export const saveCustomer = async (deps: any) => {
-    const { customerName, customerRoles, setCustomerBusy, officeId, customerPhone, customerNotes, requirementMaxPrice, requirementIntent, requirementDistrict, requirementNeighborhood, requirementRooms, requirementType, requirementCity, loadCustomers, loadMatches, setCustomerModalOpen, setCustomerName, setCustomerPhone, setCustomerRoles, setCustomerNotes, setRequirementIntent, setRequirementType, setRequirementCity, setRequirementDistrict, setRequirementNeighborhood, setRequirementMaxPrice, setRequirementRooms } = deps;
+    const { customerName, customerRoles, setCustomerBusy, officeId, customerPhone, customerNotes, requirementMinPrice, requirementMaxPrice, requirementMinArea, requirementMaxArea, requirementIntent, requirementDistrict, requirementNeighborhood, requirementRooms, requirementType, requirementCity, loadCustomers, loadMatches, setCustomerModalOpen, setCustomerName, setCustomerPhone, setCustomerRoles, setCustomerNotes, setRequirementIntent, setRequirementType, setRequirementCity, setRequirementDistrict, setRequirementNeighborhood, setRequirementMinPrice, setRequirementMaxPrice, setRequirementMinArea, setRequirementMaxArea, setRequirementRooms } = deps;
     if (!customerName?.trim()) { Alert.alert('Eksik bilgi', 'Müşterinin adını gir.'); return; }
     if (!Array.isArray(customerRoles) || customerRoles.length === 0) { Alert.alert('Müşteri türü', 'En az bir müşteri rolü seç.'); return; }
     setCustomerBusy(true);
@@ -385,22 +400,28 @@ export const saveCustomer = async (deps: any) => {
       if (userError || !userResult.user) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
       const { data: customer, error } = await firebaseClient.from('customers').insert({ office_id: officeId, assigned_agent_id: userResult.user.id, created_by: userResult.user.id, full_name: customerName.trim(), phone: String(customerPhone ?? '').trim(), roles: customerRoles, notes: String(customerNotes ?? '').trim() }).select('id').single();
       if (error || !customer) throw new Error(error?.message || 'Müşteri kaydedilemedi. Migration 003 ve RLS ayarlarını kontrol et.');
+      const safeMinPrice = String(requirementMinPrice ?? '');
       const safeMaxPrice = String(requirementMaxPrice ?? '');
+      const safeMinArea = String(requirementMinArea ?? '');
+      const safeMaxArea = String(requirementMaxArea ?? '');
       const safeDistrict = String(requirementDistrict ?? '');
       const safeNeighborhood = String(requirementNeighborhood ?? '');
       const safeRooms = String(requirementRooms ?? '');
       const safeCity = String(requirementCity ?? '');
+      const minPrice = Number(safeMinPrice.replace(/[^0-9]/g, ''));
       const maxPrice = Number(safeMaxPrice.replace(/[^0-9]/g, ''));
-      const hasRequirement = !!(requirementIntent !== 'sale' || safeDistrict.trim() || safeNeighborhood.trim() || safeMaxPrice.trim() || safeRooms.trim() || requirementType !== 'apartment' || safeCity.trim() !== 'Muğla');
+      const minArea = Number(safeMinArea.replace(/[^0-9]/g, ''));
+      const maxArea = Number(safeMaxArea.replace(/[^0-9]/g, ''));
+      const hasRequirement = !!(requirementIntent !== 'sale' || safeDistrict.trim() || safeNeighborhood.trim() || safeMinPrice.trim() || safeMaxPrice.trim() || safeMinArea.trim() || safeMaxArea.trim() || safeRooms.trim() || requirementType !== 'apartment' || safeCity.trim() !== 'Muğla');
       if (hasRequirement) {
-        const hasActualSearchCriteria = !!(safeDistrict.trim() || safeNeighborhood.trim() || safeMaxPrice.trim() || safeRooms.trim() || safeCity.trim());
+        const hasActualSearchCriteria = !!(safeDistrict.trim() || safeNeighborhood.trim() || safeMinPrice.trim() || safeMaxPrice.trim() || safeMinArea.trim() || safeMaxArea.trim() || safeRooms.trim() || safeCity.trim());
         if (!hasActualSearchCriteria) {
           await loadCustomers(officeId);
-          setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementNeighborhood(''); setRequirementMaxPrice(''); setRequirementRooms('');
+          setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementNeighborhood(''); setRequirementMinPrice(''); setRequirementMaxPrice(''); setRequirementMinArea(''); setRequirementMaxArea(''); setRequirementRooms('');
           Alert.alert('Müşteri kaydedildi', 'Müşteri kaydedildi. Arama talebi için konum, bütçe veya oda kriterlerinden en az birini girmen yeterli.');
           return;
         }
-        const { error: requirementError } = await firebaseClient.from('customer_requirements').insert({ office_id: officeId, customer_id: customer.id, intent: requirementIntent, property_type: requirementType, city: safeCity.trim(), district: safeDistrict.trim(), neighborhood: safeNeighborhood.trim(), max_price: maxPrice > 0 ? maxPrice : null, rooms: safeRooms.trim() ? [safeRooms.trim()] : [], is_active: true });
+        const { error: requirementError } = await firebaseClient.from('customer_requirements').insert({ office_id: officeId, customer_id: customer.id, intent: requirementIntent, property_type: requirementType, city: safeCity.trim(), district: safeDistrict.trim(), neighborhood: safeNeighborhood.trim(), min_price: minPrice > 0 ? minPrice : null, max_price: maxPrice > 0 ? maxPrice : null, min_area_m2: minArea > 0 ? minArea : null, max_area_m2: maxArea > 0 ? maxArea : null, rooms: safeRooms.trim() ? [safeRooms.trim()] : [], is_active: true });
         if (requirementError) {
           await firebaseClient.from('customers').delete().eq('id', customer.id).eq('office_id', officeId);
           throw new Error('Arama kriterleri kaydedilemediği için müşteri kaydı tamamlanmadı: ' + requirementError.message);
