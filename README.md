@@ -11,6 +11,7 @@ GAYIT, emlak ofislerinin portföylerini, müşterilerini, danışmanlarını ve 
 - [Teknik mimari](#teknik-mimari)
 - [Kurulum ve derleme](#kurulum-ve-derleme)
 - [Firebase ilk kurulum kontrol listesi](#firebase-ilk-kurulum-kontrol-listesi)
+- [Planlanan web paneli ve herkese açık ilan linkleri](#planlanan-web-paneli-ve-herkese-açık-ilan-linkleri)
 - [Bilinen sınırlamalar ve sonraki işler](#bilinen-sınırlamalar-ve-sonraki-işler)
 - [Güvenlik notları](#güvenlik-notları)
 
@@ -145,6 +146,39 @@ Cloudinary panelinde `gayit_portfoy` preset'i unsigned modda olmalıdır. Güven
 - GitHub Actions Android release APK derlemesi ve Mobile CI, `5aa6b1d` commit'i için başarılı raporlanmıştır. Bu kontroller TypeScript/derleme hattının geçtiğini gösterir; Firebase canlı bağlantısını veya tüm ekran akışlarını uçtan uca test etmez.
 - `firestore.rules` ve `storage.rules` dosyaları repoda mevcuttur. Dosyaların repoda olması, canlı Firebase projesine yayımlandıklarını kanıtlamaz.
 
+## Planlanan web paneli ve herkese açık ilan linkleri
+
+**Öncelikli sonraki geliştirme:** Mobil uygulamanın yanında, aynı emlak ofisi hesabıyla kullanılabilen bir web yönetim paneli hazırlanacak. Panelin amacı mobil uygulamanın yerine geçmek değil; bilgisayardan portföy ve müşteri işlerini yönetmeyi kolaylaştırmak ve ilanları müşterilerle bağlantı üzerinden paylaşabilmektir.
+
+### Hedefler
+- **Mobil–web senkronizasyonu:** Mobil uygulama ve web paneli aynı Firebase projesini, Firebase Authentication kimliğini ve Firestore veri kaynağını kullanmalı. Mobilde eklenen/düzenlenen ilan panelde, panelde yapılan değişiklik de mobilde görünmeli. Fotoğraf URL'leri ve portföy durumları da aynı kayıtlarla senkron kalmalı.
+- **Web yönetim paneli:** Mobildeki temel portföy yönetimi mantığı korunmalı: ilanları listeleme, arama/filtreleme, detayları görüntüleme, ilan ekleme/düzenleme, fiyat ve durum güncelleme, fotoğraf yönetimi. Müşteri/CRM özellikleri masaüstüne uygun şekilde aşamalı olarak eklenebilir.
+- **Herkese açık ilan paylaşımı:** Her ilan için müşteriye WhatsApp veya başka bir kanaldan gönderilebilecek, oturum açmayı gerektirmeyen bir paylaşım linki oluşturulmalı. Link yalnızca özellikle paylaşılabilir olarak işaretlenen ve aktif durumdaki ilanı göstermeli.
+- **Güvenli herkese açık görünüm:** Paylaşım sayfasında yalnızca müşteriyle paylaşılması uygun ilan alanları ve fotoğraflar gösterilmeli. Müşteri kayıtları, özel ofis notları, danışman iç notları, komisyonlar, kullanıcı kimlikleri ve diğer ofis ilanları kesinlikle açığa çıkmamalı. Paylaşım sayfası ofis içi yönetim panelinden ayrı bir salt-okunur görünüm olmalı.
+- **Kısa Firebase Hosting adresi:** Hedef, `gayit.web.app` gibi kısa ve kolay paylaşılabilir bir adres kullanmak. Bu adresin kullanılabilirliği Firebase projesinin Hosting site/proje kimliğine bağlıdır; gerekirse uygun kısa bir Hosting site kimliği seçilmeli. Alan adı ve Hosting yapılandırması uygunluğu doğrulandıktan sonra yapılmalı.
+- **Responsive tasarım:** Panel masaüstünde rahat kullanılmalı; telefon ve tablet ekranlarında da temel işlemler bozulmadan çalışmalı.
+- **Yetkilendirme:** Giriş gerektiren panel sayfaları mevcut ofis/rol yetkilerini uygulamalı. Her ofis yalnızca kendi verisini görebilmeli. İlanı herkese açık paylaşmak, ofis içi verilerin tamamını herkese açmak anlamına gelmemeli.
+
+### Uygulama sırası
+1. [ ] Mevcut Firestore portföy şemasını, ofis izolasyonunu ve mobil uygulamanın okuma/yazma akışlarını incele.
+2. [ ] Web uygulaması için mimari ve teknoloji seçimini yap; mevcut Firebase yapılandırmasını güvenli biçimde yeniden kullan. Mobil uygulamayı kıracak ayrı veya kopya bir ilan veritabanı oluşturma.
+3. [ ] Firebase Authentication ile giriş ve rol/ofis bazlı erişim kontrolünü kur.
+4. [ ] Web portföy listesi, arama/filtreler, ilan ekleme/düzenleme ve fotoğraf yönetimini geliştir.
+5. [ ] Her ilan için tahmin edilmesi zor bir paylaşım kimliği kullanan herkese açık ilan detay sayfasını oluştur; yalnızca izin verilen alanları sun.
+6. [ ] Firestore Rules ve gerekiyorsa sunucu tarafı paylaşım erişimini, oturum açmış/oturum açmamış kullanıcılar ve farklı ofisler arasında pozitif-negatif testlerle doğrula.
+7. [ ] Firebase Hosting'i yapılandır; kısa `*.web.app` adresini ve dağıtım akışını doğrula.
+8. [ ] Senkronizasyon testleri yap: mobilde ilan oluştur/düzenle, web panelinde kontrol et; webde değiştir, mobilde kontrol et; fotoğraf, fiyat, durum, arşivleme ve paylaşım bağlantısını test et.
+9. [ ] Güvenlik ve gerçek cihaz/tarayıcı kontrolleri başarılı olduktan sonra canlıya al.
+
+### Kabul kriterleri
+- [ ] Mobilde oluşturulan ilan, sayfa yenilendikten sonra web panelinde doğru ofis altında görünür.
+- [ ] Web panelinde yapılan ilan değişiklikleri mobil uygulamada aynı kayıt üzerinden görünür.
+- [ ] Herkese açık link oturum açmadan açılır ve yalnızca paylaşılmasına izin verilen ilan bilgilerini gösterir.
+- [ ] Link, müşteri/CRM kayıtlarını veya ofis içi özel alanları açığa çıkarmaz.
+- [ ] Başka bir ofisin ilanları ve kayıtları panel kullanıcısına gösterilmez.
+- [ ] Hosting adresi, HTTPS, fotoğraf yükleme/görüntüleme ve mobil paylaşım akışı doğrulanır.
+
+**Durum:** Planlama aşamasında; bu bölüm yapılacak işleri tarif eder, web panelinin geliştirildiği veya Firebase Hosting'e dağıtıldığı anlamına gelmez.
 ## Bilinen sınırlamalar ve sonraki işler
 1. Cloudinary preset ve medya adaptörü gerçek cihazda fotoğraf yükleme/görüntüleme akışlarıyla test edilmeli; unsigned upload için Cloudinary kullanım/limitleri takip edilmeli. Android'de `Unsupported FormDataPart implementation` hatası görüldüğü için yükleme düzeltmesi gerçek APK'da doğrulanmadan başarılı kabul edilmemeli.
 2. Firebase Storage kodu kaldırılmadı. İleride `EXPO_PUBLIC_MEDIA_PROVIDER=firebase` gibi açık bir sağlayıcı seçimiyle Firebase Storage'a dönüş planlanmalı; mevcut Cloudinary URL'leri için veri taşıma planı hazırlanmalı.
