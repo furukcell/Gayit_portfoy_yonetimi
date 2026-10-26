@@ -72,7 +72,10 @@ export default function useAppState() {
   const [requirementCity, setRequirementCity] = useState('Muğla');
   const [requirementDistrict, setRequirementDistrict] = useState('');
   const [requirementNeighborhood, setRequirementNeighborhood] = useState('');
+  const [requirementMinPrice, setRequirementMinPrice] = useState('');
   const [requirementMaxPrice, setRequirementMaxPrice] = useState('');
+  const [requirementMinArea, setRequirementMinArea] = useState('');
+  const [requirementMaxArea, setRequirementMaxArea] = useState('');
   const [requirementRooms, setRequirementRooms] = useState('');
   const [customerBusy, setCustomerBusy] = useState(false);
   const [matches, setMatches] = useState<any[]>([]);
@@ -132,6 +135,8 @@ export default function useAppState() {
   const [excelPreviewCount, setExcelPreviewCount] = useState(0);
   const [minPriceFilter, setMinPriceFilter] = useState('');
   const [maxPriceFilter, setMaxPriceFilter] = useState('');
+  const [minAreaFilter, setMinAreaFilter] = useState('');
+  const [maxAreaFilter, setMaxAreaFilter] = useState('');
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
   const [photosBusy, setPhotosBusy] = useState(false);
   const [title, setTitle] = useState('');
@@ -176,7 +181,7 @@ export default function useAppState() {
     offerPropertyId, setOfferPropertyId, offerAmount, setOfferAmount, offerStatus, setOfferStatus, offerNotes, setOfferNotes, offerBusy, setOfferBusy,
     appointmentTitle, setAppointmentTitle, appointmentStartsAt, setAppointmentStartsAt, appointmentNotes, setAppointmentNotes, appointmentBusy, setAppointmentBusy, customerName, setCustomerName,
     customerPhone, setCustomerPhone, customerRoles, setCustomerRoles, customerNotes, setCustomerNotes, requirementIntent, setRequirementIntent, requirementType, setRequirementType,
-    requirementCity, setRequirementCity, requirementDistrict, setRequirementDistrict, requirementNeighborhood, setRequirementNeighborhood, requirementMaxPrice, setRequirementMaxPrice, requirementRooms, setRequirementRooms, customerBusy, setCustomerBusy,
+    requirementCity, setRequirementCity, requirementDistrict, setRequirementDistrict, requirementNeighborhood, setRequirementNeighborhood, requirementMinPrice, setRequirementMinPrice, requirementMaxPrice, setRequirementMaxPrice, requirementMinArea, setRequirementMinArea, requirementMaxArea, setRequirementMaxArea, requirementRooms, setRequirementRooms, customerBusy, setCustomerBusy,
     matches, setMatches, matchesLoading, setMatchesLoading, notifications, setNotifications, notificationsLoading, setNotificationsLoading, notificationsOpen, setNotificationsOpen,
     propertiesLoading, setPropertiesLoading, propertyBusy, setPropertyBusy, propertyStatusBusy, setPropertyStatusBusy, archiveBusy, setArchiveBusy, offerStatusBusyId, setOfferStatusBusyId,
     tab, setTab, properties, setProperties, selected, setSelected, addOpen, setAddOpen, editingPropertyId, setEditingPropertyId,
@@ -188,7 +193,7 @@ export default function useAppState() {
     csvImportBusy, setCsvImportBusy, profileModalOpen, setProfileModalOpen, officeBrandingOpen, setOfficeBrandingOpen, profilePhone, setProfilePhone, profileEmail, setProfileEmail, profileAvatarPath, setProfileAvatarPath,
     profileAvatarUrl, setProfileAvatarUrl, profileAvatarUri, setProfileAvatarUri, profileBusy, setProfileBusy, currentPassword, setCurrentPassword, profileNewPassword, setProfileNewPassword,
     profileConfirmPassword, setProfileConfirmPassword, passwordBusy, setPasswordBusy, excelFileName, setExcelFileName, excelPreviewCount, setExcelPreviewCount, minPriceFilter, setMinPriceFilter,
-    maxPriceFilter, setMaxPriceFilter, propertyPhotos, setPropertyPhotos, photosBusy, setPhotosBusy, title, setTitle, address, setAddress, propertyCity, setPropertyCity, propertyDistrict, setPropertyDistrict, propertyNeighborhood, setPropertyNeighborhood, propertyLatitude, setPropertyLatitude, propertyLongitude, setPropertyLongitude,
+    maxPriceFilter, setMaxPriceFilter, minAreaFilter, setMinAreaFilter, maxAreaFilter, setMaxAreaFilter, propertyPhotos, setPropertyPhotos, photosBusy, setPhotosBusy, title, setTitle, address, setAddress, propertyCity, setPropertyCity, propertyDistrict, setPropertyDistrict, propertyNeighborhood, setPropertyNeighborhood, propertyLatitude, setPropertyLatitude, propertyLongitude, setPropertyLongitude,
     price, setPrice, rooms, setRooms, area, setArea, kind, setKind, propertyType, setPropertyType,
     description, setDescription, bathrooms, setBathrooms, balcony, setBalcony, parking, setParking, heating, setHeating,
     cooling, setCooling, occupancyPermit, setOccupancyPermit, elevator, setElevator, nearbyAmenities, setNearbyAmenities, buildingAge, setBuildingAge,

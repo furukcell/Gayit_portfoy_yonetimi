@@ -6,7 +6,7 @@ import PropertyRow from '../components/PropertyRow';
 import BrandMark from '../components/BrandMark';
 
 export default function PortfolioScreen(props: any) {
-  const { styles, palette, role, portfolioPresentationMode, setPortfolioPresentationMode, setSelectedPresentationIds, selectedPresentationIds, setAddOpen, search, setSearch, quickTypeFilter, quickCityFilter, quickDistrictFilter, setQuickDropdown, quickDropdown, properties, setQuickTypeFilter, setQuickCityFilter, setQuickDistrictFilter, filter, setFilter, sortBy, setSortBy, recentOnly, setRecentOnly, favoritesOnly, setFavoritesOnly, minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, statusFilter, setStatusFilter, showArchived, setShowArchived, createMultiPropertyPdf, propertiesLoading, visibleProperties, money, openProperty, toggleFavorite, favoriteIds } = props;
+  const { styles, palette, role, portfolioPresentationMode, setPortfolioPresentationMode, setSelectedPresentationIds, selectedPresentationIds, setAddOpen, search, setSearch, quickTypeFilter, quickCityFilter, quickDistrictFilter, setQuickDropdown, quickDropdown, properties, setQuickTypeFilter, setQuickCityFilter, setQuickDistrictFilter, filter, setFilter, sortBy, setSortBy, recentOnly, setRecentOnly, favoritesOnly, setFavoritesOnly, minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, minAreaFilter, setMinAreaFilter, maxAreaFilter, setMaxAreaFilter, statusFilter, setStatusFilter, showArchived, setShowArchived, createMultiPropertyPdf, propertiesLoading, visibleProperties, money, openProperty, toggleFavorite, favoriteIds } = props;
   const cityOptions: string[] = Array.from(new Set<string>(
     properties
       .map((p: any) => String(p.address || '').split(',').map((part: string) => part.trim()).filter(Boolean).slice(-1)[0] || '')
@@ -28,18 +28,20 @@ export default function PortfolioScreen(props: any) {
   const [draftFavoritesOnly, setDraftFavoritesOnly] = React.useState(favoritesOnly);
   const [draftMinPrice, setDraftMinPrice] = React.useState(minPriceFilter);
   const [draftMaxPrice, setDraftMaxPrice] = React.useState(maxPriceFilter);
+  const [draftMinArea, setDraftMinArea] = React.useState(minAreaFilter);
+  const [draftMaxArea, setDraftMaxArea] = React.useState(maxAreaFilter);
   const [draftStatus, setDraftStatus] = React.useState(statusFilter);
   const [draftArchived, setDraftArchived] = React.useState(showArchived);
   const openFilters = () => {
     setDraftType(quickTypeFilter); setDraftCity(quickCityFilter); setDraftDistrict(quickDistrictFilter);
     setDraftFilter(filter); setDraftSortBy(sortBy); setDraftRecentOnly(recentOnly);
-    setDraftFavoritesOnly(favoritesOnly); setDraftMinPrice(minPriceFilter); setDraftMaxPrice(maxPriceFilter);
+    setDraftFavoritesOnly(favoritesOnly); setDraftMinPrice(minPriceFilter); setDraftMaxPrice(maxPriceFilter); setDraftMinArea(minAreaFilter); setDraftMaxArea(maxAreaFilter);
     setDraftStatus(statusFilter); setDraftArchived(showArchived); setFilterModalVisible(true);
   };
   const activeFilterCount = [
     quickTypeFilter !== 'Tümü', quickCityFilter !== 'Tümü', quickDistrictFilter !== 'Tümü',
     filter !== 'Tümü', sortBy !== 'newest', recentOnly, favoritesOnly,
-    Boolean(minPriceFilter), Boolean(maxPriceFilter), statusFilter !== 'Tümü', showArchived
+    Boolean(minPriceFilter), Boolean(maxPriceFilter), Boolean(minAreaFilter), Boolean(maxAreaFilter), statusFilter !== 'Tümü', showArchived
   ].filter(Boolean).length;
   const chipStyle = (active: boolean) => ({paddingVertical:9,paddingHorizontal:12,borderRadius:10,borderWidth:1,borderColor:active?palette.green:palette.line,backgroundColor:active?palette.goldSoft:palette.white,marginRight:7,marginBottom:7});
   const chipText = (active: boolean) => ({fontSize:13,fontWeight:active?'700' as const:'500' as const,color:active?palette.green:palette.ink});
@@ -56,10 +58,10 @@ export default function PortfolioScreen(props: any) {
                 {[
                   ...(quickTypeFilter!=='Tümü'?[quickTypeFilter]:[]), ...(quickCityFilter!=='Tümü'?[quickCityFilter]:[]),
                   ...(quickDistrictFilter!=='Tümü'?[quickDistrictFilter]:[]), ...(filter!=='Tümü'?[filter]:[]),
-                  ...(statusFilter!=='Tümü'?[statusFilter]:[]), ...(minPriceFilter?['Min ₺']:[]), ...(maxPriceFilter?['Maks ₺']:[]),
+                  ...(statusFilter!=='Tümü'?[statusFilter]:[]), ...(minPriceFilter?['Min ₺']:[]), ...(maxPriceFilter?['Maks ₺']:[]), ...(minAreaFilter?['Min m²']:[]), ...(maxAreaFilter?['Maks m²']:[]),
                   ...(recentOnly?['Son görüntülenenler']:[]), ...(favoritesOnly?['Favoriler']:[]), ...(showArchived?['Arşiv']:[])
                 ].map((label:string,index:number)=><View key={label+index} style={{paddingVertical:6,paddingHorizontal:10,borderRadius:16,backgroundColor:palette.goldSoft,marginRight:6}}><Text style={{fontSize:11,color:palette.green,fontWeight:'600'}}>{label}</Text></View>)}
-                {activeFilterCount>0&&<Pressable onPress={()=>{setQuickTypeFilter('Tümü');setQuickCityFilter('Tümü');setQuickDistrictFilter('Tümü');setFilter('Tümü');setSortBy('newest');setRecentOnly(false);setFavoritesOnly(false);setMinPriceFilter('');setMaxPriceFilter('');setStatusFilter('Tümü');setShowArchived(false);}}><Text style={{fontSize:12,color:palette.green,fontWeight:'700'}}>Temizle</Text></Pressable>}
+                {activeFilterCount>0&&<Pressable onPress={()=>{setQuickTypeFilter('Tümü');setQuickCityFilter('Tümü');setQuickDistrictFilter('Tümü');setFilter('Tümü');setSortBy('newest');setRecentOnly(false);setFavoritesOnly(false);setMinPriceFilter('');setMaxPriceFilter('');setMinAreaFilter('');setMaxAreaFilter('');setStatusFilter('Tümü');setShowArchived(false);}}><Text style={{fontSize:12,color:palette.green,fontWeight:'700'}}>Temizle</Text></Pressable>}
               </ScrollView>
               <Modal visible={filterModalVisible} transparent animationType="slide" onRequestClose={()=>setFilterModalVisible(false)}>
                 <View style={{flex:1,backgroundColor:'rgba(10,22,36,0.48)',justifyContent:'flex-end'}}>
@@ -76,6 +78,8 @@ export default function PortfolioScreen(props: any) {
                       <View style={{flexDirection:'row',flexWrap:'wrap'}}>{['Tümü','Satılık','Kiralık'].map(v=><Pressable key={v} onPress={()=>setDraftFilter(v)} style={chipStyle(draftFilter===v)}><Text style={chipText(draftFilter===v)}>{v}</Text></Pressable>)}</View>
                       <Text style={{fontSize:13,fontWeight:'700',color:palette.ink,marginTop:8,marginBottom:8}}>Fiyat aralığı (₺)</Text>
                       <View style={{flexDirection:'row',gap:10}}><View style={[styles.search,{flex:1,marginTop:0}]}><TextInput value={draftMinPrice} onChangeText={setDraftMinPrice} keyboardType="numeric" placeholder="En düşük" placeholderTextColor={palette.muted} style={styles.searchInput}/></View><View style={[styles.search,{flex:1,marginTop:0}]}><TextInput value={draftMaxPrice} onChangeText={setDraftMaxPrice} keyboardType="numeric" placeholder="En yüksek" placeholderTextColor={palette.muted} style={styles.searchInput}/></View></View>
+                      <Text style={{fontSize:13,fontWeight:'700',color:palette.ink,marginTop:14,marginBottom:8}}>Alan (m²)</Text>
+                      <View style={{flexDirection:'row',gap:10,marginTop:2,marginBottom:8}}><View style={[styles.search,{flex:1,marginTop:0}]}><TextInput value={draftMinArea} onChangeText={setDraftMinArea} keyboardType="numeric" placeholder="En düşük m²" placeholderTextColor={palette.muted} style={styles.searchInput}/></View><View style={[styles.search,{flex:1,marginTop:0}]}><TextInput value={draftMaxArea} onChangeText={setDraftMaxArea} keyboardType="numeric" placeholder="En yüksek m²" placeholderTextColor={palette.muted} style={styles.searchInput}/></View></View>
                       <Text style={{fontSize:13,fontWeight:'700',color:palette.ink,marginTop:14,marginBottom:8}}>İlan durumu</Text>
                       <View style={{flexDirection:'row',flexWrap:'wrap'}}>{['Tümü','Aktif','Opsiyonlu','Satıldı','Kiralandı'].map(v=><Pressable key={v} onPress={()=>setDraftStatus(v)} style={chipStyle(draftStatus===v)}><Text style={chipText(draftStatus===v)}>{v}</Text></Pressable>)}</View>
                       <Text style={{fontSize:13,fontWeight:'700',color:palette.ink,marginTop:8,marginBottom:8}}>Sıralama</Text>
@@ -88,8 +92,8 @@ export default function PortfolioScreen(props: any) {
                       </View>
                     </ScrollView>
                     <View style={{flexDirection:'row',gap:10,paddingTop:12,borderTopWidth:1,borderTopColor:palette.line,marginTop:8}}>
-                      <Pressable onPress={()=>{setDraftType('Tümü');setDraftCity('Tümü');setDraftDistrict('Tümü');setDraftFilter('Tümü');setDraftSortBy('newest');setDraftRecentOnly(false);setDraftFavoritesOnly(false);setDraftMinPrice('');setDraftMaxPrice('');setDraftStatus('Tümü');setDraftArchived(false)}} style={{flex:1,minHeight:48,borderRadius:12,borderWidth:1,borderColor:palette.line,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,fontWeight:'700',color:palette.ink}}>Temizle</Text></Pressable>
-                      <Pressable onPress={()=>{setQuickTypeFilter(draftType);setQuickCityFilter(draftCity);setQuickDistrictFilter(draftDistrict);setFilter(draftFilter);setSortBy(draftSortBy);setRecentOnly(draftRecentOnly);setFavoritesOnly(draftFavoritesOnly);setMinPriceFilter(draftMinPrice);setMaxPriceFilter(draftMaxPrice);setStatusFilter(draftStatus);setShowArchived(draftArchived);setFilterModalVisible(false)}} style={{flex:2,minHeight:48,borderRadius:12,backgroundColor:palette.green,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,fontWeight:'800',color:'#fff'}}>Sonuçları göster</Text></Pressable>
+                      <Pressable onPress={()=>{setDraftType('Tümü');setDraftCity('Tümü');setDraftDistrict('Tümü');setDraftFilter('Tümü');setDraftSortBy('newest');setDraftRecentOnly(false);setDraftFavoritesOnly(false);setDraftMinPrice('');setDraftMaxPrice('');setDraftMinArea('');setDraftMaxArea('');setDraftStatus('Tümü');setDraftArchived(false)}} style={{flex:1,minHeight:48,borderRadius:12,borderWidth:1,borderColor:palette.line,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,fontWeight:'700',color:palette.ink}}>Temizle</Text></Pressable>
+                      <Pressable onPress={()=>{setQuickTypeFilter(draftType);setQuickCityFilter(draftCity);setQuickDistrictFilter(draftDistrict);setFilter(draftFilter);setSortBy(draftSortBy);setRecentOnly(draftRecentOnly);setFavoritesOnly(draftFavoritesOnly);setMinPriceFilter(draftMinPrice);setMaxPriceFilter(draftMaxPrice);setMinAreaFilter(draftMinArea);setMaxAreaFilter(draftMaxArea);setStatusFilter(draftStatus);setShowArchived(draftArchived);setFilterModalVisible(false)}} style={{flex:2,minHeight:48,borderRadius:12,backgroundColor:palette.green,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,fontWeight:'800',color:'#fff'}}>Sonuçları göster</Text></Pressable>
                     </View>
                   </View>
                 </View>
