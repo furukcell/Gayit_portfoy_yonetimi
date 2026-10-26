@@ -437,7 +437,7 @@ export const saveCustomer = async (deps: any) => {
           matchWarning = ' Eşleştirme yenilenemedi: ' + (matchingError instanceof Error ? matchingError.message : 'bilinmeyen hata');
         }
       }
-      setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementMaxPrice(''); setRequirementRooms('');
+      setCustomerModalOpen(false); setCustomerName(''); setCustomerPhone(''); setCustomerRoles(['buyer']); setCustomerNotes(''); setRequirementIntent('sale'); setRequirementType('apartment'); setRequirementCity('Muğla'); setRequirementDistrict(''); setRequirementMinPrice(''); setRequirementMaxPrice(''); setRequirementMinArea(''); setRequirementMaxArea(''); setRequirementRooms('');
       Alert.alert('Müşteri kaydedildi', hasRequirement ? 'Müşteri ve arama talebi kaydedildi.' + matchWarning : 'Müşteri kaydedildi. İstersen daha sonra arama talebi ekleyebilirsin.');
     } catch (error) { Alert.alert('Müşteri kaydedilemedi', error instanceof Error ? error.message : 'Lütfen tekrar deneyin.'); }
     finally { setCustomerBusy(false); }
